@@ -179,7 +179,7 @@ class stick(object):
                     for new_plug in self._plugs_to_load:
                         if not new_plug in self._plugs:
                             self._plugs[bytes(new_plug, "utf-8")] = Plug(new_plug, self)
-                    sleep.time(5)
+                    time.sleep(5)
                     if self._init_callback != None:
                         self._init_callback()
                     self.logger.debug("finished scan of plugwise network")
@@ -188,6 +188,14 @@ class stick(object):
                     self._plugs[message.mac].new_message(message)
 
     def message_processed(self, seq_id):
+        pre_seq_id = inc_seq_id(seq_id, -1)
+        while pre_seq_id in self.expect_msg_response:
+            self.logger.warning("Failed to received message with sequence ID %s", str(pre_seq_id))
+            del self.expect_msg_response[pre_seq_id]
+            del self.msg_callback[pre_seq_id]
+            pre_seq_id = inc_seq_id(pre_seq_id, -1)
+            # TODO: do an action for missed response?
+
         if seq_id in self.expect_msg_response:
             del self.expect_msg_response[seq_id]
         if seq_id in self.msg_callback:
