@@ -67,7 +67,7 @@ class StickInitResponse(PlugwiseResponse):
         PlugwiseResponse.__init__(self)
         self.unknown1 = Int(0, length=2)
         self.network_is_online = Int(0, length=2)
-        self.network_id = Int(0, length=16)
+        self.network_id = String(None, length=16)
         self.network_id_short = Int(0, length=4)
         self.unknown2 = Int(0, length=2)
         self.params += [
@@ -77,6 +77,16 @@ class StickInitResponse(PlugwiseResponse):
             self.network_id_short,
             self.unknown2,
         ]
+
+
+class CircleScanResponse(PlugwiseResponse):
+    ID = b"0019"
+
+    def __init__(self):
+        PlugwiseResponse.__init__(self)
+        self.node_mac = String(None, length=16)
+        self.node_id = Int(0, length=2)
+        self.params += [self.node_mac, self.node_id]
 
 
 class PlugCalibrationResponse(PlugwiseResponse):
