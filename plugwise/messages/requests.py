@@ -30,6 +30,18 @@ class StickInitRequest(PlugwiseRequest):
         PlugwiseRequest.__init__(self, "")
 
 
+class CircleScanRequest(PlugwiseRequest):
+    """
+    Get all linked Circle plugs from Circle+
+    a Plugwise network can have 64 devices the node ID value has a range from 0 to 63    
+    """
+    ID = b'0018'
+
+    def __init__(self, mac, node_id):
+        PlugwiseRequest.__init__(self, mac)
+        self.args.append(Int(node_id, length=2))
+
+
 class PlugPowerUsageRequest(PlugwiseRequest):
     ID = b"0012"
 

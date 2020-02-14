@@ -11,6 +11,7 @@ from plugwise.connections.socket import SocketConnection
 from plugwise.connections.serial import PlugwiseUSBConnection
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
+    CircleScanRequest,
     PlugCalibrationRequest,
     PlugInfoRequest,
     PlugPowerUsageRequest,
@@ -19,6 +20,7 @@ from plugwise.messages.requests import (
     StickInitRequest,
 )
 from plugwise.messages.responses import (
+    CircleScanResponse,
     PlugCalibrationResponse,
     PlugInitResponse,
     PlugPowerUsageResponse,
@@ -40,17 +42,19 @@ class stick(object):
         self.logger = logging.getLogger("plugwise")
         self.mac_stick = None
         self.network_online = False
+        self.circle_mac = None
         self.network_id = None
         self.network_id_short = None
         self.parser = PlugwiseParser(self)
         self._plugs = {}
+        self._plugs_to_load = []
         self._auto_update_timer = None
         self._auto_update_thread = None
         self.last_received_seq_id = None
         self.last_send_seq_id = None
         self.expect_msg_response = {}
         self.msg_callback = {}
-        self.init_callback = None
+        self._init_callback = callback
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -59,7 +63,6 @@ class stick(object):
             self.connection = PlugwiseUSBConnection(port, self)
         self.logger.debug("Send init request to Plugwise Zigbee stick")
         self.send(StickInitRequest())
-        self.logger.debug("finished init of stick")
 
     def plugs(self):
         """
@@ -132,6 +135,8 @@ class stick(object):
             self.expect_msg_response[new_seq_id] = PlugSwitchResponse()
         elif isinstance(request, PlugCalibrationRequest):
             self.expect_msg_response[new_seq_id] = PlugCalibrationResponse()
+        elif isinstance(request, CircleScanRequest):
+            self.expect_msg_response[new_seq_id] = CircleScanResponse()
         elif isinstance(request, StickInitRequest):
             self.expect_msg_response[new_seq_id] = StickInitResponse()
         self.msg_callback[new_seq_id] = callback
@@ -154,12 +159,30 @@ class stick(object):
                     self.network_online = True
                 else:
                     self.network_online = False
+                self.circle_mac = b'00' + message.network_id.value[2:]
                 self.network_id = message.network_id.value
                 self.network_id_short = message.network_id_short.value
                 if b"0000" in self.expect_msg_response:
                     self.message_processed(b"0000")
                 else:
                     self.message_processed(message.seq_id)
+                self.logger.debug("Query circle+ plug for plugwise nodes")
+                for node_id in range(0, 64):
+                    self.send(CircleScanRequest(self.circle_mac, node_id))
+            elif isinstance(message, CircleScanResponse):
+                if message.node_mac.value != b'FFFFFFFFFFFFFFFF':
+                    self._plugs_to_load.append(message.node_mac.value.decode("ascii"))
+                    self.logger.debug("Found plug with mac %s", message.node_mac.value.decode("ascii"))
+                self.message_processed(message.seq_id)
+                if message.node_id.value == 63:
+                    # Last scan response
+                    for new_plug in self._plugs_to_load:
+                        if not new_plug in self._plugs:
+                            self._plugs[bytes(new_plug, "utf-8")] = Plug(new_plug, self)
+                    sleep.time(5)
+                    if self._init_callback != None:
+                        self._init_callback()
+                    self.logger.debug("finished scan of plugwise network")
             else:
                 if message.mac in self._plugs:
                     self._plugs[message.mac].new_message(message)
