@@ -5,9 +5,9 @@ Base for serial or socket connections
 """
 
 
-class PlugwiseConnection(object):
+class StickConnection(object):
     """
-    Generic Plugwise connection
+    Generic Plugwise stick connection
     """
 
     stick = None

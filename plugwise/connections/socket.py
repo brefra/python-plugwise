@@ -9,23 +9,18 @@ import logging
 from queue import Queue
 import socket
 from plugwise.constants import SLEEP_TIME
-from plugwise.connections.connection import PlugwiseConnection
+from plugwise.connections.connection import StickConnection
 from plugwise.message import PlugwiseMessage
-from plugwise.messages.requests import (
-    PlugInfoRequest,
-    PlugSwitchRequest,
-    PlugCalibrationRequest,
-)
 from plugwise.util import PlugwiseException
 
 
-class SocketConnection(PlugwiseConnection):
+class SocketConnection(StickConnection):
     """
     Wrapper for Socket connection configuration
     """
 
     def __init__(self, device, stick=None):
-        plugwiseConnection.__init__(self)
+        StickConnection.__init__(self)
         self.logger = logging.getLogger("plugwise")
         self._device = device
         self.stick = stick
