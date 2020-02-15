@@ -16,15 +16,9 @@ from plugwise.constants import (
     SLEEP_TIME,
     STOPBITS,
 )
-from plugwise.connections.connection import PlugwiseConnection
+from plugwise.connections.connection import StickConnection
 from plugwise.message import PlugwiseMessage
-from plugwise.messages.requests import (
-    PlugInfoRequest,
-    PlugSwitchRequest,
-    PlugCalibrationRequest,
-)
 from plugwise.util import PlugwiseException
-
 
 
 class Protocol(serial.threaded.Protocol):
@@ -35,7 +29,7 @@ class Protocol(serial.threaded.Protocol):
         self.parser(data)
 
 
-class PlugwiseUSBConnection(object):
+class PlugwiseUSBConnection(StickConnection):
     """simple wrapper around serial module"""
 
     def __init__(self, port, stick=None):

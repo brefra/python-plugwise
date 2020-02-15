@@ -3,6 +3,7 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 
 All (known) response messages to be received from plugwise plugs
 """
+from datetime import datetime
 import struct
 from plugwise.constants import (
     MESSAGE_FOOTER,
@@ -19,12 +20,12 @@ from plugwise.util import (
 )
 
 
-class PlugwiseResponse(PlugwiseMessage):
+class CircleResponse(PlugwiseMessage):
     def __init__(self):
         PlugwiseMessage.__init__(self)
         self.params = []
         self.mac = None
-        self.timestamp = None
+        self.timestamp = datetime.now()
         self.seq_id = None
 
     def unserialize(self, response):
@@ -60,11 +61,11 @@ class PlugwiseResponse(PlugwiseMessage):
         return 34 + arglen
 
 
-class StickInitResponse(PlugwiseResponse):
+class StickInitResponse(CircleResponse):
     ID = b"0011"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.unknown1 = Int(0, length=2)
         self.network_is_online = Int(0, length=2)
         self.network_id = String(None, length=16)
@@ -79,21 +80,21 @@ class StickInitResponse(PlugwiseResponse):
         ]
 
 
-class CircleScanResponse(PlugwiseResponse):
+class CircleScanResponse(CircleResponse):
     ID = b"0019"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.node_mac = String(None, length=16)
         self.node_id = Int(0, length=2)
         self.params += [self.node_mac, self.node_id]
 
 
-class PlugCalibrationResponse(PlugwiseResponse):
+class CircleCalibrationResponse(CircleResponse):
     ID = b"0027"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.gain_a = Float(0, 8)
         self.gain_b = Float(0, 8)
         self.off_tot = Float(0, 8)
@@ -101,11 +102,11 @@ class PlugCalibrationResponse(PlugwiseResponse):
         self.params += [self.gain_a, self.gain_b, self.off_tot, self.off_ruis]
 
 
-class PlugwiseClockInfoResponse(PlugwiseResponse):
+class CircleClockInfoResponse(CircleResponse):
     ID = b"003F"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.time = Time()
         self.day_of_week = Int(0, 2)
         self.unknown = Int(0, 2)
@@ -113,14 +114,14 @@ class PlugwiseClockInfoResponse(PlugwiseResponse):
         self.params += [self.time, self.day_of_week, self.unknown, self.unknown2]
 
 
-class PlugPowerUsageResponse(PlugwiseResponse):
+class CirclePowerUsageResponse(CircleResponse):
     """returns power usage as impulse counters for several different timeframes
     """
 
     ID = b"0013"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.pulse_1s = Int(0, 4)
         self.pulse_8s = Int(0, 4)
         self.pulse_hour = Int(0, 8)
@@ -137,7 +138,7 @@ class PlugPowerUsageResponse(PlugwiseResponse):
         ]
 
 
-class PlugwisePowerBufferResponse(PlugwiseResponse):
+class CirclePowerBufferResponse(CircleResponse):
     """returns information about historical power usage
     each response contains 4 log buffers and each log buffer contains data for 1 hour
     """
@@ -145,7 +146,7 @@ class PlugwisePowerBufferResponse(PlugwiseResponse):
     ID = b"0049"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.logdate1 = DateTime()
         self.pulses1 = Int(0, 8)
         self.logdate2 = DateTime()
@@ -168,11 +169,11 @@ class PlugwisePowerBufferResponse(PlugwiseResponse):
         ]
 
 
-class PlugInitResponse(PlugwiseResponse):
+class CircleInfoResponse(CircleResponse):
     ID = b"0024"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.datetime = DateTime()
         self.last_logaddr = LogAddr(0, length=8)
         self.relay_state = Int(0, length=2)
@@ -191,11 +192,11 @@ class PlugInitResponse(PlugwiseResponse):
         ]
 
 
-class PlugSwitchResponse(PlugwiseResponse):
+class CircleSwitchResponse(CircleResponse):
     ID = b"0099"
 
     def __init__(self):
-        PlugwiseResponse.__init__(self)
+        CircleResponse.__init__(self)
         self.unknown = None
         self.relay_state = None
 

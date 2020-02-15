@@ -7,10 +7,10 @@ from plugwise.constants import (
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
-    PlugCalibrationResponse,
-    PlugInitResponse,
+    CircleCalibrationResponse,
+    CircleInfoResponse,
     StickInitResponse,
-    PlugPowerUsageResponse,
+    CirclePowerUsageResponse,
 )
 from plugwise.util import inc_seq_id
 

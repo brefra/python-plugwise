@@ -6,30 +6,31 @@ Main stick object to control associated plugwise plugs
 import logging
 import time
 import threading
+from datetime import datetime, timedelta
 
 from plugwise.connections.socket import SocketConnection
 from plugwise.connections.serial import PlugwiseUSBConnection
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
     CircleScanRequest,
-    PlugCalibrationRequest,
-    PlugInfoRequest,
-    PlugPowerUsageRequest,
-    PlugSwitchRequest,
-    PlugwiseRequest,
+    CircleCalibrationRequest,
+    CircleInfoRequest,
+    CirclePowerUsageRequest,
+    CircleSwitchRequest,
+    CircleRequest,
     StickInitRequest,
 )
 from plugwise.messages.responses import (
     CircleScanResponse,
-    PlugCalibrationResponse,
-    PlugInitResponse,
-    PlugPowerUsageResponse,
-    PlugSwitchResponse,
-    PlugwiseResponse,
+    CircleCalibrationResponse,
+    CircleInfoResponse,
+    CirclePowerUsageResponse,
+    CircleSwitchResponse,
+    CircleResponse,
     StickInitResponse,
 )
 from plugwise.parser import PlugwiseParser
-from plugwise.plug import Plug
+from plugwise.circle import Circle
 from plugwise.util import inc_seq_id, validate_mac
 
 
@@ -46,8 +47,8 @@ class stick(object):
         self.network_id = None
         self.network_id_short = None
         self.parser = PlugwiseParser(self)
-        self._plugs = {}
-        self._plugs_to_load = []
+        self._circles = {}
+        self._circles_to_load = []
         self._auto_update_timer = None
         self._auto_update_thread = None
         self.last_received_seq_id = None
@@ -64,37 +65,37 @@ class stick(object):
         self.logger.debug("Send init request to Plugwise Zigbee stick")
         self.send(StickInitRequest())
 
-    def plugs(self):
+    def circles(self):
         """
-        :return: list of plugs
+        :return: list of circles
         """
-        return self._plugs
+        return self._circles
 
-    def plug(self, mac):
+    def circle(self, mac):
         """
-        :return: plug
+        :return: circle
         """
-        return self._plugs[mac]
+        return self._circles[mac]
 
-    def add_plug(self, mac):
+    def add_circle(self, mac):
         """
-        Add plug to stick
+        Add circle to stick
 
         :return: bool
         """
         if validate_mac(mac) == True:
-            self._plugs[bytes(mac, "utf-8")] = Plug(mac, self)
+            self._circles[bytes(mac, "utf-8")] = Circle(mac, self)
             return True
-        self.logger.error("Failed to add plug, invalid mac '%s'", mac)
+        self.logger.error("Failed to add circle, invalid mac '%s'", mac)
         return False
 
-    def remove_plug(self, mac):
+    def remove_circle(self, mac):
         """
-        remove plug from stick
+        remove circle from stick
 
         :return: None
         """
-        del self._plugs[mac]
+        del self._circles[mac]
 
     def feed_parser(self, data):
         """
@@ -118,7 +119,7 @@ class stick(object):
 
         :return: None
         """
-        assert isinstance(request, PlugwiseRequest)
+        assert isinstance(request, CircleRequest)
         if self.last_send_seq_id != None and self.last_send_seq_id != b"0000":
             new_seq_id = inc_seq_id(self.last_send_seq_id)
         else:
@@ -127,14 +128,14 @@ class stick(object):
             else:
                 new_seq_id = b"0000"
         self.last_send_seq_id = new_seq_id
-        if isinstance(request, PlugPowerUsageRequest):
-            self.expect_msg_response[new_seq_id] = PlugPowerUsageResponse()
-        elif isinstance(request, PlugInfoRequest):
-            self.expect_msg_response[new_seq_id] = PlugInitResponse()
-        elif isinstance(request, PlugSwitchRequest):
-            self.expect_msg_response[new_seq_id] = PlugSwitchResponse()
-        elif isinstance(request, PlugCalibrationRequest):
-            self.expect_msg_response[new_seq_id] = PlugCalibrationResponse()
+        if isinstance(request, CirclePowerUsageRequest):
+            self.expect_msg_response[new_seq_id] = CirclePowerUsageResponse()
+        elif isinstance(request, CircleInfoRequest):
+            self.expect_msg_response[new_seq_id] = CircleInfoResponse()
+        elif isinstance(request, CircleSwitchRequest):
+            self.expect_msg_response[new_seq_id] = CircleSwitchResponse()
+        elif isinstance(request, CircleCalibrationRequest):
+            self.expect_msg_response[new_seq_id] = CircleCalibrationResponse()
         elif isinstance(request, CircleScanRequest):
             self.expect_msg_response[new_seq_id] = CircleScanResponse()
         elif isinstance(request, StickInitRequest):
@@ -149,7 +150,7 @@ class stick(object):
         """
         print ("New message " + str(message.__class__.__name__))
         self.logger.debug("New %s message", message.__class__.__name__)
-        if isinstance(message, PlugwiseResponse):
+        if isinstance(message, CircleResponse):
             self.last_received_seq_id = message.seq_id
             if self.last_send_seq_id == message.seq_id:
                 self.last_send_seq_id = None
@@ -166,26 +167,26 @@ class stick(object):
                     self.message_processed(b"0000")
                 else:
                     self.message_processed(message.seq_id)
-                self.logger.debug("Query circle+ plug for plugwise nodes")
+                self.logger.debug("Query circle+ for known circle nodes")
                 for node_id in range(0, 64):
                     self.send(CircleScanRequest(self.circle_mac, node_id))
             elif isinstance(message, CircleScanResponse):
                 if message.node_mac.value != b'FFFFFFFFFFFFFFFF':
-                    self._plugs_to_load.append(message.node_mac.value.decode("ascii"))
-                    self.logger.debug("Found plug with mac %s", message.node_mac.value.decode("ascii"))
+                    self._circles_to_load.append(message.node_mac.value.decode("ascii"))
+                    self.logger.debug("Found circle with mac %s", message.node_mac.value.decode("ascii"))
                 self.message_processed(message.seq_id)
                 if message.node_id.value == 63:
                     # Last scan response
-                    for new_plug in self._plugs_to_load:
-                        if not new_plug in self._plugs:
-                            self._plugs[bytes(new_plug, "utf-8")] = Plug(new_plug, self)
-                    time.sleep(5)
+                    for new_circle in self._circles_to_load:
+                        if not new_circle in self._circles:
+                            self._circles[bytes(new_circle, "utf-8")] = Circle(new_circle, self)
                     if self._init_callback != None:
                         self._init_callback()
                     self.logger.debug("finished scan of plugwise network")
             else:
-                if message.mac in self._plugs:
-                    self._plugs[message.mac].new_message(message)
+                if message.mac in self._circles:
+                    self._circles[message.mac].new_message(message)
+        print("queue = " + str(self.expect_msg_response.keys()))
 
     def message_processed(self, seq_id):
         pre_seq_id = inc_seq_id(seq_id, -1)
@@ -213,20 +214,34 @@ class stick(object):
         self.connection.stop()
 
     def _request_power_usage(self):
-        for plug in self._plugs:
-            self._plugs[plug].update_power_usage()
-            time.sleep(0.5)
-        self._auto_update_thread = threading.Timer(
-            self._auto_update_timer, self._request_power_usage
-        ).start()
+        for circle in self._circles:
+            # When circle has not received any message during last 2 update polls, reset availability
+            if self._circles[circle].last_update != None:
+                print("last update for mac " + str(circle) + " at " + str(self._circles[circle].last_update))
+                print("check: " + str((datetime.now() - timedelta(seconds=(self._auto_update_timer * 3)))))
+                if self._circles[circle].last_update < (datetime.now() - timedelta(seconds=(self._auto_update_timer * 3))):
+                    self._circles[circle].available = False
+            self._circles[circle].update_power_usage()
+        if self._auto_update_timer != None:
+            self._auto_update_thread = threading.Timer(
+                self._auto_update_timer, self._request_power_usage
+            ).start()
 
-    def auto_power_update(self, timer):
+    def auto_update(self, timer=None):
         """
-        setup auto refresh for power usage.
+        setup auto update polling for power usage.
 
         :return: bool
         """
-        if timer > 5:
+        if timer == None:
+            # Timer based on number of circles
+            self._auto_update_timer = len(self.circles()) * 2
+            self._request_power_usage()
+            return True
+        elif timer == 0:
+            self._auto_update_timer = None
+            return False
+        elif timer > 5:
             if self._auto_update_thread != None:
                 self._auto_update_thread.cancel()
             self._auto_update_timer = timer

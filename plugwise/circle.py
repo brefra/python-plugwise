@@ -1,28 +1,28 @@
 """
 Use of this source code is governed by the MIT license found in the LICENSE file.
 
-Plugwise Circle plug object
+Plugwise Circle(+) object
 """
 import logging
 from plugwise.constants import *
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
-    PlugCalibrationRequest,
-    PlugInfoRequest,
-    PlugPowerUsageRequest,
-    PlugSwitchRequest,
+    CircleCalibrationRequest,
+    CircleInfoRequest,
+    CirclePowerUsageRequest,
+    CircleSwitchRequest,
 )
 from plugwise.messages.responses import (
-    PlugCalibrationResponse,
-    PlugInitResponse,
-    PlugPowerUsageResponse,
-    PlugSwitchResponse,
+    CircleCalibrationResponse,
+    CircleInfoResponse,
+    CirclePowerUsageResponse,
+    CircleSwitchResponse,
 )
 from plugwise.util import Int, validate_mac
 
 
-class Plug(object):
-    """provides interface to the Plugwise Plug & Plug+ devices
+class Circle(object):
+    """provides interface to the Plugwise Circle(+) devices
     """
 
     def __init__(self, mac, stick):
@@ -35,6 +35,7 @@ class Plug(object):
         self._mac = bytes(mac, encoding="latin-1")
         self._callbacks = []
         self.last_update = None
+        self.available = False
         self._relay_state = None
         self._hardware_version = None
         self._firmware_version = None
@@ -46,36 +47,40 @@ class Plug(object):
         self._off_ruis = None
         self._off_tot = None
         self.stick = stick
-        self.stick.logger.error("Initializing plug with mac %s", str(self._mac))
+        self.stick.logger.error("Initializing circle with mac %s", str(self._mac))
         self._request_info()
         self._request_calibration()
+
+    def mac(self):
+        """Return mac address"""
+        return self._mac.decode("ascii")
 
     def _request_info(self, callback=None):
         """ Request info from plug
         """
         self.stick.send(
-            PlugInfoRequest(self._mac), callback,
+            CircleInfoRequest(self._mac), callback,
         )
 
     def _request_calibration(self, callback=None):
         """Request calibration info
         """
         self.stick.send(
-            PlugCalibrationRequest(self._mac), callback,
+            CircleCalibrationRequest(self._mac), callback,
         )
 
     def _request_switch(self, state, callback=None):
         """Request to switch relay state and request state info
         """
         self.stick.send(
-            PlugSwitchRequest(self._mac, state), callback,
+            CircleSwitchRequest(self._mac, state), callback,
         )
 
     def update_power_usage(self, callback=None):
         """Request power usage
         """
         self.stick.send(
-            PlugPowerUsageRequest(self._mac), callback,
+            CirclePowerUsageRequest(self._mac), callback,
         )
 
     def new_message(self, message):
@@ -87,20 +92,23 @@ class Plug(object):
         )
         if isinstance(message, PlugwiseMessage):
             if message.mac == self._mac:
-                if isinstance(message, PlugPowerUsageResponse):
+                if isinstance(message, CirclePowerUsageResponse):
                     self._response_power_usage(message)
                     if CALLBACK_POWER in self._callbacks:
                         for callback in self._callbacks[CALLBACK_POWER]:
                             callback(get_power_usage())
-                elif isinstance(message, PlugSwitchResponse):
+                elif isinstance(message, CircleSwitchResponse):
                     self._response_switch(message)
                     if CALLBACK_RELAY in self._callbacks:
                         for callback in self._callbacks[CALLBACK_RELAY]:
                             callback(self._relay_state)
-                elif isinstance(message, PlugCalibrationResponse):
+                elif isinstance(message, CircleCalibrationResponse):
                     self._response_calibration(message)
-                elif isinstance(message, PlugInitResponse):
+                elif isinstance(message, CircleInfoResponse):
                     self._response_info(message)
+                self.available = True
+                if message.timestamp != None:
+                    self.last_update = message.timestamp
                 self.stick.message_processed(message.seq_id)
             else:
                 self.stick.logger.error(
@@ -176,7 +184,6 @@ class Plug(object):
         self.stick.logger.debug("Relay = " + str(self._relay_state))
         self._hardware_version = message.hw_ver
         self.stick.logger.debug("hw version = " + str(self._hardware_version.value))
-        self.last_update = message.timestamp
 
     def _response_switch(self, message):
         """ Process switch response message
