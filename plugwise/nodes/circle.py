@@ -1,44 +1,33 @@
 """
 Use of this source code is governed by the MIT license found in the LICENSE file.
 
-Plugwise Circle(+) object
+Plugwise Circle node object
 """
 import logging
 from plugwise.constants import *
+from plugwise.node import PlugwiseNode
+
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
     CircleCalibrationRequest,
-    CircleInfoRequest,
     CirclePowerUsageRequest,
     CircleSwitchRequest,
 )
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
-    CircleInfoResponse,
     CirclePowerUsageResponse,
+    CircleScanResponse,
     CircleSwitchResponse,
 )
-from plugwise.util import Int, validate_mac
+from plugwise.util import Int
 
 
-class Circle(object):
-    """provides interface to the Plugwise Circle(+) devices
+class PlugwiseCircle(PlugwiseNode):
+    """provides interface to the Plugwise Circle nodes
     """
 
-    def __init__(self, mac, stick):
-        """
-        will raise ValueError if mac doesn't look valid
-        """
-        mac = mac.upper()
-        if validate_mac(mac) == False:
-            raise ValueError("MAC address is in unexpected format: " + str(mac))
-        self._mac = bytes(mac, encoding="latin-1")
-        self._callbacks = []
-        self.last_update = None
-        self.available = False
-        self._relay_state = None
-        self._hardware_version = None
-        self._firmware_version = None
+    def __init__(self, mac, stick, info_message):
+        PlugwiseNode.__init__(self, mac, stick, info_message)
         self._pulse_1s = None
         self._pulse_8s = None
         self._pulse_hour = None
@@ -46,78 +35,60 @@ class Circle(object):
         self._gain_b = None
         self._off_ruis = None
         self._off_tot = None
-        self.stick = stick
-        self.stick.logger.error("Initializing circle with mac %s", str(self._mac))
-        self._request_info()
         self._request_calibration()
-
-    def mac(self):
-        """Return mac address"""
-        return self._mac.decode("ascii")
-
-    def _request_info(self, callback=None):
-        """ Request info from plug
-        """
-        self.stick.send(
-            CircleInfoRequest(self._mac), callback,
-        )
 
     def _request_calibration(self, callback=None):
         """Request calibration info
         """
         self.stick.send(
-            CircleCalibrationRequest(self._mac), callback,
+            CircleCalibrationRequest(self.mac), callback,
         )
 
     def _request_switch(self, state, callback=None):
         """Request to switch relay state and request state info
         """
         self.stick.send(
-            CircleSwitchRequest(self._mac, state), callback,
+            CircleSwitchRequest(self.mac, state), callback,
         )
 
     def update_power_usage(self, callback=None):
         """Request power usage
         """
         self.stick.send(
-            CirclePowerUsageRequest(self._mac), callback,
+            CirclePowerUsageRequest(self.mac), callback,
         )
 
-    def new_message(self, message):
+    def on_message(self, message):
         """
         Process received message
         """
-        self.stick.logger.debug(
-            "Process received message for plug with mac %s", str(self._mac)
-        )
-        if isinstance(message, PlugwiseMessage):
-            if message.mac == self._mac:
-                if isinstance(message, CirclePowerUsageResponse):
-                    self._response_power_usage(message)
-                    if CALLBACK_POWER in self._callbacks:
-                        for callback in self._callbacks[CALLBACK_POWER]:
-                            callback(get_power_usage())
-                elif isinstance(message, CircleSwitchResponse):
-                    self._response_switch(message)
-                    if CALLBACK_RELAY in self._callbacks:
-                        for callback in self._callbacks[CALLBACK_RELAY]:
-                            callback(self._relay_state)
-                elif isinstance(message, CircleCalibrationResponse):
-                    self._response_calibration(message)
-                elif isinstance(message, CircleInfoResponse):
-                    self._response_info(message)
-                self.available = True
-                if message.timestamp != None:
-                    self.last_update = message.timestamp
-                self.stick.message_processed(message.seq_id)
-            else:
-                self.stick.logger.error(
-                    "Skip message, mac message %s != mac plug %s",
-                    str(self._mac),
-                    str(message.mac),
-                )
+        if isinstance(message, CirclePowerUsageResponse):
+            self._response_power_usage(message)
+            if CALLBACK_POWER in self._callbacks:
+                for callback in self._callbacks[CALLBACK_POWER]:
+                    callback(get_power_usage())
+            self.stick.message_processed(message.seq_id)
+        elif isinstance(message, CircleSwitchResponse):
+            self._response_switch(message)
+            if CALLBACK_RELAY in self._callbacks:
+                for callback in self._callbacks[CALLBACK_RELAY]:
+                    callback(self._relay_state)
+            self.stick.message_processed(message.seq_id)
+        elif isinstance(message, CircleCalibrationResponse):
+            self._response_calibration(message)
+            self.stick.message_processed(message.seq_id)
+        elif isinstance(message, CircleScanResponse):
+            self._on_message(message)
         else:
-            self.stick.logger.warning("Wrong message type: %s", type(message))
+            self.stick.logger.debug(
+                "Unsupported message type '%s' received for circle with mac %s",
+                str(message.__class__.__name__),
+                self.get_mac(),
+            )
+            self.stick.message_processed(message.seq_id)
+
+    def _on_message(self, message):
+        pass
 
     def _status_update_callbacks(self, value):
         for callback in self._callbacks:
@@ -170,20 +141,6 @@ class Circle(object):
         # sometimes it's slightly less than 0, probably caused by calibration/calculation errors
         # it doesn't make much sense to return negative power usage in that case
         return retval if retval > 0.0 else 0.0
-
-    def _response_info(self, message):
-        """ Process info response message
-        """
-        self.stick.logger.error(
-            "Response info message for plug with mac " + str(self._mac)
-        )
-        if message.relay_state.serialize() == b"01":
-            self._relay_state = True
-        else:
-            self._relay_state = False
-        self.stick.logger.debug("Relay = " + str(self._relay_state))
-        self._hardware_version = message.hw_ver
-        self.stick.logger.debug("hw version = " + str(self._hardware_version.value))
 
     def _response_switch(self, message):
         """ Process switch response message

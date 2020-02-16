@@ -20,7 +20,7 @@ from plugwise.util import (
 )
 
 
-class CircleResponse(PlugwiseMessage):
+class NodeResponse(PlugwiseMessage):
     def __init__(self):
         PlugwiseMessage.__init__(self)
         self.params = []
@@ -61,40 +61,40 @@ class CircleResponse(PlugwiseMessage):
         return 34 + arglen
 
 
-class StickInitResponse(CircleResponse):
+class StickInitResponse(NodeResponse):
     ID = b"0011"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.unknown1 = Int(0, length=2)
         self.network_is_online = Int(0, length=2)
-        self.network_id = String(None, length=16)
-        self.network_id_short = Int(0, length=4)
+        self.circle_plus_mac = String(None, length=16)
+        self.network_id = Int(0, length=4)
         self.unknown2 = Int(0, length=2)
         self.params += [
             self.unknown1,
             self.network_is_online,
+            self.circle_plus_mac,
             self.network_id,
-            self.network_id_short,
             self.unknown2,
         ]
 
 
-class CircleScanResponse(CircleResponse):
+class CircleScanResponse(NodeResponse):
     ID = b"0019"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.node_mac = String(None, length=16)
         self.node_id = Int(0, length=2)
         self.params += [self.node_mac, self.node_id]
 
 
-class CircleCalibrationResponse(CircleResponse):
+class CircleCalibrationResponse(NodeResponse):
     ID = b"0027"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.gain_a = Float(0, 8)
         self.gain_b = Float(0, 8)
         self.off_tot = Float(0, 8)
@@ -102,11 +102,11 @@ class CircleCalibrationResponse(CircleResponse):
         self.params += [self.gain_a, self.gain_b, self.off_tot, self.off_ruis]
 
 
-class CircleClockInfoResponse(CircleResponse):
+class CircleClockInfoResponse(NodeResponse):
     ID = b"003F"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.time = Time()
         self.day_of_week = Int(0, 2)
         self.unknown = Int(0, 2)
@@ -114,14 +114,14 @@ class CircleClockInfoResponse(CircleResponse):
         self.params += [self.time, self.day_of_week, self.unknown, self.unknown2]
 
 
-class CirclePowerUsageResponse(CircleResponse):
+class CirclePowerUsageResponse(NodeResponse):
     """returns power usage as impulse counters for several different timeframes
     """
 
     ID = b"0013"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.pulse_1s = Int(0, 4)
         self.pulse_8s = Int(0, 4)
         self.pulse_hour = Int(0, 8)
@@ -138,7 +138,7 @@ class CirclePowerUsageResponse(CircleResponse):
         ]
 
 
-class CirclePowerBufferResponse(CircleResponse):
+class CirclePowerBufferResponse(NodeResponse):
     """returns information about historical power usage
     each response contains 4 log buffers and each log buffer contains data for 1 hour
     """
@@ -146,7 +146,7 @@ class CirclePowerBufferResponse(CircleResponse):
     ID = b"0049"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.logdate1 = DateTime()
         self.pulses1 = Int(0, 8)
         self.logdate2 = DateTime()
@@ -169,18 +169,18 @@ class CirclePowerBufferResponse(CircleResponse):
         ]
 
 
-class CircleInfoResponse(CircleResponse):
+class NodeInfoResponse(NodeResponse):
     ID = b"0024"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.datetime = DateTime()
         self.last_logaddr = LogAddr(0, length=8)
         self.relay_state = Int(0, length=2)
         self.hz = Int(0, length=2)
         self.hw_ver = String(None, length=12)
         self.fw_ver = UnixTimestamp(0)
-        self.unknown = Int(0, length=2)
+        self.node_type = Int(0, length=2)
         self.params += [
             self.datetime,
             self.last_logaddr,
@@ -188,15 +188,15 @@ class CircleInfoResponse(CircleResponse):
             self.hz,
             self.hw_ver,
             self.fw_ver,
-            self.unknown,
+            self.node_type,
         ]
 
 
-class CircleSwitchResponse(CircleResponse):
+class CircleSwitchResponse(NodeResponse):
     ID = b"0099"
 
     def __init__(self):
-        CircleResponse.__init__(self)
+        NodeResponse.__init__(self)
         self.unknown = None
         self.relay_state = None
 

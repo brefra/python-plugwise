@@ -3,7 +3,7 @@
 from plugwise.messages.requests import (
     CircleCalibrationRequest,
     CircleClockInfoRequest,
-    CircleInfoRequest,
+    NodeInfoRequest,
     CirclePowerUsageRequest,
     CirclePowerBufferRequest,
     CircleSwitchRequest,
@@ -12,7 +12,7 @@ from plugwise.messages.requests import (
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
     CircleClockInfoResponse,
-    CircleInfoResponse,
+    NodeInfoResponse,
     CirclePowerUsageResponse,
     CirclePowerBufferResponse,
     CircleSwitchResponse,

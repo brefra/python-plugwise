@@ -38,6 +38,7 @@ def inc_seq_id(seq_id, value=1):
         temp = "0" + temp
     return temp.encode()
 
+
 class PlugwiseException(Exception):
     """Plugwise Exception."""
 
