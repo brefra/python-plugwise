@@ -8,7 +8,7 @@ from plugwise.constants import (
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
-    CircleInfoResponse,
+    NodeInfoResponse,
     StickInitResponse,
     CirclePowerUsageResponse,
 )
@@ -89,7 +89,7 @@ class PlugwiseParser(object):
                             + str(self._buffer[8:12])
                         )
                         print(
-                            "Skip acknowledge message with sequence id : "
+                            "Acknowledge message with sequence id : "
                             + str(self._buffer[8:12])
                         )
                     elif footer_index < 28:
@@ -104,13 +104,14 @@ class PlugwiseParser(object):
                         else:
                             # Footer and Header available, lookup expected message
                             seq_id = self._buffer[8:12]
-                            if seq_id in self.stick.expect_msg_response:
-                                self._message = self.stick.expect_msg_response[seq_id]
+                            if seq_id in self.stick.expected_responses:
+                                self._message = self.stick.expected_responses[seq_id][0]
                                 self.stick.logger.debug(
                                     "Expected msgtype: %s",
                                     self._message.__class__.__name__,
                                 )
                             else:
+                                print ("seq_id " + str(seq_id) + " not fond in expected list")
                                 self.stick.logger.warning(
                                     "No expected message type found for sequence id %s",
                                     str(seq_id),
@@ -118,19 +119,6 @@ class PlugwiseParser(object):
                                 self.stick.last_received_seq_id = seq_id
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):
-                        if len(self._buffer[: footer_index + 2]) != len(self._message):
-                            # Wrong size, possible missed previous seq_id so try next one...
-                            self.stick.logger.warning("Invalid message size received")
-                            test_seq_id = inc_seq_id(self._buffer[8:12])
-                            if test_seq_id in self.stick.expect_msg_response:
-                                self._message = self.stick.expect_msg_response[
-                                    test_seq_id
-                                ]
-                                if len(self._buffer[: footer_index + 2]) == len(
-                                    self._message
-                                ):
-                                    # TODO: missed seq_id, so re-arrange message response??
-                                    print("===== fix response msg types =====")
                         if len(self._buffer[: footer_index + 2]) == len(self._message):
                             try:
                                 self._message.unserialize(
@@ -139,8 +127,7 @@ class PlugwiseParser(object):
                                 valid_message = True
                             except Exception as e:
                                 self.stick.logger.error(
-                                    "Error while decoding received data for plug '%s'",
-                                    str(mac),
+                                    "Error while decoding received message",
                                 )
                                 self.stick.logger.error(e)
                             # Submit message
