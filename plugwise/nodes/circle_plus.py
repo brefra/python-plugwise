@@ -22,20 +22,12 @@ from plugwise.messages.responses import CircleScanResponse
 class PlugwiseCirclePlus(PlugwiseCircle):
     """provides interface to the Plugwise Circle+ nodes
     """
-    def __init__(self, mac, stick, info_message):
-        PlugwiseCircle.__init__(self, mac, stick, info_message)
-        self._pulse_1s = None
-        self._pulse_8s = None
-        self._pulse_hour = None
-        self._gain_a = None
-        self._gain_b = None
-        self._off_ruis = None
-        self._off_tot = None
+    def __init__(self, mac, stick):
+        PlugwiseCircle.__init__(self, mac, stick)
         self._plugwise_nodes = []
-        self._scan_thread = threading.Timer(2, self._request_scan).start()
-        self._request_calibration()
+        self._scan_for_nodes_callback = None
 
-    def on_message(self, message):
+    def _on_message(self, message):
         """
         Process received message
         """
@@ -50,19 +42,18 @@ class PlugwiseCirclePlus(PlugwiseCircle):
             )
         self.stick.message_processed(message.seq_id)
 
-    def _request_scan(self):
-        """Query circle+ for registered nodes
-        """
-        self.stick.logger.debug("Query circle+ for known Plugwise nodes")
-        for node_id in range(0, 63):
-            self.stick.send(CircleScanRequest(self.mac, node_id))
-        self.stick.send(
-            CircleScanRequest(self.mac, node_id),
-            self.stick.discovery_finished,
-        )
+    def scan_for_nodes(self, callback=None):
+        self._scan_for_nodes_callback = callback
+        for node_address in range(0, 64):
+            self.stick.send(CircleScanRequest(self.mac, node_address))
 
     def _process_scan_response(self, message):
         """ Process scan response message """
+        print ("Scan response : " + str(message.node_address.value))
+        self.stick.logger.debug("Process scan response for address %s", message.node_address.value)
         if message.node_mac.value != b'FFFFFFFFFFFFFFFF':
-            self.stick.logger.debug("Linked pluswise node with mac %s found, discover node type", message.node_mac.value.decode("ascii"))
-            self.stick.discover_node(message.node_mac.value.decode("ascii"))
+            self.stick.logger.debug("Linked plugwise node with mac %s found", message.node_mac.value.decode("ascii"))
+            self._plugwise_nodes.append(message.node_mac.value.decode("ascii"))
+        if message.node_address.value == 63 and self._scan_for_nodes_callback != None:
+            self._scan_for_nodes_callback(self._plugwise_nodes)
+            self._scan_for_nodes_callback = None

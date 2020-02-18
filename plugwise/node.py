@@ -14,7 +14,7 @@ class PlugwiseNode(object):
     """provides interface to the Plugwise node devices
     """
 
-    def __init__(self, mac, stick, info_message):
+    def __init__(self, mac, stick):
         """
         will raise ValueError if mac doesn't look valid
         """
@@ -23,14 +23,16 @@ class PlugwiseNode(object):
             raise ValueError("MAC address is in unexpected format: " + str(mac))
         self.mac = bytes(mac, encoding="ascii")
         self.stick = stick
-        self._callbacks = []
-        self._last_update = None
+        self._callbacks = {}
+        self.last_update = None
         self.available = False
         self._node_type = None
         self._hardware_version = None
         self._firmware_version = None
         self._relay_state = None
-        self._process_info_response(info_message)
+
+    def is_active(self) -> bool:
+        return self.available
 
     def get_mac(self) -> str:
         """Return mac address"""
@@ -56,20 +58,20 @@ class PlugwiseNode(object):
 
     def get_hardware_version(self) -> str:
         """Return hardware version"""
-        if self.hardware_version != None:
-            return self.hardware_version
+        if self._hardware_version != None:
+            return self._hardware_version
         return "Unknown"
 
     def get_firmware_version(self) -> str:
         """Return firmware version"""
-        if self.firmware_version != None:
-            return str(self.firmware_version)
+        if self._firmware_version != None:
+            return str(self._firmware_version)
         return "Unknown"
 
     def get_last_update(self) -> str:
-        """Return firmware version"""
-        if self._last_update != None:
-            return str(self._last_update)
+        """Return  version"""
+        if self.last_update != None:
+            return str(self.last_update)
         return "Unknown"
 
     def _request_info(self, callback=None):
@@ -83,24 +85,22 @@ class PlugwiseNode(object):
         """
         Process received message
         """
-        if isinstance(message, PlugwiseMessage):
-            if message.mac == self.mac:
-                self.available = True
-                if message.timestamp != None:
-                    self.last_update = message.timestamp
-                if isinstance(message, NodeInfoResponse):
-                    self._process_info_response(message)
-                    self.stick.message_processed(message.seq_id)
-                else:
-                    self._on_message(message)
+        assert isinstance(message, PlugwiseMessage)
+        if message.mac == self.mac:
+            self.available = True
+            if message.timestamp != None:
+                self.last_update = message.timestamp
+            if isinstance(message, NodeInfoResponse):
+                self._process_info_response(message)
+                self.stick.message_processed(message.seq_id)
             else:
-                self.stick.logger.debug(
-                    "Skip message, mac of node (%s) != mac at message (%s)",
-                    str(message.mac),
-                    str(self.mac),
-                )
+                self._on_message(message)
         else:
-            self.stick.logger.warning("Wrong message type: %s", type(message))
+            self.stick.logger.debug(
+                "Skip message, mac of node (%s) != mac at message (%s)",
+                message.mac.decode("ascii"),
+                self.mac.decode("ascii"),
+            )
 
     def _on_message(self, message):
         pass
@@ -129,16 +129,16 @@ class PlugwiseNode(object):
         """ Process info response message
         """
         self.stick.logger.debug(
-            "Response info message for plug with mac " + str(self.mac)
+            "Response info message for plug with mac " + self.mac.decode("ascii")
         )
         if message.relay_state.serialize() == b"01":
             self._relay_state = True
         else:
             self._relay_state = False
-        self.hardware_version = message.hw_ver
-        self.firmware_version = message.fw_ver
-        self._node_type = message.node_type
+        self._hardware_version = int(message.hw_ver.value)
+        self._firmware_version = message.fw_ver.value
+        self._node_type = message.node_type.value
         self.stick.logger.debug("Node type        = " + self.get_node_type())
         self.stick.logger.debug("Relay state      = " + str(self._relay_state))
-        self.stick.logger.debug("Hardware version = " + str(self.hardware_version))
-        self.stick.logger.debug("Firmware version = " + str(self.firmware_version))
+        self.stick.logger.debug("Hardware version = " + str(self._hardware_version))
+        self.stick.logger.debug("Firmware version = " + str(self._firmware_version))

@@ -39,7 +39,7 @@ class PlugwiseUSBConnection(StickConnection):
         self.stop = STOPBITS
         self.parity = serial.PARITY_NONE
         self.stick = stick
-        self.stick.logger.error("start serial port")
+        self.stick.logger.debug("start serial port")
         try:
             self.serial = serial.Serial(
                 port = self.port,
@@ -62,7 +62,7 @@ class PlugwiseUSBConnection(StickConnection):
                                                "write_packets_process", (), {})
         self._write_process.daemon = True
         self._write_process.start()
-        self.stick.logger.error("Serial port initialized")
+        self.stick.logger.debug("Serial port initialized")
 
     def stop(self):
         """Close serial port."""
@@ -93,7 +93,7 @@ class PlugwiseUSBConnection(StickConnection):
         """Write thread."""
         while True:
             (message, callback) = self._write_queue.get(block=True)
-            self.stick.logger.error("Sending %s to plugwise stick (%s)", message.__class__.__name__, message.serialize())
+            self.stick.logger.debug("Sending %s to plugwise stick (%s)", message.__class__.__name__, message.serialize())
             self._reader.write(message.serialize())
             time.sleep(SLEEP_TIME)
             if callback:

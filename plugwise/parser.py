@@ -35,8 +35,6 @@ class PlugwiseParser(object):
         if len(self._buffer) >= 8:
             if self._parsing == False:
                 self.parse_data()
-            else:
-                print("skip parsing")
 
     def next_message(self, message):
         """
@@ -88,10 +86,6 @@ class PlugwiseParser(object):
                             "Skip acknowledge message with sequence id : "
                             + str(self._buffer[8:12])
                         )
-                        print(
-                            "Acknowledge message with sequence id : "
-                            + str(self._buffer[8:12])
-                        )
                     elif footer_index < 28:
                         self.stick.logger.warning(
                             "Message %s to small, skip parsing",
@@ -111,7 +105,6 @@ class PlugwiseParser(object):
                                     self._message.__class__.__name__,
                                 )
                             else:
-                                print ("seq_id " + str(seq_id) + " not fond in expected list")
                                 self.stick.logger.warning(
                                     "No expected message type found for sequence id %s",
                                     str(seq_id),
