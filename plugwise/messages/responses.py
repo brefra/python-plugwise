@@ -86,8 +86,8 @@ class CircleScanResponse(NodeResponse):
     def __init__(self):
         NodeResponse.__init__(self)
         self.node_mac = String(None, length=16)
-        self.node_id = Int(0, length=2)
-        self.params += [self.node_mac, self.node_id]
+        self.node_address = Int(0, length=2)
+        self.params += [self.node_mac, self.node_address]
 
 
 class CircleCalibrationResponse(NodeResponse):

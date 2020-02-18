@@ -37,9 +37,9 @@ class CircleScanRequest(NodeRequest):
     """
     ID = b'0018'
 
-    def __init__(self, mac, node_id):
+    def __init__(self, mac, node_address):
         NodeRequest.__init__(self, mac)
-        self.args.append(Int(node_id, length=2))
+        self.args.append(Int(node_address, length=2))
 
 
 class CirclePowerUsageRequest(NodeRequest):

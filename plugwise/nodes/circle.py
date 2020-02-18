@@ -26,8 +26,8 @@ class PlugwiseCircle(PlugwiseNode):
     """provides interface to the Plugwise Circle nodes
     """
 
-    def __init__(self, mac, stick, info_message):
-        PlugwiseNode.__init__(self, mac, stick, info_message)
+    def __init__(self, mac, stick):
+        PlugwiseNode.__init__(self, mac, stick)
         self._pulse_1s = None
         self._pulse_8s = None
         self._pulse_hour = None
@@ -58,7 +58,7 @@ class PlugwiseCircle(PlugwiseNode):
             CirclePowerUsageRequest(self.mac), callback,
         )
 
-    def on_message(self, message):
+    def _on_message(self, message):
         """
         Process received message
         """
@@ -66,7 +66,7 @@ class PlugwiseCircle(PlugwiseNode):
             self._response_power_usage(message)
             if CALLBACK_POWER in self._callbacks:
                 for callback in self._callbacks[CALLBACK_POWER]:
-                    callback(get_power_usage())
+                    callback(self.get_power_usage())
             self.stick.message_processed(message.seq_id)
         elif isinstance(message, CircleSwitchResponse):
             self._response_switch(message)
@@ -86,9 +86,6 @@ class PlugwiseCircle(PlugwiseNode):
                 self.get_mac(),
             )
             self.stick.message_processed(message.seq_id)
-
-    def _on_message(self, message):
-        pass
 
     def _status_update_callbacks(self, value):
         for callback in self._callbacks:
