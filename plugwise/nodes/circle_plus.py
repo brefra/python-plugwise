@@ -49,7 +49,6 @@ class PlugwiseCirclePlus(PlugwiseCircle):
 
     def _process_scan_response(self, message):
         """ Process scan response message """
-        print ("Scan response : " + str(message.node_address.value))
         self.stick.logger.debug("Process scan response for address %s", message.node_address.value)
         if message.node_mac.value != b'FFFFFFFFFFFFFFFF':
             self.stick.logger.debug("Linked plugwise node with mac %s found", message.node_mac.value.decode("ascii"))
