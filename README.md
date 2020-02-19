@@ -3,13 +3,13 @@
 This library was created to extent my [Home Assisstant](https://home-assistant.io) setup with the [Plugwise](https://plugwise.com) stick to control the linked Circle+ and [Circle](https://www.plugwise.com/en_US/products/circle) plugs.
 As the primary goal is to support Plugwise nodes in Home Assistant, it can also be used independently.
 
-There's no official documentation available about the protocol of the Plugwise so this library is based on partial reverse engineering by Maarten Damen (https://maartendamen.com/category/plugwise-unleashed/)
+There's no official documentation available about the protocol of the Plugwise so this library is based on partial reverse engineering by [Maarten Damen](https://maartendamen.com/category/plugwise-unleashed/)
 and several other sources [bitbucket.org/hadara/python-plugwise](https://bitbucket.org/hadara/python-plugwise/wiki/Home) and [openHAB](https://github.com/openhab/openhab-addons)
 
 The latest version of the library is published as a python package on [pypi](https://pypi.python.org/pypi/python-plugwise) and currently supports the devices an functions listed below:
 
 | Plugwise node | Relay control | Power monitoring | Comments |
-| ----------- | ----------- | ----------- |
+| ----------- | ----------- | ----------- | ----------- |
 | Circle+ | Yes | Yes | Scan for linked nodes |
 | Circle | Yes | Yes | |
 | Scan | No | No | Not supported yet |
@@ -18,7 +18,7 @@ The latest version of the library is published as a python package on [pypi](htt
 | Stealth | No | No | Not supported yet |
 | Sting | No | No | Not supported yet |
 
-I would like to extend this library to support other Plugwise device types, unfortunately I do not own these devices so I'm unable to test. So feel free to submit pull requests or log issues through [github](httpS://github.com/brefra/python-plugwise) for functionality you like to have included.
+I would like to extend this library to support other Plugwise device types, unfortunately I do not own these devices so I'm unable to test. So feel free to submit pull requests or log issues through [github](https://github.com/brefra/python-plugwise) for functionality you like to have included.
 
 Note: This library does not support linking or removing nodes from the Plugwise network. You still need the Plugwise Source software for that.
 
