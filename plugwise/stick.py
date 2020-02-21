@@ -69,7 +69,6 @@ class stick(object):
         self.last_received_seq_id = None
         self.last_send_seq_id = None
         self.expected_responses = {}
-        self._init_callback = callback
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -90,7 +89,7 @@ class stick(object):
         )
         self._send_message_thread.daemon = True
         self._send_message_thread.start()
-        self.send(StickInitRequest())
+        self.send(StickInitRequest(), callback)
 
     def nodes(self) -> list:
         """ Return mac addresses of known plugwise nodes """
@@ -140,15 +139,13 @@ class stick(object):
 
             def timeout_expired():
                 if not self._discovery_finished:
-                    nodes_not_discovered = []
-                    for mac in self._nodes_to_discover:
+                    for (mac, address) in self._nodes_to_discover:
                         if mac not in self._plugwise_nodes.keys():
                             self.logger.warning(
                                 "Failed to discover Plugwise node "
                                 + str(mac)
                                 + " before timeout expired."
                             )
-                            nodes_not_discovered.append(mac)
                     if callback != None:
                         callback()
 
@@ -159,7 +156,7 @@ class stick(object):
             self.discover_timeout = threading.Timer(
                 discover_timeout, timeout_expired
             ).start()
-            for mac in nodes_to_discover:
+            for (mac, address) in nodes_to_discover:
                 self.send(
                     NodeInfoRequest(bytes(mac, "ascii")), node_discovered,
                 )
@@ -169,12 +166,12 @@ class stick(object):
         else:
             self.logger.warning("Plugwise stick not initialized yet.")
 
-    def _append_node(self, mac, node_type):
+    def _append_node(self, mac, address, node_type):
         """ Add Plugwise node to be controlled """
         if node_type == NODE_TYPE_CIRCLE:
-            self._plugwise_nodes[mac] = PlugwiseCircle(mac, self)
+            self._plugwise_nodes[mac] = PlugwiseCircle(mac, address, self)
         elif node_type == NODE_TYPE_CIRCLE_PLUS:
-            self._plugwise_nodes[mac] = PlugwiseCirclePlus(mac, self)
+            self._plugwise_nodes[mac] = PlugwiseCirclePlus(mac, address, self)
         else:
             self.logger.warning("Unsupported node type '%s'", str(node_type))
 
@@ -258,6 +255,10 @@ class stick(object):
     def _send_message_daemon(self):
         while True:
             (message, seq_id) = self._send_message_queue.get(block=True)
+            #if seq_id != inc_seq_id(self.last_received_seq_id) and self.last_received_seq_id != None:
+            #    # Mismatch between send queue and expected received queue
+            #    # probably due to an unexpected received message received
+            #    self.expected_responses[inc_seq_id(self.last_received_seq_id)] = self.expected_responses.pop(seq_id)
             self.connection.send(message)
             self.expected_responses[seq_id][4] = datetime.now()
             time.sleep(SLEEP_TIME)
@@ -322,13 +323,23 @@ class stick(object):
             self.network_id = message.network_id.value
             # The first StickInitResponse gives the actual sequence ID
             if b"0000" in self.expected_responses:
-                self.message_processed(b"0000")
+                seq_id = b"0000"
             else:
-                self.message_processed(message.seq_id)
-            self.discover_node(self.circle_plus_mac)
+                seq_id = message.seq_id
+            # Discover Circle+, and "move" callback to discovery
+            if self.expected_responses[seq_id][2] != None:
+                self.discover_node(self.circle_plus_mac, self.expected_responses[seq_id][2])
+            else:
+                self.discover_node(self.circle_plus_mac)
+            del self.expected_responses[seq_id]
         elif isinstance(message, NodeInfoResponse):
             if not mac in self._plugwise_nodes:
-                self._append_node(mac, message.node_type.value)
+                if message.node_type.value == NODE_TYPE_CIRCLE_PLUS:
+                    self._append_node(mac, 0, message.node_type.value)
+                else:
+                    for (mac_to_discover, address) in self._nodes_to_discover:
+                        if mac == mac_to_discover:
+                            self._append_node(mac, address, message.node_type.value)
             self._plugwise_nodes[mac].on_message(message)
         else:
             if mac in self._plugwise_nodes:
@@ -374,7 +385,7 @@ class stick(object):
         """
         if timer == None:
             # Timer based on number of circles
-            self._auto_update_timer = len(self._plugwise_nodes()) * 2
+            self._auto_update_timer = len(self._plugwise_nodes) * 2
             self._request_power_usage()
             return True
         elif timer == 0:

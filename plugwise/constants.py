@@ -32,3 +32,7 @@ SLEEP_TIME = 500 / 1000
 # Callback types
 CALLBACK_RELAY = "RELAY"
 CALLBACK_POWER = "POWER"
+
+# Home Assistant entities
+HA_SWITCH = "switch"
+HA_SENSOR = "sensor"

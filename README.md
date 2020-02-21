@@ -63,7 +63,7 @@ def discovery_finished():
     node.on_status_update("POWER", log_power_update)
 
     print("Start auto update")
-    plugwise.auto_update(10)
+    plugwise.auto_update()
 
     time.sleep(300)
 ```

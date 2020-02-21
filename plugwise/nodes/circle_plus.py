@@ -22,10 +22,14 @@ from plugwise.messages.responses import CircleScanResponse
 class PlugwiseCirclePlus(PlugwiseCircle):
     """provides interface to the Plugwise Circle+ nodes
     """
-    def __init__(self, mac, stick):
-        PlugwiseCircle.__init__(self, mac, stick)
+    def __init__(self, mac, address, stick):
+        PlugwiseCircle.__init__(self, mac, address, stick)
         self._plugwise_nodes = []
         self._scan_for_nodes_callback = None
+
+    def get_name(self) -> str:
+        """Return unique name"""
+        return self.get_node_type()
 
     def _on_message(self, message):
         """
@@ -52,7 +56,7 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         self.stick.logger.debug("Process scan response for address %s", message.node_address.value)
         if message.node_mac.value != b'FFFFFFFFFFFFFFFF':
             self.stick.logger.debug("Linked plugwise node with mac %s found", message.node_mac.value.decode("ascii"))
-            self._plugwise_nodes.append(message.node_mac.value.decode("ascii"))
+            self._plugwise_nodes.append([message.node_mac.value.decode("ascii"), message.node_address.value])
         if message.node_address.value == 63 and self._scan_for_nodes_callback != None:
             self._scan_for_nodes_callback(self._plugwise_nodes)
             self._scan_for_nodes_callback = None
