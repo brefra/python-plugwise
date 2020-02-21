@@ -26,8 +26,8 @@ class PlugwiseCircle(PlugwiseNode):
     """provides interface to the Plugwise Circle nodes
     """
 
-    def __init__(self, mac, stick):
-        PlugwiseNode.__init__(self, mac, stick)
+    def __init__(self, mac, address, stick):
+        PlugwiseNode.__init__(self, mac, address, stick)
         self._pulse_1s = None
         self._pulse_8s = None
         self._pulse_hour = None

@@ -11,6 +11,10 @@ import plugwise
 CALLBACK_RELAY = "RELAY"
 CALLBACK_POWER = "POWER"
 
+def scan_start():
+    print("start scan for Plugwise nodes (takes 1 minute)")
+    plugwise.scan(scan_finished)
+
 def scan_finished():
     """
     Callback for init finished
@@ -37,15 +41,14 @@ def scan_finished():
     node.on_status_update(CALLBACK_POWER, power_update)
 
     print("start auto update")
-    plugwise.auto_update(10)
+    plugwise.auto_update()
 
+
+## Main ##
 
 print("start connecting to stick")
 port = "com5"
-plugwise = plugwise.stick(port)
-time.sleep(5)
-print("start scan")
-plugwise.scan(scan_finished)
+plugwise = plugwise.stick(port, scan_start)
 
 time.sleep(300)
 print("stop auto update")

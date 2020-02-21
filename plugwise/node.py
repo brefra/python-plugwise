@@ -14,7 +14,7 @@ class PlugwiseNode(object):
     """provides interface to the Plugwise node devices
     """
 
-    def __init__(self, mac, stick):
+    def __init__(self, mac, address, stick):
         """
         will raise ValueError if mac doesn't look valid
         """
@@ -23,6 +23,7 @@ class PlugwiseNode(object):
             raise ValueError("MAC address is in unexpected format: " + str(mac))
         self.mac = bytes(mac, encoding="ascii")
         self.stick = stick
+        self._address = address
         self._callbacks = {}
         self.last_update = None
         self.available = False
@@ -37,6 +38,10 @@ class PlugwiseNode(object):
     def get_mac(self) -> str:
         """Return mac address"""
         return self.mac.decode("ascii")
+
+    def get_name(self) -> str:
+        """Return unique name"""
+        return self.get_node_type() + " (" + str(self._address) + ")"
 
     def get_node_type(self) -> str:
         """Return Circle type"""
@@ -55,6 +60,9 @@ class PlugwiseNode(object):
         elif self._node_type == NODE_TYPE_STICK:
             return "Stick"
         return "Unknown"
+
+    def get_categories(self) -> str:
+        return [HA_SWITCH]
 
     def get_hardware_version(self) -> str:
         """Return hardware version"""
