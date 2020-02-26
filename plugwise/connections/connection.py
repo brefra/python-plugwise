@@ -23,3 +23,9 @@ class StickConnection(object):
         :return: None
         """
         raise NotImplementedError
+
+    def stop(self):
+        """
+        :return: None
+        """
+        raise NotImplementedError

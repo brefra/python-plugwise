@@ -8,9 +8,10 @@ from plugwise.constants import (
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
+    CirclePowerUsageResponse,
+    CircleSwitchResponse,
     NodeInfoResponse,
     StickInitResponse,
-    CirclePowerUsageResponse,
 )
 from plugwise.util import inc_seq_id
 
@@ -40,8 +41,7 @@ class PlugwiseParser(object):
         """
         Process next packet if present
         """
-        if isinstance(message, PlugwiseMessage):
-            self.stick.new_message(message)
+        self.stick.new_message(message)
 
     def parse_data(self):
         """
@@ -86,6 +86,7 @@ class PlugwiseParser(object):
                             "Skip acknowledge message with sequence id : "
                             + str(self._buffer[8:12])
                         )
+                        self.stick.last_ack_seq_id = self._buffer[8:12]                      
                     elif footer_index < 28:
                         self.stick.logger.warning(
                             "Message %s to small, skip parsing",
@@ -109,7 +110,6 @@ class PlugwiseParser(object):
                                     "No expected message type found for sequence id %s",
                                     str(seq_id),
                                 )
-                                self.stick.last_received_seq_id = seq_id
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):
                         if len(self._buffer[: footer_index + 2]) == len(self._message):
