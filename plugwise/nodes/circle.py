@@ -68,12 +68,22 @@ class PlugwiseCircle(PlugwiseNode):
                 for callback in self._callbacks[CALLBACK_POWER]:
                     callback(self.get_power_usage())
             self.stick.message_processed(message.seq_id)
+            self.stick.logger.debug(
+                "Power update for %s, last update %s",
+                self.get_mac(),
+                str(self.last_update),
+            )
         elif isinstance(message, CircleSwitchResponse):
             self._response_switch(message)
             if CALLBACK_RELAY in self._callbacks:
                 for callback in self._callbacks[CALLBACK_RELAY]:
                     callback(self._relay_state)
             self.stick.message_processed(message.seq_id)
+            self.stick.logger.debug(
+                "Switch update for %s, last update %s",
+                self.get_mac(),
+                str(self.last_update),
+            )
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
             self.stick.message_processed(message.seq_id)
@@ -87,25 +97,21 @@ class PlugwiseCircle(PlugwiseNode):
             )
             self.stick.message_processed(message.seq_id)
 
-    def _status_update_callbacks(self, value):
-        for callback in self._callbacks:
-            callback(self._relay_state)
-
-    def on_status_update(self, state, callback):
+    def on_status_update(self, callback, state="both"):
         """
         Callback to execute when status is updated
         """
-        if state == CALLBACK_RELAY or state == CALLBACK_POWER:
-            if state not in self._callbacks:
-                self._callbacks[state] = []
-            self._callbacks[state].append(callback)
-        else:
-            self.stick.logger.warning(
-                "Wrong callback type '%s', should be '%s' or '%s'",
-                state,
-                CALLBACK_RELAY,
-                CALLBACK_POWER,
-            )
+        if state == CALLBACK_RELAY or state == "both":
+            if CALLBACK_RELAY not in self._callbacks:
+                self._callbacks[CALLBACK_RELAY] = []
+            self._callbacks[CALLBACK_RELAY].append(callback)
+        if state == CALLBACK_POWER or state == "both":
+            if CALLBACK_POWER not in self._callbacks:
+                self._callbacks[CALLBACK_POWER] = []
+            self._callbacks[CALLBACK_POWER].append(callback)
+
+    def get_categories(self) -> str:
+        return [HA_SWITCH, HA_SENSOR]
 
     def is_on(self):
         """

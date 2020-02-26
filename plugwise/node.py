@@ -26,6 +26,7 @@ class PlugwiseNode(object):
         self._address = address
         self._callbacks = {}
         self.last_update = None
+        self.last_request = None
         self.available = False
         self._node_type = None
         self._hardware_version = None
@@ -95,8 +96,23 @@ class PlugwiseNode(object):
         """
         assert isinstance(message, PlugwiseMessage)
         if message.mac == self.mac:
-            self.available = True
+            self.stick.logger.debug(
+                "node.py, new %s message for %s",
+                message.__class__.__name__,
+                self.mac.decode("ascii"),
+            )
+            if self.available == False:
+                self.available = True
+                self.stick.logger.debug(
+                    "Make node %s available",
+                    self.mac.decode("ascii"),
+                )
             if message.timestamp != None:
+                self.stick.logger.debug(
+                    "node.py, self last update %s message last update %s",
+                    str(self.last_update),
+                    str(message.timestamp),
+                )
                 self.last_update = message.timestamp
             if isinstance(message, NodeInfoResponse):
                 self._process_info_response(message)
@@ -112,26 +128,6 @@ class PlugwiseNode(object):
 
     def _on_message(self, message):
         pass
-
-    def _status_update_callbacks(self, callback_value):
-        for callback in self._callbacks:
-            callback(callback_value)
-
-    def on_status_update(self, state, callback):
-        """
-        Callback to execute when status is updated
-        """
-        if state == CALLBACK_RELAY or state == CALLBACK_POWER:
-            if state not in self._callbacks:
-                self._callbacks[state] = []
-            self._callbacks[state].append(callback)
-        else:
-            self.stick.logger.warning(
-                "Wrong callback type '%s', should be '%s' or '%s'",
-                state,
-                CALLBACK_RELAY,
-                CALLBACK_POWER,
-            )
 
     def _process_info_response(self, message):
         """ Process info response message

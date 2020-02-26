@@ -22,6 +22,7 @@ from plugwise.messages.responses import CircleScanResponse
 class PlugwiseCirclePlus(PlugwiseCircle):
     """provides interface to the Plugwise Circle+ nodes
     """
+
     def __init__(self, mac, address, stick):
         PlugwiseCircle.__init__(self, mac, address, stick)
         self._plugwise_nodes = []
@@ -53,10 +54,17 @@ class PlugwiseCirclePlus(PlugwiseCircle):
 
     def _process_scan_response(self, message):
         """ Process scan response message """
-        self.stick.logger.debug("Process scan response for address %s", message.node_address.value)
-        if message.node_mac.value != b'FFFFFFFFFFFFFFFF':
-            self.stick.logger.debug("Linked plugwise node with mac %s found", message.node_mac.value.decode("ascii"))
-            self._plugwise_nodes.append([message.node_mac.value.decode("ascii"), message.node_address.value])
+        self.stick.logger.debug(
+            "Process scan response for address %s", message.node_address.value
+        )
+        if message.node_mac.value != b"FFFFFFFFFFFFFFFF":
+            self.stick.logger.debug(
+                "Linked plugwise node with mac %s found",
+                message.node_mac.value.decode("ascii"),
+            )
+            self._plugwise_nodes.append(
+                [message.node_mac.value.decode("ascii"), message.node_address.value]
+            )
         if message.node_address.value == 63 and self._scan_for_nodes_callback != None:
             self._scan_for_nodes_callback(self._plugwise_nodes)
             self._scan_for_nodes_callback = None
