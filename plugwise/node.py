@@ -96,21 +96,17 @@ class PlugwiseNode(object):
         """
         assert isinstance(message, PlugwiseMessage)
         if message.mac == self.mac:
-            self.stick.logger.debug(
-                "node.py, new %s message for %s",
-                message.__class__.__name__,
-                self.mac.decode("ascii"),
-            )
             if self.available == False:
                 self.available = True
                 self.stick.logger.debug(
-                    "Make node %s available",
+                    "Mark node %s available",
                     self.mac.decode("ascii"),
                 )
             if message.timestamp != None:
                 self.stick.logger.debug(
-                    "node.py, self last update %s message last update %s",
+                    "Last update %s of node %s, last message %s",
                     str(self.last_update),
+                    self.mac.decode("ascii"),
                     str(message.timestamp),
                 )
                 self.last_update = message.timestamp
