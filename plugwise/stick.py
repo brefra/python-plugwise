@@ -327,7 +327,7 @@ class stick(object):
                 seq_id = b"0000"
             else:
                 seq_id = message.seq_id
-            # Discover Circle+, and "move" callback to discovery
+            # Discover Circle+, and "move" callback to discovery request
             if self.expected_responses[seq_id][2] != None:
                 self.discover_node(
                     self.circle_plus_mac, self.expected_responses[seq_id][2]
@@ -387,7 +387,7 @@ class stick(object):
                         if self._plugwise_nodes[mac].last_update != None:
                             if self._plugwise_nodes[mac].last_update < (
                                 datetime.now()
-                                - timedelta(seconds=(self._auto_update_timer * 10))
+                                - timedelta(seconds=((self._auto_update_timer + MESSAGE_TIME_OUT) * 10))
                             ):
                                 if self._plugwise_nodes[mac].available == True:
                                     self.logger.warning(
