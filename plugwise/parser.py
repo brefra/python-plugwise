@@ -9,6 +9,7 @@ from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
     CirclePowerUsageResponse,
+    CircleScanResponse,
     CircleSwitchResponse,
     NodeInfoResponse,
     StickInitResponse,
@@ -93,11 +94,24 @@ class PlugwiseParser(object):
                             self._buffer[: footer_index + 2],
                         )
                     else:
-                        # Check for stick init response
-                        if self._buffer[4:8] == b"0011":
+                        # Footer and Header available, check for known message id's
+                        message_id = self._buffer[4:8]
+                        if message_id == b"0011":
                             self._message = StickInitResponse()
+                        elif message_id == b"0013":
+                            self._message = CirclePowerUsageResponse()
+                        elif message_id == b"0019":
+                            self._message = CircleScanResponse()
+                        elif message_id == b"0024":
+                            self._message = NodeInfoResponse()
+                        elif message_id == b"0027":
+                            self._message = CircleCalibrationResponse()
                         else:
-                            # Footer and Header available, lookup expected message
+                            # Lookup expected message based on request
+                            self.stick.logger.warning(
+                                "Message id %s",
+                                str(self._buffer[4:8]),
+                            )
                             seq_id = self._buffer[8:12]
                             if seq_id in self.stick.expected_responses:
                                 self._message = self.stick.expected_responses[seq_id][0]
@@ -105,10 +119,20 @@ class PlugwiseParser(object):
                                     "Expected msgtype: %s",
                                     self._message.__class__.__name__,
                                 )
+                                self.stick.logger.warning(
+                                    "Message id %s for %s",
+                                    str(self._buffer[4:8]),
+                                    self._message.__class__.__name__,
+                                )
                             else:
                                 self.stick.logger.warning(
-                                    "No expected message type found for sequence id %s",
+                                    "No expected message type found for sequence id %s in %s",
                                     str(seq_id),
+                                    self.stick.expected_responses.keys(),
+                                )
+                                self.stick.logger.warning(
+                                    "Message %s",
+                                    self._buffer[: footer_index + 2],
                                 )
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):
