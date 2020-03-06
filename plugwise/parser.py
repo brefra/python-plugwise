@@ -81,16 +81,28 @@ class PlugwiseParser(object):
                     self.stick.logger.debug(
                         "Valid message footer found at index %s", str(footer_index)
                     )
+                    seq_id = self._buffer[8:12]
                     if footer_index == 20:
                         # Acknowledge message
                         self.stick.logger.debug(
                             "Skip acknowledge message with sequence id : "
-                            + str(self._buffer[8:12])
+                            + str(seq_id)
                         )
-                        self.stick.last_ack_seq_id = self._buffer[8:12]                      
+                        if self.stick.last_ack_seq_id != None:
+                            if seq_id == inc_seq_id(self.stick.last_ack_seq_id):
+                                self.stick.last_ack_seq_id = seq_id
+                            else:
+                                self.stick.logger.warning(
+                                    "Missed acknowledge message with sequence id, received : "
+                                    + str(seq_id)
+                                    + " expected : "
+                                    + str(inc_seq_id(self.stick.last_ack_seq_id))
+                                )
+                        else:
+                            self.stick.last_ack_seq_id = seq_id
                     elif footer_index < 28:
                         self.stick.logger.warning(
-                            "Message %s to small, skip parsing",
+                            "Received message %s to small, skip parsing",
                             self._buffer[: footer_index + 2],
                         )
                     else:
@@ -108,11 +120,11 @@ class PlugwiseParser(object):
                             self._message = CircleCalibrationResponse()
                         else:
                             # Lookup expected message based on request
-                            self.stick.logger.warning(
-                                "Message id %s",
-                                str(self._buffer[4:8]),
-                            )
-                            seq_id = self._buffer[8:12]
+                            if message_id != b"0000":
+                                self.stick.logger.warning(
+                                    "Message id %s",
+                                    str(message_id),
+                                )
                             if seq_id in self.stick.expected_responses:
                                 self._message = self.stick.expected_responses[seq_id][0]
                                 self.stick.logger.debug(
