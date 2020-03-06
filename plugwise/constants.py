@@ -27,7 +27,7 @@ PLUGWISE_EPOCH = 2000
 PULSES_PER_KW_SECOND = 468.9385193
 
 # Default sleep between sending messages
-SLEEP_TIME = 500 / 1000
+SLEEP_TIME = 150 / 1000
 
 # Callback types
 CALLBACK_RELAY = "RELAY"
