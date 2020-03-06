@@ -37,6 +37,10 @@ class PlugwiseCircle(PlugwiseNode):
         self._off_tot = None
         self._request_calibration()
 
+    def get_name(self) -> str:
+        """Return unique name"""
+        return self.get_node_type()
+
     def _request_calibration(self, callback=None):
         """Request calibration info
         """
@@ -88,7 +92,8 @@ class PlugwiseCircle(PlugwiseNode):
             self._response_calibration(message)
             self.stick.message_processed(message.seq_id)
         elif isinstance(message, CircleScanResponse):
-            self._on_message(message)
+            self._process_scan_response(message)
+            self.stick.message_processed(message.seq_id)
         else:
             self.stick.logger.debug(
                 "Unsupported message type '%s' received for circle with mac %s",
@@ -96,6 +101,9 @@ class PlugwiseCircle(PlugwiseNode):
                 self.get_mac(),
             )
             self.stick.message_processed(message.seq_id)
+
+    def _process_scan_response(self, message):
+        pass
 
     def on_status_update(self, callback, state="both"):
         """
