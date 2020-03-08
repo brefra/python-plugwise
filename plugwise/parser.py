@@ -2,6 +2,9 @@
 
 import logging
 from plugwise.constants import (
+    ACK_ERROR,
+    ACK_SUCCESS,
+    ACK_TIMEOUT,
     MESSAGE_FOOTER,
     MESSAGE_HEADER,
 )
@@ -84,22 +87,38 @@ class PlugwiseParser(object):
                     seq_id = self._buffer[8:12]
                     if footer_index == 20:
                         # Acknowledge message
-                        self.stick.logger.debug(
-                            "Skip acknowledge message with sequence id : "
-                            + str(seq_id)
-                        )
-                        if self.stick.last_ack_seq_id != None:
-                            if seq_id == inc_seq_id(self.stick.last_ack_seq_id):
-                                self.stick.last_ack_seq_id = seq_id
+                        ack_id = int(self._buffer[12:16], 16)
+                        if ack_id == ACK_SUCCESS:
+                            if self.stick.last_ack_seq_id != None:
+                                if seq_id == inc_seq_id(self.stick.last_ack_seq_id):
+                                    self.stick.last_ack_seq_id = seq_id
+                                else:
+                                    self.stick.logger.warning(
+                                        "Missed acknowledge message with sequence id, received : "
+                                        + str(seq_id)
+                                        + " expected : "
+                                        + str(inc_seq_id(self.stick.last_ack_seq_id))
+                                    )
                             else:
-                                self.stick.logger.warning(
-                                    "Missed acknowledge message with sequence id, received : "
-                                    + str(seq_id)
-                                    + " expected : "
-                                    + str(inc_seq_id(self.stick.last_ack_seq_id))
-                                )
+                                self.stick.last_ack_seq_id = seq_id
+                        elif ack_id == ACK_TIMEOUT:
+                            self.stick.logger.debug(
+                                "Timeout acknowledge on message request with sequence id "
+                                + str(seq_id)
+                            )
+                            self.stick.message_processed(seq_id, ack_id)
+                        elif ack_id == ACK_ERROR:
+                            self.stick.logger.warning(
+                                "Error acknowledge on message request with sequence id "
+                                + str(seq_id)
+                            )
+                            self.stick.message_processed(seq_id, ack_id)
                         else:
-                            self.stick.last_ack_seq_id = seq_id
+                            self.stick.logger.warning(
+                                "Acknowledge message type "
+                                + str(int(self._buffer[12:16], 16))
+                                + " received"
+                            )
                     elif footer_index < 28:
                         self.stick.logger.warning(
                             "Received message %s to small, skip parsing",
@@ -128,13 +147,9 @@ class PlugwiseParser(object):
                             if seq_id in self.stick.expected_responses:
                                 self._message = self.stick.expected_responses[seq_id][0]
                                 self.stick.logger.debug(
-                                    "Expected msgtype: %s",
+                                    "Expected %s for message id %s",
                                     self._message.__class__.__name__,
-                                )
-                                self.stick.logger.warning(
-                                    "Message id %s for %s",
-                                    str(self._buffer[4:8]),
-                                    self._message.__class__.__name__,
+                                    str(message_id),
                                 )
                             else:
                                 self.stick.logger.warning(
