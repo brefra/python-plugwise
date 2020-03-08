@@ -207,4 +207,6 @@ class PlugwiseCircle(PlugwiseNode):
     def _pulses_to_kWs(self, pulses):
         """converts the pulse count to kWs
         """
-        return pulses / PULSES_PER_KW_SECOND
+        if pulses != None:
+            return pulses / PULSES_PER_KW_SECOND
+        return 0
