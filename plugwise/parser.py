@@ -15,6 +15,7 @@ from plugwise.messages.responses import (
     CircleScanResponse,
     CircleSwitchResponse,
     NodeInfoResponse,
+    NodePingResponse,
     StickInitResponse,
 )
 from plugwise.util import inc_seq_id
@@ -137,6 +138,8 @@ class PlugwiseParser(object):
                             self._message = NodeInfoResponse()
                         elif message_id == b"0027":
                             self._message = CircleCalibrationResponse()
+                        elif message_id == b"000E":
+                            self._message = NodePingResponse()
                         else:
                             # Lookup expected message based on request
                             if message_id != b"0000":

@@ -27,7 +27,7 @@ class StickInitRequest(NodeRequest):
     def __init__(self):
         """message for that initializes the Stick"""
         # init is the only request message that doesn't send MAC address
-        NodeRequest.__init__(self, "")
+        super().__init__("")
 
 
 class CircleScanRequest(NodeRequest):
@@ -38,12 +38,16 @@ class CircleScanRequest(NodeRequest):
     ID = b'0018'
 
     def __init__(self, mac, node_address):
-        NodeRequest.__init__(self, mac)
+        super().__init__(mac)
         self.args.append(Int(node_address, length=2))
 
 
 class CirclePowerUsageRequest(NodeRequest):
     ID = b"0012"
+
+
+class NodePingRequest(NodeRequest):
+    ID = b"000D"
 
 
 class NodeInfoRequest(NodeRequest):
@@ -58,7 +62,7 @@ class PlugwiseClockSetRequest(NodeRequest):
     ID = b"0016"
 
     def __init__(self, mac, dt):
-        NodeRequest.__init__(self, mac)
+        super().__init__(mac)
         passed_days = dt.day - 1
         month_minutes = (passed_days * 24 * 60) + (dt.hour * 60) + dt.minute
         d = DateTime(dt.year, dt.month, month_minutes)
@@ -75,7 +79,7 @@ class CircleSwitchRequest(NodeRequest):
     ID = b"0017"
 
     def __init__(self, mac, on):
-        NodeRequest.__init__(self, mac)
+        super().__init__(mac)
         val = 1 if on == True else 0
         self.args.append(Int(val, length=2))
 
@@ -88,5 +92,5 @@ class CirclePowerBufferRequest(NodeRequest):
     ID = b"0048"
 
     def __init__(self, mac, log_address):
-        NodeRequest.__init__(self, mac)
+        super().__init__(mac)
         self.args.append(LogAddr(log_address, 8))

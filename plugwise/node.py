@@ -5,8 +5,8 @@ General node object to control associated plugwise nodes like: Circle+, Circle, 
 """
 from plugwise.constants import *
 from plugwise.message import PlugwiseMessage
-from plugwise.messages.responses import NodeInfoResponse
-from plugwise.messages.requests import NodeInfoRequest
+from plugwise.messages.responses import NodeInfoResponse, NodePingResponse
+from plugwise.messages.requests import NodeInfoRequest, NodePingRequest
 from plugwise.util import validate_mac
 
 
@@ -28,6 +28,9 @@ class PlugwiseNode(object):
         self.last_update = None
         self.last_request = None
         self.available = False
+        self.in_RSSI = None
+        self.out_RSSI = None
+        self.ping_ms = None
         self._node_type = None
         self._hardware_version = None
         self._firmware_version = None
@@ -83,11 +86,34 @@ class PlugwiseNode(object):
             return str(self.last_update)
         return "Unknown"
 
+    def get_in_RSSI(self) -> int:
+        """Return inbound RSSI level"""
+        if self.in_RSSI != None:
+            return self.in_RSSI
+        return 0
+
+    def get_out_RSSI(self) -> int:
+        """Return outbound RSSI level"""
+        if self.out_RSSI != None:
+            return self.out_RSSI
+        return 0
+
+    def get_ping(self) -> int:
+        """Return ping roundtrip"""
+        if self.ping_ms != None:
+            return self.ping_ms
+        return 0
+
     def _request_info(self, callback=None):
-        """ Request info from node
-        """
+        """ Request info from node"""
         self.stick.send(
             NodeInfoRequest(self.mac), callback,
+        )
+
+    def ping(self, callback=None):
+        """ Ping node"""
+        self.stick.send(
+            NodePingRequest(self.mac), callback,
         )
 
     def on_message(self, message):
@@ -113,6 +139,11 @@ class PlugwiseNode(object):
             if isinstance(message, NodeInfoResponse):
                 self._process_info_response(message)
                 self.stick.message_processed(message.seq_id)
+            elif isinstance(message, NodePingResponse):
+                self.in_RSSI = message.in_RSSI.value
+                self.out_RSSI = message.out_RSSI.value
+                self.ping_ms = message.ping_ms.value
+                self.stick.message_processed(message.seq_id)
             else:
                 self._on_message(message)
         else:
@@ -126,8 +157,7 @@ class PlugwiseNode(object):
         pass
 
     def _process_info_response(self, message):
-        """ Process info response message
-        """
+        """ Process info response message"""
         self.stick.logger.debug(
             "Response info message for plug with mac " + self.mac.decode("ascii")
         )
