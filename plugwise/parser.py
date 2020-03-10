@@ -90,28 +90,21 @@ class PlugwiseParser(object):
                         # Acknowledge message
                         ack_id = int(self._buffer[12:16], 16)
                         if ack_id == ACK_SUCCESS:
-                            if self.stick.last_ack_seq_id != None:
-                                if seq_id == inc_seq_id(self.stick.last_ack_seq_id):
-                                    self.stick.last_ack_seq_id = seq_id
-                                else:
-                                    self.stick.logger.warning(
-                                        "Missed acknowledge message with sequence id, received : "
-                                        + str(seq_id)
-                                        + " expected : "
-                                        + str(inc_seq_id(self.stick.last_ack_seq_id))
-                                    )
-                            else:
-                                self.stick.last_ack_seq_id = seq_id
+                            self.stick.last_ack_seq_id = seq_id
+                            self.stick.logger.debug(
+                                "Success acknowledge on message request with sequence id %s",
+                                str(seq_id),
+                            )
                         elif ack_id == ACK_TIMEOUT:
                             self.stick.logger.debug(
-                                "Timeout acknowledge on message request with sequence id "
-                                + str(seq_id)
+                                "Timeout acknowledge on message request with sequence id %s",
+                                str(seq_id),
                             )
                             self.stick.message_processed(seq_id, ack_id)
                         elif ack_id == ACK_ERROR:
                             self.stick.logger.warning(
-                                "Error acknowledge on message request with sequence id "
-                                + str(seq_id)
+                                "Error acknowledge on message request with sequence id %s",
+                                str(seq_id),
                             )
                             self.stick.message_processed(seq_id, ack_id)
                         else:
