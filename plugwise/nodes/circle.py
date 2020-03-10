@@ -26,8 +26,8 @@ class PlugwiseCircle(PlugwiseNode):
     """provides interface to the Plugwise Circle nodes
     """
 
-    def __init__(self, mac, stick):
-        PlugwiseNode.__init__(self, mac, stick)
+    def __init__(self, mac, address, stick):
+        PlugwiseNode.__init__(self, mac, address, stick)
         self._pulse_1s = None
         self._pulse_8s = None
         self._pulse_hour = None
@@ -36,6 +36,10 @@ class PlugwiseCircle(PlugwiseNode):
         self._off_ruis = None
         self._off_tot = None
         self._request_calibration()
+
+    def get_name(self) -> str:
+        """Return unique name"""
+        return self.get_node_type()
 
     def _request_calibration(self, callback=None):
         """Request calibration info
@@ -68,17 +72,28 @@ class PlugwiseCircle(PlugwiseNode):
                 for callback in self._callbacks[CALLBACK_POWER]:
                     callback(self.get_power_usage())
             self.stick.message_processed(message.seq_id)
+            self.stick.logger.debug(
+                "Power update for %s, last update %s",
+                self.get_mac(),
+                str(self.last_update),
+            )
         elif isinstance(message, CircleSwitchResponse):
             self._response_switch(message)
             if CALLBACK_RELAY in self._callbacks:
                 for callback in self._callbacks[CALLBACK_RELAY]:
                     callback(self._relay_state)
             self.stick.message_processed(message.seq_id)
+            self.stick.logger.debug(
+                "Switch update for %s, last update %s",
+                self.get_mac(),
+                str(self.last_update),
+            )
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
             self.stick.message_processed(message.seq_id)
         elif isinstance(message, CircleScanResponse):
-            self._on_message(message)
+            self._process_scan_response(message)
+            self.stick.message_processed(message.seq_id)
         else:
             self.stick.logger.debug(
                 "Unsupported message type '%s' received for circle with mac %s",
@@ -87,25 +102,24 @@ class PlugwiseCircle(PlugwiseNode):
             )
             self.stick.message_processed(message.seq_id)
 
-    def _status_update_callbacks(self, value):
-        for callback in self._callbacks:
-            callback(self._relay_state)
+    def _process_scan_response(self, message):
+        pass
 
-    def on_status_update(self, state, callback):
+    def on_status_update(self, callback, state="both"):
         """
         Callback to execute when status is updated
         """
-        if state == CALLBACK_RELAY or state == CALLBACK_POWER:
-            if state not in self._callbacks:
-                self._callbacks[state] = []
-            self._callbacks[state].append(callback)
-        else:
-            self.stick.logger.warning(
-                "Wrong callback type '%s', should be '%s' or '%s'",
-                state,
-                CALLBACK_RELAY,
-                CALLBACK_POWER,
-            )
+        if state == CALLBACK_RELAY or state == "both":
+            if CALLBACK_RELAY not in self._callbacks:
+                self._callbacks[CALLBACK_RELAY] = []
+            self._callbacks[CALLBACK_RELAY].append(callback)
+        if state == CALLBACK_POWER or state == "both":
+            if CALLBACK_POWER not in self._callbacks:
+                self._callbacks[CALLBACK_POWER] = []
+            self._callbacks[CALLBACK_POWER].append(callback)
+
+    def get_categories(self) -> str:
+        return [HA_SWITCH, HA_SENSOR]
 
     def is_on(self):
         """
@@ -193,4 +207,6 @@ class PlugwiseCircle(PlugwiseNode):
     def _pulses_to_kWs(self, pulses):
         """converts the pulse count to kWs
         """
-        return pulses / PULSES_PER_KW_SECOND
+        if pulses != None:
+            return pulses / PULSES_PER_KW_SECOND
+        return 0

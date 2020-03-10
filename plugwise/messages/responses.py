@@ -22,7 +22,7 @@ from plugwise.util import (
 
 class NodeResponse(PlugwiseMessage):
     def __init__(self):
-        PlugwiseMessage.__init__(self)
+        super().__init__()
         self.params = []
         self.mac = None
         self.timestamp = datetime.now()
@@ -65,7 +65,7 @@ class StickInitResponse(NodeResponse):
     ID = b"0011"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.unknown1 = Int(0, length=2)
         self.network_is_online = Int(0, length=2)
         self.circle_plus_mac = String(None, length=16)
@@ -80,11 +80,26 @@ class StickInitResponse(NodeResponse):
         ]
 
 
+class NodePingResponse(NodeResponse):
+    ID = b"000E"
+
+    def __init__(self):
+        super().__init__()
+        self.in_RSSI = Int(0, length=2)
+        self.out_RSSI = Int(0, length=2)
+        self.ping_ms= Int(0, length=4)
+        self.params += [
+            self.in_RSSI,
+            self.out_RSSI,
+            self.ping_ms,
+        ]
+
+
 class CircleScanResponse(NodeResponse):
     ID = b"0019"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.node_mac = String(None, length=16)
         self.node_address = Int(0, length=2)
         self.params += [self.node_mac, self.node_address]
@@ -94,7 +109,7 @@ class CircleCalibrationResponse(NodeResponse):
     ID = b"0027"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.gain_a = Float(0, 8)
         self.gain_b = Float(0, 8)
         self.off_tot = Float(0, 8)
@@ -106,7 +121,7 @@ class CircleClockInfoResponse(NodeResponse):
     ID = b"003F"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.time = Time()
         self.day_of_week = Int(0, 2)
         self.unknown = Int(0, 2)
@@ -121,7 +136,7 @@ class CirclePowerUsageResponse(NodeResponse):
     ID = b"0013"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.pulse_1s = Int(0, 4)
         self.pulse_8s = Int(0, 4)
         self.pulse_hour = Int(0, 8)
@@ -146,7 +161,7 @@ class CirclePowerBufferResponse(NodeResponse):
     ID = b"0049"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.logdate1 = DateTime()
         self.pulses1 = Int(0, 8)
         self.logdate2 = DateTime()
@@ -173,7 +188,7 @@ class NodeInfoResponse(NodeResponse):
     ID = b"0024"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.datetime = DateTime()
         self.last_logaddr = LogAddr(0, length=8)
         self.relay_state = Int(0, length=2)
@@ -196,7 +211,7 @@ class CircleSwitchResponse(NodeResponse):
     ID = b"0099"
 
     def __init__(self):
-        NodeResponse.__init__(self)
+        super().__init__()
         self.unknown = None
         self.relay_state = None
 

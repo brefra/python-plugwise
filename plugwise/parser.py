@@ -2,15 +2,21 @@
 
 import logging
 from plugwise.constants import (
+    ACK_ERROR,
+    ACK_SUCCESS,
+    ACK_TIMEOUT,
     MESSAGE_FOOTER,
     MESSAGE_HEADER,
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
-    NodeInfoResponse,
-    StickInitResponse,
     CirclePowerUsageResponse,
+    CircleScanResponse,
+    CircleSwitchResponse,
+    NodeInfoResponse,
+    NodePingResponse,
+    StickInitResponse,
 )
 from plugwise.util import inc_seq_id
 
@@ -40,8 +46,7 @@ class PlugwiseParser(object):
         """
         Process next packet if present
         """
-        if isinstance(message, PlugwiseMessage):
-            self.stick.new_message(message)
+        self.stick.new_message(message)
 
     def parse_data(self):
         """
@@ -80,36 +85,85 @@ class PlugwiseParser(object):
                     self.stick.logger.debug(
                         "Valid message footer found at index %s", str(footer_index)
                     )
+                    seq_id = self._buffer[8:12]
                     if footer_index == 20:
                         # Acknowledge message
-                        self.stick.logger.debug(
-                            "Skip acknowledge message with sequence id : "
-                            + str(self._buffer[8:12])
-                        )
+                        ack_id = int(self._buffer[12:16], 16)
+                        if ack_id == ACK_SUCCESS:
+                            if self.stick.last_ack_seq_id != None:
+                                if seq_id == inc_seq_id(self.stick.last_ack_seq_id):
+                                    self.stick.last_ack_seq_id = seq_id
+                                else:
+                                    self.stick.logger.warning(
+                                        "Missed acknowledge message with sequence id, received : "
+                                        + str(seq_id)
+                                        + " expected : "
+                                        + str(inc_seq_id(self.stick.last_ack_seq_id))
+                                    )
+                            else:
+                                self.stick.last_ack_seq_id = seq_id
+                        elif ack_id == ACK_TIMEOUT:
+                            self.stick.logger.debug(
+                                "Timeout acknowledge on message request with sequence id "
+                                + str(seq_id)
+                            )
+                            self.stick.message_processed(seq_id, ack_id)
+                        elif ack_id == ACK_ERROR:
+                            self.stick.logger.warning(
+                                "Error acknowledge on message request with sequence id "
+                                + str(seq_id)
+                            )
+                            self.stick.message_processed(seq_id, ack_id)
+                        else:
+                            self.stick.logger.warning(
+                                "Acknowledge message type "
+                                + str(int(self._buffer[12:16], 16))
+                                + " received"
+                            )
                     elif footer_index < 28:
                         self.stick.logger.warning(
-                            "Message %s to small, skip parsing",
+                            "Received message %s to small, skip parsing",
                             self._buffer[: footer_index + 2],
                         )
                     else:
-                        # Check for stick init response
-                        if self._buffer[4:8] == b"0011":
+                        # Footer and Header available, check for known message id's
+                        message_id = self._buffer[4:8]
+                        if message_id == b"0011":
                             self._message = StickInitResponse()
+                        elif message_id == b"0013":
+                            self._message = CirclePowerUsageResponse()
+                        elif message_id == b"0019":
+                            self._message = CircleScanResponse()
+                        elif message_id == b"0024":
+                            self._message = NodeInfoResponse()
+                        elif message_id == b"0027":
+                            self._message = CircleCalibrationResponse()
+                        elif message_id == b"000E":
+                            self._message = NodePingResponse()
                         else:
-                            # Footer and Header available, lookup expected message
-                            seq_id = self._buffer[8:12]
+                            # Lookup expected message based on request
+                            if message_id != b"0000":
+                                self.stick.logger.warning(
+                                    "Message id %s",
+                                    str(message_id),
+                                )
                             if seq_id in self.stick.expected_responses:
                                 self._message = self.stick.expected_responses[seq_id][0]
                                 self.stick.logger.debug(
-                                    "Expected msgtype: %s",
+                                    "Expected %s for message id %s",
                                     self._message.__class__.__name__,
+                                    str(message_id),
                                 )
                             else:
                                 self.stick.logger.warning(
-                                    "No expected message type found for sequence id %s",
+                                    "No expected message type found for sequence id %s in %s",
                                     str(seq_id),
+                                    self.stick.expected_responses.keys(),
                                 )
-                                self.stick.last_received_seq_id = seq_id
+                                self.stick.logger.warning(
+                                    "Message %s",
+                                    self._buffer[: footer_index + 2],
+                                )
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):
                         if len(self._buffer[: footer_index + 2]) == len(self._message):

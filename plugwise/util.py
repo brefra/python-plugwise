@@ -29,14 +29,16 @@ def validate_mac(mac):
 
 def inc_seq_id(seq_id, value=1):
     """
-    Increment sequence id by 1
+    Increment sequence id by value
 
     :return: 4 bytes
     """
-    temp = str(hex(int(seq_id, 16) + value)).lstrip("0x").upper()
-    while len(temp) < 4:
-        temp = "0" + temp
-    return temp.encode()
+    temp_int = int(seq_id, 16) + value
+    if temp_int >= 65536: temp_int = 0
+    temp_str = str(hex(temp_int)).lstrip("0x").upper()
+    while len(temp_str) < 4:
+        temp_str = "0" + temp_str
+    return temp_str.encode()
 
 
 class PlugwiseException(Exception):
