@@ -71,7 +71,7 @@ def scan_start():
         node = plugwise.node(plugwise.nodes()[0])
         mac = node.get_mac()
         print("Register callback for power use updates of node " + mac)
-        node.on_status_update(power_update, CALLBACK_POWER)
+        node.register_callback(power_update, CALLBACK_POWER)
 
         print("start auto update every 10 sec")
         plugwise.auto_update(10)
