@@ -29,10 +29,6 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         self._scan_for_nodes_callback = None
         self._print_progress = False
 
-    def get_name(self) -> str:
-        """Return unique name"""
-        return self.get_node_type()
-
     def scan_for_nodes(self, callback=None):
         self._scan_for_nodes_callback = callback
         for node_address in range(0, 64):

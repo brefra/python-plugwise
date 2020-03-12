@@ -406,7 +406,7 @@ class stick(object):
                     if not isinstance(self.expected_responses[seq_id][1], StickInitRequest):
                         mac = self.expected_responses[seq_id][1].mac.decode("ascii")
                         if mac in self._plugwise_nodes:
-                            if self._plugwise_nodes[mac].available:
+                            if self._plugwise_nodes[mac].get_available():
                                 self.send(
                                     self.expected_responses[seq_id][1],
                                     self.expected_responses[seq_id][2],
@@ -427,13 +427,13 @@ class stick(object):
                     if not isinstance(self.expected_responses[seq_id][1], StickInitRequest):
                         mac = self.expected_responses[seq_id][1].mac.decode("ascii")
                         if mac in self._plugwise_nodes:
-                            if self._plugwise_nodes[mac].is_active():
+                            if self._plugwise_nodes[mac].get_available():
                                 self.logger.warning(
                                     "Mark %s as unavailabe because max (%s) time out responses reached",
                                     mac,
                                     str(MESSAGE_RETRY + 1),
                                 )
-                                self._plugwise_nodes[mac].available = False
+                                self._plugwise_nodes[mac].set_available(False)
             elif ack_response == None :
                 if self.expected_responses[seq_id][2] != None:
                     self.expected_responses[seq_id][2]()
@@ -462,7 +462,7 @@ class stick(object):
                     self.logger.debug("Request current power usage for node %s", mac)
                     if self._auto_update_first_run == False and self._auto_update_timer != None:
                         # Only request update if node is available
-                        if self._plugwise_nodes[mac].available:
+                        if self._plugwise_nodes[mac].get_available():
                             self.logger.debug(
                                 "Node '%s' is available for update request, last update (%s)",
                                 mac,
@@ -473,12 +473,12 @@ class stick(object):
                                     datetime.now()
                                     - timedelta(seconds=((self._auto_update_timer + MESSAGE_TIME_OUT) * 10))
                                 ):
-                                    if self._plugwise_nodes[mac].available:
+                                    if self._plugwise_nodes[mac].get_available():
                                         self.logger.warning(
                                             "Mark node '%s' as unavailable because of no response to last 10 update requests",
                                             mac,
                                         )
-                                        self._plugwise_nodes[mac].available = False
+                                        self._plugwise_nodes[mac].set_available(False)
                             # Skip update request if there is still an request expected to be received
                             open_requests_found = False
                             for seq_id in list(self.expected_responses.keys()):
