@@ -27,7 +27,7 @@ class PlugwiseNode(object):
         self._callbacks = {}
         self.last_update = None
         self.last_request = None
-        self.available = False
+        self._available = False
         self.in_RSSI = None
         self.out_RSSI = None
         self.ping_ms = None
@@ -36,8 +36,24 @@ class PlugwiseNode(object):
         self._firmware_version = None
         self._relay_state = None
 
-    def is_active(self) -> bool:
-        return self.available
+    def get_available(self) -> bool:
+        return self._available
+
+    def set_available(self, state):
+        if state == True:
+            if self._available == False:
+                self._available = True
+                self.stick.logger.warning(
+                    "Mark node %s available",
+                    self.mac.decode("ascii"),
+                )
+        else:
+            if self._available == True:
+                self._available = False
+                self.stick.logger.warning(
+                    "Mark node %s unavailable",
+                    self.mac.decode("ascii"),
+                )
 
     def get_mac(self) -> str:
         """Return mac address"""
@@ -122,12 +138,7 @@ class PlugwiseNode(object):
         """
         assert isinstance(message, PlugwiseMessage)
         if message.mac == self.mac:
-            if self.available == False:
-                self.available = True
-                self.stick.logger.debug(
-                    "Mark node %s available",
-                    self.mac.decode("ascii"),
-                )
+            self.set_available(True)
             if message.timestamp != None:
                 self.stick.logger.debug(
                     "Last update %s of node %s, last message %s",

@@ -61,7 +61,7 @@ def scan_start():
         for mac in plugwise.nodes():
             print ("- type  : " + str(plugwise.node(mac).get_node_type()))
             print ("- mac   : " + mac)
-            print ("- state : " + str(plugwise.node(mac).available))
+            print ("- state : " + str(plugwise.node(mac).get_available()))
             print ("- update: " + str(plugwise.node(mac).get_last_update()))
             print ("- hw ver: " + str(plugwise.node(mac).get_hardware_version()))
             print ("- fw ver: " + str(plugwise.node(mac).get_firmware_version()))
