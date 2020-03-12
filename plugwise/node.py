@@ -43,14 +43,14 @@ class PlugwiseNode(object):
         if state == True:
             if self._available == False:
                 self._available = True
-                self.stick.logger.warning(
+                self.stick.logger.debug(
                     "Mark node %s available",
                     self.mac.decode("ascii"),
                 )
         else:
             if self._available == True:
                 self._available = False
-                self.stick.logger.warning(
+                self.stick.logger.debug(
                     "Mark node %s unavailable",
                     self.mac.decode("ascii"),
                 )
