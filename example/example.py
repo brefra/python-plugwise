@@ -30,7 +30,7 @@ def scan_start():
         for mac in plugwise.nodes():
             print ("- type  : " + str(plugwise.node(mac).get_node_type()))
             print ("- mac   : " + mac)
-            print ("- state : " + str(plugwise.node(mac).available))
+            print ("- state : " + str(plugwise.node(mac).get_available()))
             print ("- update: " + str(plugwise.node(mac).get_last_update()))
             print ("- hw ver: " + str(plugwise.node(mac).get_hardware_version()))
             print ("- fw ver: " + str(plugwise.node(mac).get_firmware_version()))
@@ -44,6 +44,10 @@ def scan_start():
 
         print("start auto update every 10 sec")
         plugwise.auto_update(10)
+        time.sleep(5)
+        plugwise.node("000D6F00003FD440").turn_on()
+        time.sleep(5)
+        plugwise.node("000D6F00003FD440").turn_off()
 
     plugwise.scan(scan_finished, True)
 
