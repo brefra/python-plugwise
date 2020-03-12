@@ -39,7 +39,7 @@ class PlugwiseNode(object):
     def get_available(self) -> bool:
         return self._available
 
-    def set_available(self, state):
+    def set_available(self, state, request_info=False):
         if state == True:
             if self._available == False:
                 self._available = True
@@ -47,6 +47,11 @@ class PlugwiseNode(object):
                     "Mark node %s available",
                     self.mac.decode("ascii"),
                 )
+                if CALLBACK_ALL in self._callbacks:
+                    for callback in self._callbacks[CALLBACK_ALL]:
+                        callback(None)
+                if request_info:
+                    self._request_info()
         else:
             if self._available == True:
                 self._available = False
@@ -54,6 +59,9 @@ class PlugwiseNode(object):
                     "Mark node %s unavailable",
                     self.mac.decode("ascii"),
                 )
+                if CALLBACK_ALL in self._callbacks:
+                    for callback in self._callbacks[CALLBACK_ALL]:
+                        callback(None)
 
     def get_mac(self) -> str:
         """Return mac address"""
@@ -138,7 +146,6 @@ class PlugwiseNode(object):
         """
         assert isinstance(message, PlugwiseMessage)
         if message.mac == self.mac:
-            self.set_available(True)
             if message.timestamp != None:
                 self.stick.logger.debug(
                     "Last update %s of node %s, last message %s",
@@ -148,6 +155,7 @@ class PlugwiseNode(object):
                 )
                 self.last_update = message.timestamp
             if isinstance(message, NodeInfoResponse):
+                self.set_available(True)
                 self._process_info_response(message)
                 self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodePingResponse):
@@ -155,7 +163,9 @@ class PlugwiseNode(object):
                 self.out_RSSI = message.out_RSSI.value
                 self.ping_ms = message.ping_ms.value
                 self.stick.message_processed(message.seq_id)
+                self.set_available(True, True)
             else:
+                self.set_available(True)
                 self._on_message(message)
         else:
             self.stick.logger.debug(
