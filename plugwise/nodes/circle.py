@@ -37,10 +37,6 @@ class PlugwiseCircle(PlugwiseNode):
         self._off_tot = None
         self._request_calibration()
 
-    def get_name(self) -> str:
-        """Return unique name"""
-        return self.get_node_type()
-
     def _request_calibration(self, callback=None):
         """Request calibration info
         """
