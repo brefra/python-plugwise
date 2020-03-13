@@ -106,9 +106,7 @@ class PlugwiseNode(object):
 
     def get_last_update(self) -> str:
         """Return  version"""
-        if self.last_update != None:
-            return str(self.last_update)
-        return "Unknown"
+        return self.last_update
 
     def get_in_RSSI(self) -> int:
         """Return inbound RSSI level"""
