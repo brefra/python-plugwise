@@ -468,17 +468,6 @@ class stick(object):
                                 mac,
                                 str(self._plugwise_nodes[mac].get_last_update()),
                             )
-                            if self._plugwise_nodes[mac].last_update != None:
-                                if self._plugwise_nodes[mac].last_update < (
-                                    datetime.now()
-                                    - timedelta(seconds=((self._auto_update_timer + MESSAGE_TIME_OUT) * 10))
-                                ):
-                                    if self._plugwise_nodes[mac].get_available():
-                                        self.logger.warning(
-                                            "Mark node '%s' as unavailable because of no response to last 10 update requests",
-                                            mac,
-                                        )
-                                        self._plugwise_nodes[mac].set_available(False)
                             # Skip update request if there is still an request expected to be received
                             open_requests_found = False
                             for seq_id in list(self.expected_responses.keys()):
@@ -490,20 +479,6 @@ class stick(object):
                                         open_requests_found = True
                                         break
                             if not open_requests_found:
-                                self._plugwise_nodes[mac].update_power_usage()
-                        else:
-                            # Do a power update request because last request is from more than 1 hour in the past
-                            self.logger.debug(
-                                "Node '%s' is unavailable, skip update request if last (%s) is 1 hour ago",
-                                mac,
-                                str(self._plugwise_nodes[mac].last_update),
-                            )
-                            if self._plugwise_nodes[mac].last_update != None:
-                                if self._plugwise_nodes[mac].last_update < (
-                                    datetime.now() - timedelta(seconds=3600)
-                                ):
-                                    self._plugwise_nodes[mac].update_power_usage()
-                            else:
                                 self._plugwise_nodes[mac].update_power_usage()
                     else:
                         if self._auto_update_timer != None:
