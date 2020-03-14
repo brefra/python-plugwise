@@ -170,7 +170,6 @@ class PlugwiseCircle(PlugwiseNode):
             raise ValueError("1h pulse counter seems to contain an unreasonable value")
         else:
             self._pulse_hour = message.pulse_hour.value
-        self.last_update = message.timestamp
         self._do_circle_callbacks(CALLBACK_POWER)
 
 
@@ -178,7 +177,6 @@ class PlugwiseCircle(PlugwiseNode):
         for x in ("gain_a", "gain_b", "off_ruis", "off_tot"):
             val = getattr(message, x).value
             setattr(self, "_" + x, val)
-        self.last_update = message.timestamp
 
     def _pulse_correction(self, pulses, seconds=1):
         """correct pulse count with Circle specific calibration offsets
