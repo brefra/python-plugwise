@@ -137,8 +137,7 @@ class PlugwiseParser(object):
                             # Lookup expected message based on request
                             if message_id != b"0000":
                                 self.stick.logger.warning(
-                                    "Message id %s",
-                                    str(message_id),
+                                    "Message id %s", str(message_id),
                                 )
                             if seq_id in self.stick.expected_responses:
                                 self._message = self.stick.expected_responses[seq_id][0]
@@ -154,8 +153,7 @@ class PlugwiseParser(object):
                                     self.stick.expected_responses.keys(),
                                 )
                                 self.stick.logger.warning(
-                                    "Message %s",
-                                    self._buffer[: footer_index + 2],
+                                    "Message %s", self._buffer[: footer_index + 2],
                                 )
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):

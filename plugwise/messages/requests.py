@@ -35,7 +35,8 @@ class CircleScanRequest(NodeRequest):
     Get all linked Circle plugs from Circle+
     a Plugwise network can have 64 devices the node ID value has a range from 0 to 63    
     """
-    ID = b'0018'
+
+    ID = b"0018"
 
     def __init__(self, mac, node_address):
         super().__init__(mac)

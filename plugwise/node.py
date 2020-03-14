@@ -44,8 +44,7 @@ class PlugwiseNode(object):
             if self._available == False:
                 self._available = True
                 self.stick.logger.debug(
-                    "Mark node %s available",
-                    self.mac.decode("ascii"),
+                    "Mark node %s available", self.mac.decode("ascii"),
                 )
                 self._do_all_callbacks()
                 if request_info:
@@ -54,8 +53,7 @@ class PlugwiseNode(object):
             if self._available == True:
                 self._available = False
                 self.stick.logger.debug(
-                    "Mark node %s unavailable",
-                    self.mac.decode("ascii"),
+                    "Mark node %s unavailable", self.mac.decode("ascii"),
                 )
                 self._do_all_callbacks()
 
@@ -195,7 +193,7 @@ class PlugwiseNode(object):
     def _process_info_response(self, message):
         """ Process info response message"""
         self.stick.logger.debug(
-            "Response info message for plug with mac " + self.mac.decode("ascii")
+            "Response info message for plug %s", self.mac.decode("ascii")
         )
         if message.relay_state.serialize() == b"01":
             if not self._relay_state:
@@ -208,7 +206,7 @@ class PlugwiseNode(object):
         self._hardware_version = int(message.hw_ver.value)
         self._firmware_version = message.fw_ver.value
         self._node_type = message.node_type.value
-        self.stick.logger.debug("Node type        = " + self.get_node_type())
-        self.stick.logger.debug("Relay state      = " + str(self._relay_state))
-        self.stick.logger.debug("Hardware version = " + str(self._hardware_version))
-        self.stick.logger.debug("Firmware version = " + str(self._firmware_version))
+        self.stick.logger.debug("Node type        = %s", self.get_node_type())
+        self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
+        self.stick.logger.debug("Hardware version = %s", str(self._hardware_version))
+        self.stick.logger.debug("Firmware version = %s", str(self._firmware_version))

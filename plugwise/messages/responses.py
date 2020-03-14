@@ -87,7 +87,7 @@ class NodePingResponse(NodeResponse):
         super().__init__()
         self.in_RSSI = Int(0, length=2)
         self.out_RSSI = Int(0, length=2)
-        self.ping_ms= Int(0, length=4)
+        self.ping_ms = Int(0, length=4)
         self.params += [
             self.in_RSSI,
             self.out_RSSI,
