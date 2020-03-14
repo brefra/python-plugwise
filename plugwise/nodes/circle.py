@@ -64,7 +64,6 @@ class PlugwiseCircle(PlugwiseNode):
         """
         if isinstance(message, CirclePowerUsageResponse):
             self._response_power_usage(message)
-            self.do_callback(CALLBACK_POWER)
             self.stick.message_processed(message.seq_id)
             self.stick.logger.debug(
                 "Power update for %s, last update %s",
@@ -73,7 +72,6 @@ class PlugwiseCircle(PlugwiseNode):
             )
         elif isinstance(message, CircleSwitchResponse):
             self._response_switch(message)
-            self.do_callback(CALLBACK_RELAY)
             self.stick.message_processed(message.seq_id)
             self.stick.logger.debug(
                 "Switch update for %s, last update %s",
@@ -97,43 +95,17 @@ class PlugwiseCircle(PlugwiseNode):
     def _process_scan_response(self, message):
         pass
 
-    def do_callback(self, callback_type):
-        """
-        Execute registered callbacks
-        """
+    def _do_circle_callbacks(self, callback_type):
+        """ Execute callbacks registered for power and relay updates """
         if callback_type == CALLBACK_RELAY:
             if CALLBACK_RELAY in self._callbacks:
                 for callback in self._callbacks[CALLBACK_RELAY]:
                     callback(self._relay_state)
-            else:
-                if CALLBACK_ALL in self._callbacks:
-                    for callback in self._callbacks[CALLBACK_ALL]:
-                        callback(None)
-        if callback_type == CALLBACK_POWER:
+        elif callback_type == CALLBACK_POWER:
             if CALLBACK_POWER in self._callbacks:
                 for callback in self._callbacks[CALLBACK_POWER]:
                     callback(self.get_power_usage())
-            else:
-                if CALLBACK_ALL in self._callbacks:
-                    for callback in self._callbacks[CALLBACK_ALL]:
-                        callback(None)
-
-    def register_callback(self, callback, state=CALLBACK_ALL):
-        """
-        Callback to execute when status is updated
-        """
-        if state == CALLBACK_RELAY:
-            if CALLBACK_RELAY not in self._callbacks:
-                self._callbacks[CALLBACK_RELAY] = []
-            self._callbacks[CALLBACK_RELAY].append(callback)
-        if state == CALLBACK_POWER:
-            if CALLBACK_POWER not in self._callbacks:
-                self._callbacks[CALLBACK_POWER] = []
-            self._callbacks[CALLBACK_POWER].append(callback)
-        if state == CALLBACK_ALL:
-            if CALLBACK_ALL not in self._callbacks:
-                self._callbacks[CALLBACK_ALL] = []
-            self._callbacks[CALLBACK_ALL].append(callback)
+        self._do_all_callbacks()
 
     def get_categories(self) -> str:
         return [HA_SWITCH, HA_SENSOR]
@@ -174,9 +146,13 @@ class PlugwiseCircle(PlugwiseNode):
         """ Process switch response message
         """
         if message.relay_state == b"D8":
-            self._relay_state = True
+            if not self._relay_state:
+                self._relay_state = True
+                self._do_circle_callbacks(CALLBACK_RELAY)
         else:
-            self._relay_state = False
+            if self._relay_state:
+                self._relay_state = False
+                self._do_circle_callbacks(CALLBACK_RELAY)
 
     def _response_power_usage(self, message):
         # sometimes the circle returns max values for some of the pulse counters
@@ -195,6 +171,8 @@ class PlugwiseCircle(PlugwiseNode):
         else:
             self._pulse_hour = message.pulse_hour.value
         self.last_update = message.timestamp
+        self._do_circle_callbacks(CALLBACK_POWER)
+
 
     def _response_calibration(self, message):
         for x in ("gain_a", "gain_b", "off_ruis", "off_tot"):

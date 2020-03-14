@@ -34,7 +34,7 @@ class PlugwiseNode(object):
         self._node_type = None
         self._hardware_version = None
         self._firmware_version = None
-        self._relay_state = None
+        self._relay_state = False
 
     def get_available(self) -> bool:
         return self._available
@@ -47,9 +47,7 @@ class PlugwiseNode(object):
                     "Mark node %s available",
                     self.mac.decode("ascii"),
                 )
-                if CALLBACK_ALL in self._callbacks:
-                    for callback in self._callbacks[CALLBACK_ALL]:
-                        callback(None)
+                self._do_all_callbacks()
                 if request_info:
                     self._request_info()
         else:
@@ -59,9 +57,7 @@ class PlugwiseNode(object):
                     "Mark node %s unavailable",
                     self.mac.decode("ascii"),
                 )
-                if CALLBACK_ALL in self._callbacks:
-                    for callback in self._callbacks[CALLBACK_ALL]:
-                        callback(None)
+                self._do_all_callbacks()
 
     def get_mac(self) -> str:
         """Return mac address"""
@@ -175,15 +171,40 @@ class PlugwiseNode(object):
     def _on_message(self, message):
         pass
 
+    def register_callback(self, callback, state=CALLBACK_ALL):
+        """ Register callback to execute when state change happens """
+        if state == CALLBACK_RELAY:
+            if CALLBACK_RELAY not in self._callbacks:
+                self._callbacks[CALLBACK_RELAY] = []
+            self._callbacks[CALLBACK_RELAY].append(callback)
+        if state == CALLBACK_POWER:
+            if CALLBACK_POWER not in self._callbacks:
+                self._callbacks[CALLBACK_POWER] = []
+            self._callbacks[CALLBACK_POWER].append(callback)
+        if state == CALLBACK_ALL:
+            if CALLBACK_ALL not in self._callbacks:
+                self._callbacks[CALLBACK_ALL] = []
+            self._callbacks[CALLBACK_ALL].append(callback)
+
+    def _do_all_callbacks(self):
+        """ Execute callbacks registered for all updates """
+        if CALLBACK_ALL in self._callbacks:
+            for callback in self._callbacks[CALLBACK_ALL]:
+                callback(None)
+
     def _process_info_response(self, message):
         """ Process info response message"""
         self.stick.logger.debug(
             "Response info message for plug with mac " + self.mac.decode("ascii")
         )
         if message.relay_state.serialize() == b"01":
-            self._relay_state = True
+            if not self._relay_state:
+                self._relay_state = True
+                self._do_all_callbacks()
         else:
-            self._relay_state = False
+            if self._relay_state:
+                self._relay_state = False
+                self._do_all_callbacks()
         self._hardware_version = int(message.hw_ver.value)
         self._firmware_version = message.fw_ver.value
         self._node_type = message.node_type.value
