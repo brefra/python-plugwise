@@ -32,7 +32,6 @@ class PlugwiseCirclePlus(PlugwiseCircle):
     def scan_for_nodes(self, callback=None):
         self._scan_for_nodes_callback = callback
         for node_address in range(0, 64):
-        #for node_address in range(0, 10):
             self.stick.send(CircleScanRequest(self.mac, node_address))
 
     def _process_scan_response(self, message):
@@ -63,6 +62,5 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                     + " => no node found"
                 )
         if message.node_address.value == 63 and self._scan_for_nodes_callback != None:
-        #if message.node_address.value == 9 and self._scan_for_nodes_callback != None:
             self._scan_for_nodes_callback(self._plugwise_nodes)
             self._scan_for_nodes_callback = None

@@ -172,7 +172,6 @@ class PlugwiseCircle(PlugwiseNode):
             self._pulse_hour = message.pulse_hour.value
         self._do_circle_callbacks(CALLBACK_POWER)
 
-
     def _response_calibration(self, message):
         for x in ("gain_a", "gain_b", "off_ruis", "off_tot"):
             val = getattr(message, x).value
