@@ -5,16 +5,19 @@ Plugwise Circle node object
 """
 import logging
 from plugwise.constants import *
+from datetime import date, datetime, timedelta
 from plugwise.node import PlugwiseNode
 
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
     CircleCalibrationRequest,
+    CirclePowerBufferRequest,
     CirclePowerUsageRequest,
     CircleSwitchRequest,
 )
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
+    CirclePowerBufferResponse,
     CirclePowerUsageResponse,
     CircleScanResponse,
     CircleSwitchResponse,
@@ -36,6 +39,8 @@ class PlugwiseCircle(PlugwiseNode):
         self._off_ruis = None
         self._off_tot = None
         self._request_calibration()
+        self._power_history = {}
+        self._last_hour_usage = 0
 
     def _request_calibration(self, callback=None):
         """Request calibration info
@@ -81,16 +86,14 @@ class PlugwiseCircle(PlugwiseNode):
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
             self.stick.message_processed(message.seq_id)
-        elif isinstance(message, CircleScanResponse):
-            self._process_scan_response(message)
+        elif isinstance(message, CirclePowerBufferResponse):
+            self._response_power_buffer(message)
             self.stick.message_processed(message.seq_id)
         else:
-            self.stick.logger.debug(
-                "Unsupported message type '%s' received for circle with mac %s",
-                str(message.__class__.__name__),
-                self.get_mac(),
-            )
-            self.stick.message_processed(message.seq_id)
+            self._circle_plus_message(message)
+        
+    def _circle_plus_message(self, message):
+        pass
 
     def _process_scan_response(self, message):
         pass
@@ -202,3 +205,42 @@ class PlugwiseCircle(PlugwiseNode):
         if pulses != None:
             return pulses / PULSES_PER_KW_SECOND
         return 0
+
+        """Collect power history info of today and yesterday
+        for log_address in range(self._last_log_address - logs, self._last_log_address + 1, ):
+            self._request_power_buffer(log_address)
+
+    def _request_power_buffer(self, log_address=None, callback=None):
+        """Request power log of specified address
+        """
+        if log_address == None:
+            log_address = self._last_log_address
+        self.stick.send(
+            CirclePowerBufferRequest(self.mac, log_address), callback,
+        )
+    def _response_power_buffer(self, message):
+        """returns information about historical power usage
+        each response contains 4 log buffers and each log buffer contains data for 1 hour
+        """
+                dt = getattr(message, "logdate%d" % (i,)).value
+        # TODO cleanup history for more than 2 day's ago
+
+    def get_power_last_hour(self):
+        """ Total power use of last hour """
+        return self._last_hour_usage
+
+    def get_power_today(self):
+        """ Total power use of today in Wh"""
+        today_power = 0
+        for dt in self._power_history:
+            if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == datetime.now().today().date():
+                today_power += self._power_history[dt]
+        return round(today_power, 3)
+
+    def get_power_yesterday(self):
+        """ Return total power use of yesterday in Wh"""
+        yesterday_power = 0
+        for dt in self._power_history:
+            if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == (datetime.now().today().date() - timedelta(days=1)):
+                yesterday_power += self._power_history[dt]
+        return round(yesterday_power, 3)

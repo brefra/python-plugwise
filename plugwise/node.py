@@ -4,9 +4,19 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 General node object to control associated plugwise nodes like: Circle+, Circle, Scan, Stealth
 """
 from plugwise.constants import *
+from datetime import datetime
 from plugwise.message import PlugwiseMessage
-from plugwise.messages.responses import NodeInfoResponse, NodePingResponse
-from plugwise.messages.requests import NodeInfoRequest, NodePingRequest
+from plugwise.messages.responses import (
+    NodeClockResponse,
+    NodeInfoResponse,
+    NodePingResponse,
+)
+from plugwise.messages.requests import (
+    NodeClockGetRequest,
+    NodeClockSetRequest,
+    NodeInfoRequest,
+    NodePingRequest,
+)
 from plugwise.util import validate_mac
 
 
@@ -35,6 +45,8 @@ class PlugwiseNode(object):
         self._hardware_version = None
         self._firmware_version = None
         self._relay_state = False
+        self._last_log_address = None
+        self._clock_offset = None
 
     def get_available(self) -> bool:
         return self._available
@@ -98,7 +110,7 @@ class PlugwiseNode(object):
             return str(self._firmware_version)
         return "Unknown"
 
-    def get_last_update(self) -> str:
+    def get_last_update(self) -> datetime:
         """Return  version"""
         return self.last_update
 
@@ -146,16 +158,19 @@ class PlugwiseNode(object):
                     str(message.timestamp),
                 )
                 self.last_update = message.timestamp
-            if isinstance(message, NodeInfoResponse):
-                self.set_available(True)
-                self._process_info_response(message)
-                self.stick.message_processed(message.seq_id)
-            elif isinstance(message, NodePingResponse):
+            if isinstance(message, NodePingResponse):
                 self.in_RSSI = message.in_RSSI.value
                 self.out_RSSI = message.out_RSSI.value
                 self.ping_ms = message.ping_ms.value
-                self.stick.message_processed(message.seq_id)
                 self.set_available(True, True)
+                self.stick.message_processed(message.seq_id)
+            elif isinstance(message, NodeInfoResponse):
+                if not self._available:
+                    self.stick.logger.warning("Info msg for node %s while node is unavailable", self.get_mac())
+                self.stick.message_processed(message.seq_id)
+            elif isinstance(message, NodeClockResponse):
+                self._response_clock(message)
+                self.stick.message_processed(message.seq_id)
             else:
                 self.set_available(True)
                 self._on_message(message)
@@ -206,7 +221,45 @@ class PlugwiseNode(object):
         self._hardware_version = int(message.hw_ver.value)
         self._firmware_version = message.fw_ver.value
         self._node_type = message.node_type.value
+        self._last_log_address = message.last_logaddr.value
         self.stick.logger.debug("Node type        = %s", self.get_node_type())
         self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
         self.stick.logger.debug("Hardware version = %s", str(self._hardware_version))
         self.stick.logger.debug("Firmware version = %s", str(self._firmware_version))
+
+    def get_clock(self, callback=None):
+        """ get current datetime of internal clock of CirclePlus """
+        self.stick.send(
+            NodeClockGetRequest(self.mac), callback,
+        )
+
+    def _response_clock(self, message):
+        dt = datetime(
+            message.timestamp.year,
+            message.timestamp.month,
+            message.timestamp.day,
+            message.time.value.hour,
+            message.time.value.minute,
+            message.time.value.second,
+        )
+        clock_offset = message.timestamp.replace(microsecond=0) - (dt + self.stick.timezone_delta)
+        if clock_offset.days == -1:
+            self._clock_offset = clock_offset.seconds - 86400
+        else:
+            self._clock_offset = clock_offset.seconds
+        self.stick.logger.debug("Realtime clock has drifted " + str(self._clock_offset) + " sec")
+
+    def set_clock(self, callback=None):
+        """ set internal clock of CirclePlus """
+        self.stick.send(
+            NodeClockSetRequest(self.mac, datetime.utcnow()), callback,
+        )
+
+    def sync_clock(self, max_drift=MAX_TIME_DRIFT) -> bool:
+        """ Resync clock of node if time has drifted more than max drifted
+        """
+        if self._clock_offset != None:
+            if self._clock_offset > max_drift or self._clock_offset < max_drift:
+                self.set_clock()
+                return True
+        return False

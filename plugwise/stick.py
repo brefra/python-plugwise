@@ -26,8 +26,9 @@ from plugwise.connections.socket import SocketConnection
 from plugwise.connections.serial import PlugwiseUSBConnection
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
-    CircleScanRequest,
+    CirclePlusScanRequest,
     CircleCalibrationRequest,
+    CirclePlusRealTimeClockSetRequest,
     CirclePowerUsageRequest,
     CircleSwitchRequest,
     NodeInfoRequest,
@@ -70,6 +71,8 @@ class stick(object):
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = False
+        self.timezone_delta = datetime.now() - datetime.utcnow()
+
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -227,7 +230,7 @@ class stick(object):
             response_message = CircleSwitchResponse()
         elif isinstance(request, CircleCalibrationRequest):
             response_message = CircleCalibrationResponse()
-        elif isinstance(request, CircleScanRequest):
+        elif isinstance(request, CirclePlusScanRequest):
             response_message = CircleScanResponse()
         elif isinstance(request, StickInitRequest):
             response_message = StickInitResponse()
