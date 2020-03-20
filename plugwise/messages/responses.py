@@ -15,8 +15,11 @@ from plugwise.util import (
     Float,
     Int,
     LogAddr,
+    RealClockDate,
+    RealClockTime,
     String,
     UnixTimestamp,
+    Time,
 )
 
 
@@ -61,50 +64,6 @@ class NodeResponse(PlugwiseMessage):
         return 34 + arglen
 
 
-class StickInitResponse(NodeResponse):
-    ID = b"0011"
-
-    def __init__(self):
-        super().__init__()
-        self.unknown1 = Int(0, length=2)
-        self.network_is_online = Int(0, length=2)
-        self.circle_plus_mac = String(None, length=16)
-        self.network_id = Int(0, length=4)
-        self.unknown2 = Int(0, length=2)
-        self.params += [
-            self.unknown1,
-            self.network_is_online,
-            self.circle_plus_mac,
-            self.network_id,
-            self.unknown2,
-        ]
-
-
-class NodePingResponse(NodeResponse):
-    ID = b"000E"
-
-    def __init__(self):
-        super().__init__()
-        self.in_RSSI = Int(0, length=2)
-        self.out_RSSI = Int(0, length=2)
-        self.ping_ms = Int(0, length=4)
-        self.params += [
-            self.in_RSSI,
-            self.out_RSSI,
-            self.ping_ms,
-        ]
-
-
-class CircleScanResponse(NodeResponse):
-    ID = b"0019"
-
-    def __init__(self):
-        super().__init__()
-        self.node_mac = String(None, length=16)
-        self.node_address = Int(0, length=2)
-        self.params += [self.node_mac, self.node_address]
-
-
 class CircleCalibrationResponse(NodeResponse):
     ID = b"0027"
 
@@ -117,16 +76,19 @@ class CircleCalibrationResponse(NodeResponse):
         self.params += [self.gain_a, self.gain_b, self.off_tot, self.off_ruis]
 
 
-class CircleClockInfoResponse(NodeResponse):
-    ID = b"003F"
+class CirclePlusRealTimeClockResponse(NodeResponse):
+    """returns the real time clock of CirclePlus node
+    """
+
+    ID = b"003A"
 
     def __init__(self):
         super().__init__()
-        self.time = Time()
-        self.day_of_week = Int(0, 2)
-        self.unknown = Int(0, 2)
-        self.unknown2 = Int(0, 4)
-        self.params += [self.time, self.day_of_week, self.unknown, self.unknown2]
+
+        self.time = RealClockTime()
+        self.day_of_week = Int(0, length=2)
+        self.date = RealClockDate()
+        self.params += [self.time, self.day_of_week, self.date]
 
 
 class CirclePowerUsageResponse(NodeResponse):
@@ -184,27 +146,14 @@ class CirclePowerBufferResponse(NodeResponse):
         ]
 
 
-class NodeInfoResponse(NodeResponse):
-    ID = b"0024"
+class CircleScanResponse(NodeResponse):
+    ID = b"0019"
 
     def __init__(self):
         super().__init__()
-        self.datetime = DateTime()
-        self.last_logaddr = LogAddr(0, length=8)
-        self.relay_state = Int(0, length=2)
-        self.hz = Int(0, length=2)
-        self.hw_ver = String(None, length=12)
-        self.fw_ver = UnixTimestamp(0)
-        self.node_type = Int(0, length=2)
-        self.params += [
-            self.datetime,
-            self.last_logaddr,
-            self.relay_state,
-            self.hz,
-            self.hw_ver,
-            self.fw_ver,
-            self.node_type,
-        ]
+        self.node_mac = String(None, length=16)
+        self.node_address = Int(0, length=2)
+        self.params += [self.node_mac, self.node_address]
 
 
 class CircleSwitchResponse(NodeResponse):
@@ -243,3 +192,73 @@ class CircleSwitchResponse(NodeResponse):
 
     def __len__(self):
         return 38
+
+
+class NodeClockResponse(NodeResponse):
+    ID = b"003F"
+
+    def __init__(self):
+        super().__init__()
+        self.time = Time()
+        self.day_of_week = Int(0, 2)
+        self.unknown = Int(0, 2)
+        self.unknown2 = Int(0, 4)
+        self.params += [self.time, self.day_of_week, self.unknown, self.unknown2]
+
+
+class NodeInfoResponse(NodeResponse):
+    ID = b"0024"
+
+    def __init__(self):
+        super().__init__()
+        self.datetime = DateTime()
+        self.last_logaddr = LogAddr(0, length=8)
+        self.relay_state = Int(0, length=2)
+        self.hz = Int(0, length=2)
+        self.hw_ver = String(None, length=12)
+        self.fw_ver = UnixTimestamp(0)
+        self.node_type = Int(0, length=2)
+        self.params += [
+            self.datetime,
+            self.last_logaddr,
+            self.relay_state,
+            self.hz,
+            self.hw_ver,
+            self.fw_ver,
+            self.node_type,
+        ]
+
+
+class NodePingResponse(NodeResponse):
+    ID = b"000E"
+
+    def __init__(self):
+        super().__init__()
+        self.in_RSSI = Int(0, length=2)
+        self.out_RSSI = Int(0, length=2)
+        self.ping_ms = Int(0, length=4)
+        self.params += [
+            self.in_RSSI,
+            self.out_RSSI,
+            self.ping_ms,
+        ]
+
+
+class StickInitResponse(NodeResponse):
+    ID = b"0011"
+
+    def __init__(self):
+        super().__init__()
+        self.unknown1 = Int(0, length=2)
+        self.network_is_online = Int(0, length=2)
+        self.circle_plus_mac = String(None, length=16)
+        self.network_id = Int(0, length=4)
+        self.unknown2 = Int(0, length=2)
+        self.params += [
+            self.unknown1,
+            self.network_is_online,
+            self.circle_plus_mac,
+            self.network_id,
+            self.unknown2,
+        ]
+

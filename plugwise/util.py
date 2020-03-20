@@ -146,9 +146,9 @@ class DateTime(CompositeType):
                 self.year.value, self.month.value, days + 1, hours, minutes
             )
         except ValueError:
-            debug(
-                "encountered value error while attempting to construct datetime object"
-            )
+            #debug(
+            #    "encountered value error while attempting to construct datetime object"
+            #)
             self.value = None
 
 
@@ -169,6 +169,59 @@ class Time(CompositeType):
         )
 
 
+class RealClockTime(CompositeType):
+    """time value as used in the realtime clock info response"""
+
+    def __init__(self, hour=0, minute=0, second=0 ):
+        CompositeType.__init__(self)
+        if hour < 10:
+            self.hour = String("0" + str(hour), 2)
+        else:
+            self.hour = String(str(hour), 2)
+        if minute < 10:
+            self.minute = String(str(minute), 2)
+        else:
+            self.minute = String("0" + str(minute), 2)
+        if second < 10:
+            self.second = String(str(second), 2)
+        else:
+            self.second = String("0" + str(second), 2)
+        self.contents += [self.second, self.minute, self.hour]
+
+    def unserialize(self, val):
+        CompositeType.unserialize(self, val)
+        self.value = datetime.time(
+            int(self.hour.value.decode("ascii")),
+            int(self.minute.value.decode("ascii")),
+            int(self.second.value.decode("ascii")),
+        )
+
+
+class RealClockDate(CompositeType):
+    """date value as used in the realtime clock info response"""
+
+    def __init__(self, day=0, month=0, year=0):
+        CompositeType.__init__(self)
+        if day < 10:
+            self.day = String("0" + str(day), 2)
+        else:
+            self.day = String(str(day), 2)
+        if month < 10:
+            self.month = String("0" + str(month), 2)
+        else:
+            self.month = String(str(month), 2)
+        self.year = String(str(year - 2000), 2)
+        self.contents += [self.day, self.month, self.year]
+
+    def unserialize(self, val):
+        CompositeType.unserialize(self, val)
+        self.value = datetime.date(
+            int(self.year.value.decode("ascii")) + PLUGWISE_EPOCH,
+            int(self.month.value.decode("ascii")),
+            int(self.day.value.decode("ascii")),
+        )
+
+
 class Float(BaseType):
     def __init__(self, value, length=4):
         self.value = value
@@ -180,11 +233,10 @@ class Float(BaseType):
 
 
 class LogAddr(Int):
-    LOGADDR_OFFSET = 278528
 
     def serialize(self):
-        return bytes("%08X" % ((self.value * 32) + self.LOGADDR_OFFSET), "utf-8")
+        return bytes("%08X" % ((self.value * 32) + LOGADDR_OFFSET), "utf-8")
 
     def unserialize(self, val):
         Int.unserialize(self, val)
-        self.value = (self.value - self.LOGADDR_OFFSET) // 32
+        self.value = (self.value - LOGADDR_OFFSET) // 32
