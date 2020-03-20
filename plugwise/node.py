@@ -9,6 +9,7 @@ from plugwise.constants import (
     CALLBACK_POWER,
     CALLBACK_RELAY,
     HA_SWITCH,
+    MAX_TIME_DRIFT,
     NODE_TYPE_CIRCLE,
     NODE_TYPE_CIRCLE_PLUS,
     NODE_TYPE_SCAN,
