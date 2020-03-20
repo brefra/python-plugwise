@@ -32,7 +32,7 @@ class PlugwiseCirclePlus(PlugwiseCircle):
     """
 
     def __init__(self, mac, address, stick):
-        PlugwiseCircle.__init__(self, mac, address, stick)
+        super().__init__(mac, address, stick)
         self._plugwise_nodes = []
         self._scan_for_nodes_callback = None
         self._print_progress = False
