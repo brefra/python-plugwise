@@ -174,7 +174,8 @@ class PlugwiseParser(object):
                                 valid_message = True
                             except Exception as e:
                                 self.stick.logger.error(
-                                    "Error while decoding received message",
+                                    "Error while decoding received message %s",
+                                    str(self._buffer[: footer_index + 2]),
                                 )
                                 self.stick.logger.error(e)
                             # Submit message

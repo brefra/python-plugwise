@@ -4,8 +4,12 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 Plugwise Circle node object
 """
 import logging
-from plugwise.constants import *
 from datetime import date, datetime, timedelta
+from plugwise.constants import (
+    CALLBACK_POWER,
+    CALLBACK_RELAY,
+    PULSES_PER_KW_SECOND,
+)
 from plugwise.node import PlugwiseNode
 
 from plugwise.message import PlugwiseMessage
@@ -30,7 +34,7 @@ class PlugwiseCircle(PlugwiseNode):
     """
 
     def __init__(self, mac, address, stick):
-        PlugwiseNode.__init__(self, mac, address, stick)
+        super().__init__(mac, address, stick)
         self._pulse_1s = None
         self._pulse_8s = None
         self._pulse_hour = None
@@ -69,20 +73,20 @@ class PlugwiseCircle(PlugwiseNode):
         """
         if isinstance(message, CirclePowerUsageResponse):
             self._response_power_usage(message)
-            self.stick.message_processed(message.seq_id)
             self.stick.logger.debug(
                 "Power update for %s, last update %s",
                 self.get_mac(),
                 str(self.last_update),
             )
+            self.stick.message_processed(message.seq_id)
         elif isinstance(message, CircleSwitchResponse):
             self._response_switch(message)
-            self.stick.message_processed(message.seq_id)
             self.stick.logger.debug(
                 "Switch update for %s, last update %s",
                 self.get_mac(),
                 str(self.last_update),
             )
+            self.stick.message_processed(message.seq_id)
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
             self.stick.message_processed(message.seq_id)
@@ -206,7 +210,9 @@ class PlugwiseCircle(PlugwiseNode):
             return pulses / PULSES_PER_KW_SECOND
         return 0
 
+    def collect_power_history(self, logs=13):
         """Collect power history info of today and yesterday
+        """
         for log_address in range(self._last_log_address - logs, self._last_log_address + 1, ):
             self._request_power_buffer(log_address)
 
@@ -218,11 +224,18 @@ class PlugwiseCircle(PlugwiseNode):
         self.stick.send(
             CirclePowerBufferRequest(self.mac, log_address), callback,
         )
+        
     def _response_power_buffer(self, message):
         """returns information about historical power usage
         each response contains 4 log buffers and each log buffer contains data for 1 hour
         """
+        for i in range(1, 5):
+            if getattr(message, "logdate%d" % (i,)).value != None:
                 dt = getattr(message, "logdate%d" % (i,)).value
+                corrected_pulses = self._pulse_correction(getattr(message, "pulses%d" % (i,)).value, 3600)
+                self._power_history[dt] = self._pulses_to_kWs(corrected_pulses)
+                print(self.get_mac() + " " + str(message.logaddr.value) + ", Power buffer " + str(i) + " => " + str(dt) + " = " + str(getattr(message, "pulses%d" % (i,)).value) + ", " + str(round(self._power_history[dt], 2)) + " Wh")
+
         # TODO cleanup history for more than 2 day's ago
 
     def get_power_last_hour(self):

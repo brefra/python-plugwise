@@ -3,8 +3,20 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 
 General node object to control associated plugwise nodes like: Circle+, Circle, Scan, Stealth
 """
-from plugwise.constants import *
 from datetime import datetime
+from plugwise.constants import (
+    CALLBACK_ALL,
+    CALLBACK_POWER,
+    CALLBACK_RELAY,
+    HA_SWITCH,
+    NODE_TYPE_CIRCLE,
+    NODE_TYPE_CIRCLE_PLUS,
+    NODE_TYPE_SCAN,
+    NODE_TYPE_SENSE,
+    NODE_TYPE_STEALTH,
+    NODE_TYPE_SWITCH,
+    NODE_TYPE_STICK,
+)
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
     NodeClockResponse,
@@ -154,7 +166,7 @@ class PlugwiseNode(object):
                 self.stick.logger.debug(
                     "Last update %s of node %s, last message %s",
                     str(self.last_update),
-                    self.mac.decode("ascii"),
+                    self.get_mac(),
                     str(message.timestamp),
                 )
                 self.last_update = message.timestamp
@@ -167,6 +179,8 @@ class PlugwiseNode(object):
             elif isinstance(message, NodeInfoResponse):
                 if not self._available:
                     self.stick.logger.warning("Info msg for node %s while node is unavailable", self.get_mac())
+                self.set_available(True)
+                self._process_info_response(message)
                 self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeClockResponse):
                 self._response_clock(message)
@@ -178,7 +192,7 @@ class PlugwiseNode(object):
             self.stick.logger.debug(
                 "Skip message, mac of node (%s) != mac at message (%s)",
                 message.mac.decode("ascii"),
-                self.mac.decode("ascii"),
+                self.get_mac(),
             )
 
     def _on_message(self, message):
@@ -208,7 +222,7 @@ class PlugwiseNode(object):
     def _process_info_response(self, message):
         """ Process info response message"""
         self.stick.logger.debug(
-            "Response info message for plug %s", self.mac.decode("ascii")
+            "Response info message for plug %s", self.get_mac()
         )
         if message.relay_state.serialize() == b"01":
             if not self._relay_state:
