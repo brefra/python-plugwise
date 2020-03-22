@@ -301,6 +301,7 @@ class stick(object):
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
                             str(MESSAGE_RETRY),
                         )
+                        del self.expected_responses[seq_id]
 
     def _receive_timeout_daemon(self):
         while True:
