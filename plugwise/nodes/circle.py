@@ -8,6 +8,8 @@ from datetime import date, datetime, timedelta
 from plugwise.constants import (
     CALLBACK_POWER,
     CALLBACK_RELAY,
+    HA_SWITCH,
+    HA_SENSOR,
     PULSES_PER_KW_SECOND,
 )
 from plugwise.node import PlugwiseNode
