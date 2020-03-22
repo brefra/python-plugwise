@@ -109,11 +109,23 @@ class PlugwiseCircle(PlugwiseNode):
         if callback_type == CALLBACK_RELAY:
             if CALLBACK_RELAY in self._callbacks:
                 for callback in self._callbacks[CALLBACK_RELAY]:
-                    callback(self._relay_state)
+                    try:
+                        callback(self._relay_state)
+                    except Exception as e:
+                        self.stick.logger.error(
+                            "Error while executing relay callback : %s",
+                            e,
+                        )
         elif callback_type == CALLBACK_POWER:
             if CALLBACK_POWER in self._callbacks:
                 for callback in self._callbacks[CALLBACK_POWER]:
-                    callback(self.get_power_usage())
+                    try:
+                        callback(self.get_power_usage())
+                    except Exception as e:
+                        self.stick.logger.error(
+                            "Error while executing power callback : %s",
+                            e,
+                        )
         self._do_all_callbacks()
 
     def get_categories(self) -> str:

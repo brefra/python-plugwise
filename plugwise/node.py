@@ -69,7 +69,7 @@ class PlugwiseNode(object):
             if self._available == False:
                 self._available = True
                 self.stick.logger.debug(
-                    "Mark node %s available", self.mac.decode("ascii"),
+                    "Mark node %s available", self.get_mac(),
                 )
                 self._do_all_callbacks()
                 if request_info:
@@ -78,7 +78,7 @@ class PlugwiseNode(object):
             if self._available == True:
                 self._available = False
                 self.stick.logger.debug(
-                    "Mark node %s unavailable", self.mac.decode("ascii"),
+                    "Mark node %s unavailable", self.get_mac(),
                 )
                 self._do_all_callbacks()
 
@@ -178,8 +178,6 @@ class PlugwiseNode(object):
                 self.set_available(True, True)
                 self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeInfoResponse):
-                if not self._available:
-                    self.stick.logger.warning("Info msg for node %s while node is unavailable", self.get_mac())
                 self.set_available(True)
                 self._process_info_response(message)
                 self.stick.message_processed(message.seq_id)
@@ -218,7 +216,13 @@ class PlugwiseNode(object):
         """ Execute callbacks registered for all updates """
         if CALLBACK_ALL in self._callbacks:
             for callback in self._callbacks[CALLBACK_ALL]:
-                callback(None)
+                try:
+                    callback(None)
+                except Exception as e:
+                    self.stick.logger.error(
+                        "Error while executing all callback : %s",
+                        e,
+                    )
 
     def _process_info_response(self, message):
         """ Process info response message"""
