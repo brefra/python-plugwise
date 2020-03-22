@@ -267,7 +267,7 @@ class stick(object):
                         str(self.expected_responses[seq_id][1].__class__.__name__),
                         self.expected_responses[seq_id][1].mac.decode("ascii"),
                     )
-            self.expected_responses[seq_id].append(datetime.now())
+            self.expected_responses[seq_id][4] = datetime.now()
             self.connection.send(request_set[1])
             time.sleep(SLEEP_TIME)
             timeout_counter = 0
@@ -301,7 +301,7 @@ class stick(object):
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
                             str(MESSAGE_RETRY),
                         )
-                        del self.expected_responses[seq_id]
+                    del self.expected_responses[seq_id]
 
     def _receive_timeout_daemon(self):
         while True:
