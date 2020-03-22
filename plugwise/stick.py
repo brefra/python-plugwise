@@ -428,14 +428,20 @@ class stick(object):
                         if mac in self._plugwise_nodes:
                             if self._plugwise_nodes[mac].get_available():
                                 self.logger.warning(
-                                    "Mark %s as unavailabe because max (%s) time out responses reached",
+                                    "Mark %s as unavailabe because %s time out responses reached",
                                     mac,
                                     str(MESSAGE_RETRY + 1),
                                 )
                                 self._plugwise_nodes[mac].set_available(False)
             elif ack_response == None:
                 if self.expected_responses[seq_id][2] != None:
-                    self.expected_responses[seq_id][2]()
+                    try:
+                        self.expected_responses[seq_id][2]()
+                    except Exception as e:
+                        self.logger.error(
+                            "Error while executing callback after processing message : %s",
+                            e,
+                        )
             del self.expected_responses[seq_id]
 
     def stop(self):
@@ -445,12 +451,16 @@ class stick(object):
 
     def _update_daemon(self):
         """
-        When circle has not received any message during
+        When node has not received any message during
         last 2 update polls, reset availability
         """
         while self._auto_update_timer != None:
             for mac in self._plugwise_nodes:
                 # Do ping request
+                self.logger.debug(
+                    "Send ping to node %s",
+                    mac,
+                )
                 self._plugwise_nodes[mac].ping()
                 # Only power use updates for supported nodes
                 if isinstance(self._plugwise_nodes[mac], PlugwiseCircle) or isinstance(
