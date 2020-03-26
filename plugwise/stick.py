@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from plugwise.constants import (
     ACK_ERROR,
     ACK_TIMEOUT,
+    MAX_TIME_DRIFT,
     MESSAGE_TIME_OUT,
     MESSAGE_RETRY,
     NODE_TYPE_STICK,
@@ -28,9 +29,12 @@ from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
     CirclePlusScanRequest,
     CircleCalibrationRequest,
+    CirclePlusRealTimeClockGetRequest,
     CirclePlusRealTimeClockSetRequest,
     CirclePowerUsageRequest,
     CircleSwitchRequest,
+    NodeClockGetRequest,
+    NodeClockSetRequest,
     NodeInfoRequest,
     NodePingRequest,
     NodeRequest,
@@ -39,8 +43,10 @@ from plugwise.messages.requests import (
 from plugwise.messages.responses import (
     CircleScanResponse,
     CircleCalibrationResponse,
+    CirclePlusRealTimeClockResponse,
     CirclePowerUsageResponse,
     CircleSwitchResponse,
+    NodeClockResponse,
     NodeInfoResponse,
     NodePingResponse,
     NodeResponse,
@@ -72,7 +78,6 @@ class stick(object):
         self.expected_responses = {}
         self.print_progress = False
         self.timezone_delta = datetime.now() - datetime.utcnow()
-
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -163,12 +168,14 @@ class stick(object):
                                 "Failed to discover Plugwise node %s before timeout expired.",
                                 str(mac),
                             )
+                            # do 1 retry
+                            self.send(NodeInfoRequest(bytes(mac, "ascii")))
                     if callback != None:
                         callback()
 
             # setup timeout for loading nodes
             discover_timeout = (
-                30 + (len(nodes_to_discover) * 2) + (MESSAGE_TIME_OUT * MESSAGE_RETRY)
+                10 + (len(nodes_to_discover) * 2) + (MESSAGE_TIME_OUT * MESSAGE_RETRY)
             )
             self.discover_timeout = threading.Timer(
                 discover_timeout, timeout_expired
@@ -232,6 +239,10 @@ class stick(object):
             response_message = CircleCalibrationResponse()
         elif isinstance(request, CirclePlusScanRequest):
             response_message = CircleScanResponse()
+        elif isinstance(request, CirclePlusRealTimeClockGetRequest):
+            response_message = CirclePlusRealTimeClockResponse()
+        elif isinstance(request, NodeClockGetRequest):
+            response_message = NodeClockResponse()
         elif isinstance(request, StickInitRequest):
             response_message = StickInitResponse()
         else:
@@ -283,7 +294,7 @@ class stick(object):
             if timeout_counter > 10:
                 if seq_id in self.expected_responses:
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                        self.logger.debug(
+                        self.logger.warning(
                             "Resend %s for %s (%s) because stick did not acknowledged send request",
                             str(self.expected_responses[seq_id][1].__class__.__name__),
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
@@ -306,36 +317,41 @@ class stick(object):
     def _receive_timeout_daemon(self):
         while True:
             for seq_id in list(self.expected_responses.keys()):
-                if self.expected_responses[seq_id][4] != None:
-                    if self.expected_responses[seq_id][4] < (
-                        datetime.now() - timedelta(seconds=MESSAGE_TIME_OUT)
-                    ):
-                        self.logger.debug(
-                            "Timeout expired for message with sequence ID %s",
-                            str(seq_id),
-                        )
-                        if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                if isinstance(self.expected_responses[seq_id][1], NodeClockSetRequest):
+                    del self.expected_responses[seq_id]
+                elif isinstance(self.expected_responses[seq_id][1], CirclePlusRealTimeClockSetRequest):
+                    del self.expected_responses[seq_id]
+                else:
+                    if self.expected_responses[seq_id][4] != None:
+                        if self.expected_responses[seq_id][4] < (
+                            datetime.now() - timedelta(seconds=MESSAGE_TIME_OUT)
+                        ):
                             self.logger.debug(
-                                "Resend request %s",
-                                str(
-                                    self.expected_responses[seq_id][
-                                        1
-                                    ].__class__.__name__
-                                ),
+                                "Timeout expired for message with sequence ID %s",
+                                str(seq_id),
                             )
-                            self.send(
-                                self.expected_responses[seq_id][1],
-                                self.expected_responses[seq_id][2],
-                                self.expected_responses[seq_id][3] + 1,
-                            )
-                        else:
-                            self.logger.warning(
-                                "Drop %s request for mac %s because max (%s) retries reached",
-                                self.expected_responses[seq_id][1].__class__.__name__,
-                                self.expected_responses[seq_id][1].mac.decode("ascii"),
-                                str(MESSAGE_RETRY),
-                            )
-                        del self.expected_responses[seq_id]
+                            if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                                self.logger.debug(
+                                    "Resend request %s",
+                                    str(
+                                        self.expected_responses[seq_id][
+                                            1
+                                        ].__class__.__name__
+                                    ),
+                                )
+                                self.send(
+                                    self.expected_responses[seq_id][1],
+                                    self.expected_responses[seq_id][2],
+                                    self.expected_responses[seq_id][3] + 1,
+                                )
+                            else:
+                                self.logger.warning(
+                                    "Drop %s request for mac %s because max (%s) retries reached",
+                                    self.expected_responses[seq_id][1].__class__.__name__,
+                                    self.expected_responses[seq_id][1].mac.decode("ascii"),
+                                    str(MESSAGE_RETRY),
+                                )
+                            del self.expected_responses[seq_id]
             time.sleep(MESSAGE_TIME_OUT)
 
     def new_message(self, message):
@@ -386,6 +402,7 @@ class stick(object):
                 self._plugwise_nodes[mac].on_message(message)
 
     def message_processed(self, seq_id, ack_response=None):
+        """ Execute callback of received messages """
         if seq_id in self.expected_responses:
             # excute callback at response of message
             self.logger.debug(
@@ -448,6 +465,8 @@ class stick(object):
         """
         Stop connection to Plugwise Zigbee network
         """
+        self._auto_update_timer = None
+
 
     def _update_daemon(self):
         """
@@ -493,6 +512,10 @@ class stick(object):
                                         break
                             if not open_requests_found:
                                 self._plugwise_nodes[mac].update_power_usage()
+                            # Refresh node info once per hour and request power use afterwards
+                            if self._plugwise_nodes[mac]._last_info_message != None:
+                                if self._plugwise_nodes[mac]._last_info_message < (datetime.now().replace(minute=1, second=MAX_TIME_DRIFT, microsecond=0)):
+                                    self.send(NodeInfoRequest(bytes(mac, "ascii"), self._plugwise_nodes[mac]._request_power_buffer))
                     else:
                         if self._auto_update_timer != None:
                             self.logger.debug(

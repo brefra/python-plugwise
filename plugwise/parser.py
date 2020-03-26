@@ -2,7 +2,9 @@
 
 import logging
 from plugwise.constants import (
+    ACK_CLOCK_SET,
     ACK_ERROR,
+    ACK_REAL_TIME_CLOCK_SET,
     ACK_SUCCESS,
     ACK_TIMEOUT,
     MESSAGE_FOOTER,
@@ -98,6 +100,13 @@ class PlugwiseParser(object):
                                 "Success acknowledge on message request with sequence id %s",
                                 str(seq_id),
                             )
+                        elif ack_id == ACK_CLOCK_SET or ack_id == ACK_REAL_TIME_CLOCK_SET:
+                            self.stick.last_ack_seq_id = seq_id
+                            self.stick.logger.warning(
+                                "Success acknowledge on clock_set message request with sequence id %s",
+                                str(seq_id),
+                            )
+                            self.stick.message_processed(seq_id, ack_id)
                         elif ack_id == ACK_TIMEOUT:
                             self.stick.logger.debug(
                                 "Timeout acknowledge on message request with sequence id %s",
@@ -113,7 +122,7 @@ class PlugwiseParser(object):
                         else:
                             self.stick.logger.warning(
                                 "Acknowledge message type "
-                                + str(int(self._buffer[12:16], 16))
+                                + str(ack_id)
                                 + " received"
                             )
                     elif footer_index < 28:
@@ -167,6 +176,7 @@ class PlugwiseParser(object):
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):
                         if len(self._buffer[: footer_index + 2]) == len(self._message):
+                            valid_message = False
                             try:
                                 self._message.unserialize(
                                     self._buffer[: footer_index + 2]
@@ -174,7 +184,8 @@ class PlugwiseParser(object):
                                 valid_message = True
                             except Exception as e:
                                 self.stick.logger.error(
-                                    "Error while decoding received message %s",
+                                    "Error while decoding received %s message (%s)",
+                                    self._message.__class__.__name__,
                                     str(self._buffer[: footer_index + 2]),
                                 )
                                 self.stick.logger.error(e)

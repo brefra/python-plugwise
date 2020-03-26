@@ -44,9 +44,13 @@ class PlugwiseCircle(PlugwiseNode):
         self._gain_b = None
         self._off_ruis = None
         self._off_tot = None
-        self._request_calibration()
         self._power_history = {}
-        self._last_hour_usage = 0
+        self._power_use_last_hour = 0
+        self._power_use_today = 0
+        self._power_use_yesterday = 0
+        self._last_log_collected = False
+        self._request_calibration()
+        self._request_power_buffer()
 
     def _request_calibration(self, callback=None):
         """Request calibration info
@@ -163,6 +167,15 @@ class PlugwiseCircle(PlugwiseNode):
         # it doesn't make much sense to return negative power usage in that case
         return retval if retval > 0.0 else 0.0
 
+    def get_power_use_last_hour(self):
+        return self._power_use_last_hour
+
+    def get_power_use_today(self):
+        return self._power_use_today
+
+    def get_power_use_yesterday(self):
+        return self._power_use_yesterday
+
     def _response_switch(self, message):
         """ Process switch response message
         """
@@ -224,20 +237,27 @@ class PlugwiseCircle(PlugwiseNode):
             return pulses / PULSES_PER_KW_SECOND
         return 0
 
-    def collect_power_history(self, logs=13):
-        """Collect power history info of today and yesterday
-        """
-        for log_address in range(self._last_log_address - logs, self._last_log_address + 1, ):
-            self._request_power_buffer(log_address)
-
     def _request_power_buffer(self, log_address=None, callback=None):
         """Request power log of specified address
         """
         if log_address == None:
             log_address = self._last_log_address
-        self.stick.send(
-            CirclePowerBufferRequest(self.mac, log_address), callback,
-        )
+        if log_address != None:
+            if bool(self._power_history):
+                # Only request last power log
+                self.stick.send(
+                    CirclePowerBufferRequest(self.mac, log_address), callback,
+                )
+            else:
+                # Collect power history info of today and yesterday
+                # Each request contains 4 hours except last request
+                for req_log_address in range(log_address - 13, log_address):
+                    self.stick.send(
+                        CirclePowerBufferRequest(self.mac, req_log_address),
+                    )
+                self.stick.send(
+                    CirclePowerBufferRequest(self.mac, log_address + 1), callback,
+                )
         
     def _response_power_buffer(self, message):
         """returns information about historical power usage
@@ -248,26 +268,35 @@ class PlugwiseCircle(PlugwiseNode):
                 dt = getattr(message, "logdate%d" % (i,)).value
                 corrected_pulses = self._pulse_correction(getattr(message, "pulses%d" % (i,)).value, 3600)
                 self._power_history[dt] = self._pulses_to_kWs(corrected_pulses)
-                print(self.get_mac() + " " + str(message.logaddr.value) + ", Power buffer " + str(i) + " => " + str(dt) + " = " + str(getattr(message, "pulses%d" % (i,)).value) + ", " + str(round(self._power_history[dt], 2)) + " Wh")
+                if message.logaddr.value == self._last_log_address:
+                    self._last_log_collected = True
 
-        # TODO cleanup history for more than 2 day's ago
+        # Cleanup history for more than 2 day's ago
+        if len(self._power_history.keys()) > 48:
+            for dt in list(self._power_history.keys()):
+                if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() < (datetime.now().today().date() - timedelta(days=1)):
+                    del self._power_history[dt]
 
-    def get_power_last_hour(self):
-        """ Total power use of last hour """
-        return self._last_hour_usage
-
-    def get_power_today(self):
-        """ Total power use of today in Wh"""
+        # Recalculate power use counters        
+        last_hour_usage = 0
         today_power = 0
+        yesterday_power = 0
+        if (max(self._power_history.keys()) + self.stick.timezone_delta) == (datetime.now().replace(minute=0, second=0, microsecond=0)):
+            last_hour_usage = int(round(self._power_history[max(self._power_history.keys())], 3))
         for dt in self._power_history:
             if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == datetime.now().today().date():
                 today_power += self._power_history[dt]
-        return round(today_power, 3)
-
-    def get_power_yesterday(self):
-        """ Return total power use of yesterday in Wh"""
-        yesterday_power = 0
-        for dt in self._power_history:
             if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == (datetime.now().today().date() - timedelta(days=1)):
                 yesterday_power += self._power_history[dt]
-        return round(yesterday_power, 3)
+        do_callback = False
+        if self._power_use_last_hour != last_hour_usage:
+            self._power_use_last_hour = last_hour_usage
+            do_callback = True
+        if self._power_use_today != round(today_power, 3):
+            self._power_use_today = round(today_power, 3)
+            do_callback = True
+        if self._power_use_yesterday != round(yesterday_power, 3):
+            self._power_use_yesterday = round(yesterday_power, 3)
+            do_callback = True
+        if do_callback:
+            self._do_circle_callbacks(CALLBACK_POWER)

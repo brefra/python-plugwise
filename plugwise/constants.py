@@ -55,7 +55,7 @@ SLEEP_TIME = 150 / 1000
 
 # Max seconds the internal clock of plugwise nodes
 # are allowed to drift in seconds
-MAX_TIME_DRIFT = 10
+MAX_TIME_DRIFT = 30
 
 # Callback types
 CALLBACK_RELAY = "RELAY"
