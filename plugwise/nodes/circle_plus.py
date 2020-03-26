@@ -37,12 +37,14 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         self._scan_for_nodes_callback = None
         self._print_progress = False
         self._realtime_clock_offset = None
+        self.get_real_time_clock(self.sync_realtime_clock)
 
     def _circle_plus_message(self, message):
         """
         Process received message
         """
         if isinstance(message, CirclePlusRealTimeClockResponse):
+            print("CirclePlusRealTimeClockResponse")
             self._response_realtime_clock(message)
         elif isinstance(message, CircleScanResponse):
             self._process_scan_response(message)
@@ -99,9 +101,9 @@ class PlugwiseCirclePlus(PlugwiseCircle):
 
     def _response_realtime_clock(self, message):
         dt = datetime(
-            message.date.value.year,
-            message.date.value.month,
-            message.date.value.day,
+            datetime.now().year,
+            datetime.now().month,
+            datetime.now().day,
             message.time.value.hour,
             message.time.value.minute,
             message.time.value.second,
@@ -111,7 +113,11 @@ class PlugwiseCirclePlus(PlugwiseCircle):
             self._realtime_clock_offset = realtime_clock_offset.seconds - 86400
         else:
             self._realtime_clock_offset = realtime_clock_offset.seconds
-        self.stick.logger.debug("Realtime clock has drifted " + str(self._realtime_clock_offset) + " sec")
+        self.stick.logger.debug(
+            "Realtime clock of node %s has drifted %s sec",
+            self.get_mac(),
+            str(self._clock_offset),
+        )
 
     def set_real_time_clock(self, callback=None):
         """ set internal clock of CirclePlus """
@@ -119,11 +125,16 @@ class PlugwiseCirclePlus(PlugwiseCircle):
             CirclePlusRealTimeClockSetRequest(self.mac, datetime.utcnow()), callback,
         )
 
-    def sync_real_time_clock(self, max_drift=MAX_TIME_DRIFT) -> bool:
+    def sync_realtime_clock(self, max_drift=0):
         """ Sync real time clock of node if time has drifted more than max drifted
         """
-        if self._real_time_clock_offset != None:
-            if self._real_time_clock_offset > max_drift or self._real_time_clock_offset < max_drift:
+        if self._realtime_clock_offset != None:
+            if max_drift == 0:
+                max_drift = MAX_TIME_DRIFT
+            if (self._realtime_clock_offset > max_drift) or (self._realtime_clock_offset < -(max_drift)):
+                self.stick.logger.warning(
+                    "Reset realtime clock of node %s because time has drifted %s sec",
+                    self.get_mac(),
+                    str(self._clock_offset),
+                )
                 self.set_real_time_clock()
-                return True
-        return False

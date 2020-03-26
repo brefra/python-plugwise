@@ -169,31 +169,35 @@ class Time(CompositeType):
         )
 
 
+class IntDec(BaseType):
+    def __init__(self, value, length=2):
+        self.value = value
+        self.length = length
+
+    def serialize(self):
+        fmt = "%%0%dd" % self.length
+        return bytes(fmt % self.value, "utf-8")
+
+    def unserialize(self, val):
+        self.value = val.decode("utf-8")
+
+
 class RealClockTime(CompositeType):
     """time value as used in the realtime clock info response"""
 
     def __init__(self, hour=0, minute=0, second=0 ):
         CompositeType.__init__(self)
-        if hour < 10:
-            self.hour = String("0" + str(hour), 2)
-        else:
-            self.hour = String(str(hour), 2)
-        if minute < 10:
-            self.minute = String(str(minute), 2)
-        else:
-            self.minute = String("0" + str(minute), 2)
-        if second < 10:
-            self.second = String(str(second), 2)
-        else:
-            self.second = String("0" + str(second), 2)
+        self.hour = IntDec(hour, 2)
+        self.minute = IntDec(minute, 2)
+        self.second = IntDec(second, 2)
         self.contents += [self.second, self.minute, self.hour]
 
     def unserialize(self, val):
         CompositeType.unserialize(self, val)
         self.value = datetime.time(
-            int(self.hour.value.decode("ascii")),
-            int(self.minute.value.decode("ascii")),
-            int(self.second.value.decode("ascii")),
+            int(self.hour.value),
+            int(self.minute.value),
+            int(self.second.value),
         )
 
 
@@ -202,23 +206,17 @@ class RealClockDate(CompositeType):
 
     def __init__(self, day=0, month=0, year=0):
         CompositeType.__init__(self)
-        if day < 10:
-            self.day = String("0" + str(day), 2)
-        else:
-            self.day = String(str(day), 2)
-        if month < 10:
-            self.month = String("0" + str(month), 2)
-        else:
-            self.month = String(str(month), 2)
-        self.year = String(str(year - 2000), 2)
+        self.day = IntDec(day, 2)
+        self.month = IntDec(month, 2)
+        self.year = IntDec(year - PLUGWISE_EPOCH, 2)
         self.contents += [self.day, self.month, self.year]
 
     def unserialize(self, val):
         CompositeType.unserialize(self, val)
         self.value = datetime.date(
-            int(self.year.value.decode("ascii")) + PLUGWISE_EPOCH,
-            int(self.month.value.decode("ascii")),
-            int(self.day.value.decode("ascii")),
+            int(self.year.value) + PLUGWISE_EPOCH,
+            int(self.month.value),
+            int(self.day.value),
         )
 
 
