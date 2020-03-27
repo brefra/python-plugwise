@@ -77,7 +77,7 @@ class stick(object):
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = False
-        self.timezone_delta = datetime.now() - datetime.utcnow()
+        self.timezone_delta = datetime.now().replace(minute=0, second=0, microsecond=0) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -516,6 +516,8 @@ class stick(object):
                             if self._plugwise_nodes[mac]._last_info_message != None:
                                 if self._plugwise_nodes[mac]._last_info_message < (datetime.now().replace(minute=1, second=MAX_TIME_DRIFT, microsecond=0)):
                                     self.send(NodeInfoRequest(bytes(mac, "ascii"), self._plugwise_nodes[mac]._request_power_buffer))
+                            if not self._plugwise_nodes[mac]._last_log_collected:
+                                self._plugwise_nodes[mac]._request_power_buffer()
                     else:
                         if self._auto_update_timer != None:
                             self.logger.debug(

@@ -244,9 +244,9 @@ class PlugwiseNode(object):
         self._firmware_version = message.fw_ver.value
         self._node_type = message.node_type.value
         self._last_info_message = message.timestamp
-        if self._last_log_address == None:
+        if self._last_log_address != message.last_logaddr.value:
             self._last_log_address = message.last_logaddr.value
-            self._request_power_buffer()
+            self._last_log_collected = False
         self.stick.logger.debug("Node type        = %s", self.get_node_type())
         self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
         self.stick.logger.debug("Hardware version = %s", str(self._hardware_version))

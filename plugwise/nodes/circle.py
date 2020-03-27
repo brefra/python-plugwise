@@ -48,9 +48,7 @@ class PlugwiseCircle(PlugwiseNode):
         self._power_use_last_hour = 0
         self._power_use_today = 0
         self._power_use_yesterday = 0
-        self._last_log_collected = False
         self._request_calibration()
-        self._request_power_buffer()
 
     def _request_calibration(self, callback=None):
         """Request calibration info
@@ -256,20 +254,22 @@ class PlugwiseCircle(PlugwiseNode):
                         CirclePowerBufferRequest(self.mac, req_log_address),
                     )
                 self.stick.send(
-                    CirclePowerBufferRequest(self.mac, log_address + 1), callback,
+                    CirclePowerBufferRequest(self.mac, log_address), callback,
                 )
         
     def _response_power_buffer(self, message):
         """returns information about historical power usage
         each response contains 4 log buffers and each log buffer contains data for 1 hour
         """
+        if message.logaddr.value == self._last_log_address:
+            self._last_log_collected = True
+
+        # Collect logged power usage
         for i in range(1, 5):
             if getattr(message, "logdate%d" % (i,)).value != None:
                 dt = getattr(message, "logdate%d" % (i,)).value
                 corrected_pulses = self._pulse_correction(getattr(message, "pulses%d" % (i,)).value, 3600)
                 self._power_history[dt] = self._pulses_to_kWs(corrected_pulses)
-                if message.logaddr.value == self._last_log_address:
-                    self._last_log_collected = True
 
         # Cleanup history for more than 2 day's ago
         if len(self._power_history.keys()) > 48:
@@ -281,9 +281,9 @@ class PlugwiseCircle(PlugwiseNode):
         last_hour_usage = 0
         today_power = 0
         yesterday_power = 0
-        if (max(self._power_history.keys()) + self.stick.timezone_delta) == (datetime.now().replace(minute=0, second=0, microsecond=0)):
-            last_hour_usage = int(round(self._power_history[max(self._power_history.keys())], 3))
         for dt in self._power_history:
+            if (dt + self.stick.timezone_delta) == datetime.now().today().replace(minute=0, second=0, microsecond=0):
+                last_hour_usage = self._power_history[dt]
             if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == datetime.now().today().date():
                 today_power += self._power_history[dt]
             if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == (datetime.now().today().date() - timedelta(days=1)):
@@ -300,3 +300,10 @@ class PlugwiseCircle(PlugwiseNode):
             do_callback = True
         if do_callback:
             self._do_circle_callbacks(CALLBACK_POWER)
+            self.stick.logger.debug(
+                "Recalc powerusage for %s : h=%s, t=%s, y=%s",
+                self.get_mac(),
+                str(self._power_use_last_hour),
+                str(self._power_use_today),
+                str(self._power_use_yesterday),
+            )
