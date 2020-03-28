@@ -38,12 +38,12 @@ class PlugwiseNode(object):
     """
 
     def __init__(self, mac, address, stick):
-        """
-        will raise ValueError if mac doesn't look valid
-        """
         mac = mac.upper()
         if validate_mac(mac) == False:
-            raise ValueError("MAC address is in unexpected format: " + str(mac))
+            self.stick.logger.debug(
+                "MAC address is in unexpected format: %s",
+                str(mac),
+            )
         self.mac = bytes(mac, encoding="ascii")
         self.stick = stick
         self._address = address
