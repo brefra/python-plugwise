@@ -28,7 +28,7 @@ Note: This library does not support linking or removing nodes from the Plugwise 
 
 To install run the following command as root:
 ```
-python setup.py install
+pip install python-plugwise
 ```
 
 ## Example usage
