@@ -168,6 +168,13 @@ class PlugwiseCircle(PlugwiseNode):
     def get_power_use_last_hour(self):
         return self._power_use_last_hour
 
+    def get_power_use_current_hour(self):
+        if self._pulse_hour == None:
+            return 0.0
+        corrected_pulses = self._pulse_correction(self._power_use_last_hour)
+        retval = self._pulses_to_kWs(corrected_pulses) * 1000
+        return retval if retval > 0.0 else 0.0
+
     def get_power_use_today(self):
         return self._power_use_today
 
@@ -191,15 +198,24 @@ class PlugwiseCircle(PlugwiseNode):
         # I have no idea what it means but it certainly isn't a reasonable value
         # so I just assume that it's meant to signal some kind of a temporary error condition
         if message.pulse_1s.value == 65535:
-            raise ValueError("1 sec pulse counter seem to contain unreasonable values")
+            self.stick.logger.debug(
+                "1 sec power pulse counter for node %s has unreasonable value of 65535",
+                self.get_mac(),
+            )
         else:
             self._pulse_1s = message.pulse_1s.value
         if message.pulse_8s.value == 65535:
-            raise ValueError("8 sec pulse counter seem to contain unreasonable values")
+            self.stick.logger.debug(
+                "8 sec power pulse counter for node %s has unreasonable value of 65535",
+                self.get_mac(),
+            )
         else:
             self._pulse_8s = message.pulse_8s.value
         if message.pulse_hour.value == 4294967295:
-            raise ValueError("1h pulse counter seems to contain an unreasonable value")
+            self.stick.logger.debug(
+                "1 hour power pulse counter for node %s has unreasonable value of 4294967295",
+                self.get_mac(),
+            )
         else:
             self._pulse_hour = message.pulse_hour.value
         self._do_circle_callbacks(CALLBACK_POWER)
