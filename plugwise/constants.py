@@ -48,9 +48,14 @@ MESSAGE_RETRY = 2
 # plugwise year information is offset from y2k
 PLUGWISE_EPOCH = 2000
 PULSES_PER_KW_SECOND = 468.9385193
+LOGADDR_OFFSET = 278528
 
 # Default sleep between sending messages
 SLEEP_TIME = 150 / 1000
+
+# Max seconds the internal clock of plugwise nodes
+# are allowed to drift in seconds
+MAX_TIME_DRIFT = 30
 
 # Callback types
 CALLBACK_RELAY = "RELAY"

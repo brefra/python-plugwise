@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from plugwise.constants import (
     ACK_ERROR,
     ACK_TIMEOUT,
+    MAX_TIME_DRIFT,
     MESSAGE_TIME_OUT,
     MESSAGE_RETRY,
     NODE_TYPE_STICK,
@@ -26,10 +27,14 @@ from plugwise.connections.socket import SocketConnection
 from plugwise.connections.serial import PlugwiseUSBConnection
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
-    CircleScanRequest,
+    CirclePlusScanRequest,
     CircleCalibrationRequest,
+    CirclePlusRealTimeClockGetRequest,
+    CirclePlusRealTimeClockSetRequest,
     CirclePowerUsageRequest,
     CircleSwitchRequest,
+    NodeClockGetRequest,
+    NodeClockSetRequest,
     NodeInfoRequest,
     NodePingRequest,
     NodeRequest,
@@ -38,8 +43,10 @@ from plugwise.messages.requests import (
 from plugwise.messages.responses import (
     CircleScanResponse,
     CircleCalibrationResponse,
+    CirclePlusRealTimeClockResponse,
     CirclePowerUsageResponse,
     CircleSwitchResponse,
+    NodeClockResponse,
     NodeInfoResponse,
     NodePingResponse,
     NodeResponse,
@@ -70,6 +77,7 @@ class stick(object):
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = False
+        self.timezone_delta = datetime.now().replace(minute=0, second=0, microsecond=0) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -137,15 +145,14 @@ class stick(object):
                 if print_progress:
                     print(
                         "Discovered node "
-                        + str(len(self._plugwise_nodes)-1)
+                        + str(len(self._plugwise_nodes) - 1)
                         + " of "
                         + str(len(self._nodes_to_discover))
                     )
                 self.logger.debug(
-                    "Discovered Plugwise node "
-                    + str(len(self._plugwise_nodes))
-                    + " of "
-                    + str(self._nodes_to_discover)
+                    "Discovered Plugwise node %s of %s",
+                    str(len(self._plugwise_nodes)),
+                    str(self._nodes_to_discover),
                 )
                 if (len(self._plugwise_nodes) - 1) >= len(self._nodes_to_discover):
                     self._discovery_finished = True
@@ -158,16 +165,17 @@ class stick(object):
                     for (mac, address) in self._nodes_to_discover:
                         if mac not in self._plugwise_nodes.keys():
                             self.logger.warning(
-                                "Failed to discover Plugwise node "
-                                + str(mac)
-                                + " before timeout expired."
+                                "Failed to discover Plugwise node %s before timeout expired.",
+                                str(mac),
                             )
+                            # do 1 retry
+                            self.send(NodeInfoRequest(bytes(mac, "ascii")))
                     if callback != None:
                         callback()
 
             # setup timeout for loading nodes
             discover_timeout = (
-                30 + (len(nodes_to_discover) * 2) + (MESSAGE_TIME_OUT * MESSAGE_RETRY)
+                10 + (len(nodes_to_discover) * 2) + (MESSAGE_TIME_OUT * MESSAGE_RETRY)
             )
             self.discover_timeout = threading.Timer(
                 discover_timeout, timeout_expired
@@ -179,7 +187,8 @@ class stick(object):
                     NodeInfoRequest(bytes(mac, "ascii")), node_discovered,
                 )
 
-        if print_progress: self.print_progress = True
+        if print_progress:
+            self.print_progress = True
         if self.circle_plus_mac in self._plugwise_nodes:
             if self.print_progress:
                 print("Scan Circle+ for connected nodes")
@@ -228,8 +237,12 @@ class stick(object):
             response_message = CircleSwitchResponse()
         elif isinstance(request, CircleCalibrationRequest):
             response_message = CircleCalibrationResponse()
-        elif isinstance(request, CircleScanRequest):
+        elif isinstance(request, CirclePlusScanRequest):
             response_message = CircleScanResponse()
+        elif isinstance(request, CirclePlusRealTimeClockGetRequest):
+            response_message = CirclePlusRealTimeClockResponse()
+        elif isinstance(request, NodeClockGetRequest):
+            response_message = NodeClockResponse()
         elif isinstance(request, StickInitRequest):
             response_message = StickInitResponse()
         else:
@@ -265,7 +278,7 @@ class stick(object):
                         str(self.expected_responses[seq_id][1].__class__.__name__),
                         self.expected_responses[seq_id][1].mac.decode("ascii"),
                     )
-            self.expected_responses[seq_id].append(datetime.now())
+            self.expected_responses[seq_id][4] = datetime.now()
             self.connection.send(request_set[1])
             time.sleep(SLEEP_TIME)
             timeout_counter = 0
@@ -281,7 +294,7 @@ class stick(object):
             if timeout_counter > 10:
                 if seq_id in self.expected_responses:
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                        self.logger.debug(
+                        self.logger.warning(
                             "Resend %s for %s (%s) because stick did not acknowledged send request",
                             str(self.expected_responses[seq_id][1].__class__.__name__),
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
@@ -299,40 +312,46 @@ class stick(object):
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
                             str(MESSAGE_RETRY),
                         )
+                    del self.expected_responses[seq_id]
 
     def _receive_timeout_daemon(self):
         while True:
             for seq_id in list(self.expected_responses.keys()):
-                if self.expected_responses[seq_id][4] != None:
-                    if self.expected_responses[seq_id][4] < (
-                        datetime.now() - timedelta(seconds=MESSAGE_TIME_OUT)
-                    ):
-                        self.logger.debug(
-                            "Timeout expired for message with sequence ID %s",
-                            str(seq_id),
-                        )
-                        if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                if isinstance(self.expected_responses[seq_id][1], NodeClockSetRequest):
+                    del self.expected_responses[seq_id]
+                elif isinstance(self.expected_responses[seq_id][1], CirclePlusRealTimeClockSetRequest):
+                    del self.expected_responses[seq_id]
+                else:
+                    if self.expected_responses[seq_id][4] != None:
+                        if self.expected_responses[seq_id][4] < (
+                            datetime.now() - timedelta(seconds=MESSAGE_TIME_OUT)
+                        ):
                             self.logger.debug(
-                                "Resend request %s",
-                                str(
-                                    self.expected_responses[seq_id][
-                                        1
-                                    ].__class__.__name__
-                                ),
+                                "Timeout expired for message with sequence ID %s",
+                                str(seq_id),
                             )
-                            self.send(
-                                self.expected_responses[seq_id][1],
-                                self.expected_responses[seq_id][2],
-                                self.expected_responses[seq_id][3] + 1,
-                            )
-                        else:
-                            self.logger.warning(
-                                "Drop %s request for mac %s because max (%s) retries reached",
-                                self.expected_responses[seq_id][1].__class__.__name__,
-                                self.expected_responses[seq_id][1].mac.decode("ascii"),
-                                str(MESSAGE_RETRY),
-                            )
-                        del self.expected_responses[seq_id]
+                            if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                                self.logger.debug(
+                                    "Resend request %s",
+                                    str(
+                                        self.expected_responses[seq_id][
+                                            1
+                                        ].__class__.__name__
+                                    ),
+                                )
+                                self.send(
+                                    self.expected_responses[seq_id][1],
+                                    self.expected_responses[seq_id][2],
+                                    self.expected_responses[seq_id][3] + 1,
+                                )
+                            else:
+                                self.logger.warning(
+                                    "Drop %s request for mac %s because max (%s) retries reached",
+                                    self.expected_responses[seq_id][1].__class__.__name__,
+                                    self.expected_responses[seq_id][1].mac.decode("ascii"),
+                                    str(MESSAGE_RETRY),
+                                )
+                            del self.expected_responses[seq_id]
             time.sleep(MESSAGE_TIME_OUT)
 
     def new_message(self, message):
@@ -383,6 +402,7 @@ class stick(object):
                 self._plugwise_nodes[mac].on_message(message)
 
     def message_processed(self, seq_id, ack_response=None):
+        """ Execute callback of received messages """
         if seq_id in self.expected_responses:
             # excute callback at response of message
             self.logger.debug(
@@ -396,14 +416,12 @@ class stick(object):
                         "Network time out received for (%s of %s) of %s to %s, resend request",
                         str(self.expected_responses[seq_id][3] + 1),
                         str(MESSAGE_RETRY + 1),
-                        str(
-                            self.expected_responses[seq_id][
-                                1
-                            ].__class__.__name__
-                        ),
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
                         self.expected_responses[seq_id][1].mac.decode("ascii"),
                     )
-                    if not isinstance(self.expected_responses[seq_id][1], StickInitRequest):
+                    if not isinstance(
+                        self.expected_responses[seq_id][1], StickInitRequest
+                    ):
                         mac = self.expected_responses[seq_id][1].mac.decode("ascii")
                         if mac in self._plugwise_nodes:
                             if self._plugwise_nodes[mac].get_available():
@@ -415,52 +433,64 @@ class stick(object):
                 else:
                     self.logger.debug(
                         "Max (%s) network time out messages received for %s to %s, drop request",
-                        str(self.expected_responses[seq_id][3]+1),
-                        str(
-                            self.expected_responses[seq_id][
-                                1
-                            ].__class__.__name__
-                        ),
+                        str(self.expected_responses[seq_id][3] + 1),
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
                         self.expected_responses[seq_id][1].mac.decode("ascii"),
                     )
                     # Mark node as unavailable
-                    if not isinstance(self.expected_responses[seq_id][1], StickInitRequest):
+                    if not isinstance(
+                        self.expected_responses[seq_id][1], StickInitRequest
+                    ):
                         mac = self.expected_responses[seq_id][1].mac.decode("ascii")
                         if mac in self._plugwise_nodes:
                             if self._plugwise_nodes[mac].get_available():
                                 self.logger.warning(
-                                    "Mark %s as unavailabe because max (%s) time out responses reached",
+                                    "Mark %s as unavailabe because %s time out responses reached",
                                     mac,
                                     str(MESSAGE_RETRY + 1),
                                 )
                                 self._plugwise_nodes[mac].set_available(False)
-            elif ack_response == None :
+            elif ack_response == None:
                 if self.expected_responses[seq_id][2] != None:
-                    self.expected_responses[seq_id][2]()
+                    try:
+                        self.expected_responses[seq_id][2]()
+                    except Exception as e:
+                        self.logger.error(
+                            "Error while executing callback after processing message : %s",
+                            e,
+                        )
             del self.expected_responses[seq_id]
 
     def stop(self):
         """
         Stop connection to Plugwise Zigbee network
         """
+        self._auto_update_timer = None
+
 
     def _update_daemon(self):
         """
-        When circle has not received any message during
+        When node has not received any message during
         last 2 update polls, reset availability
         """
-        while (self._auto_update_timer != None):
+        while self._auto_update_timer != None:
             for mac in self._plugwise_nodes:
                 # Do ping request
+                self.logger.debug(
+                    "Send ping to node %s",
+                    mac,
+                )
                 self._plugwise_nodes[mac].ping()
                 # Only power use updates for supported nodes
-                if (
-                    isinstance(self._plugwise_nodes[mac], PlugwiseCircle)
-                    or isinstance(self._plugwise_nodes[mac], PlugwiseCirclePlus)
+                if isinstance(self._plugwise_nodes[mac], PlugwiseCircle) or isinstance(
+                    self._plugwise_nodes[mac], PlugwiseCirclePlus
                 ):
                     # Don't check at first time
                     self.logger.debug("Request current power usage for node %s", mac)
-                    if self._auto_update_first_run == False and self._auto_update_timer != None:
+                    if (
+                        self._auto_update_first_run == False
+                        and self._auto_update_timer != None
+                    ):
                         # Only request update if node is available
                         if self._plugwise_nodes[mac].get_available():
                             self.logger.debug(
@@ -468,17 +498,6 @@ class stick(object):
                                 mac,
                                 str(self._plugwise_nodes[mac].get_last_update()),
                             )
-                            if self._plugwise_nodes[mac].last_update != None:
-                                if self._plugwise_nodes[mac].last_update < (
-                                    datetime.now()
-                                    - timedelta(seconds=((self._auto_update_timer + MESSAGE_TIME_OUT) * 10))
-                                ):
-                                    if self._plugwise_nodes[mac].get_available():
-                                        self.logger.warning(
-                                            "Mark node '%s' as unavailable because of no response to last 10 update requests",
-                                            mac,
-                                        )
-                                        self._plugwise_nodes[mac].set_available(False)
                             # Skip update request if there is still an request expected to be received
                             open_requests_found = False
                             for seq_id in list(self.expected_responses.keys()):
@@ -486,28 +505,24 @@ class stick(object):
                                     self.expected_responses[seq_id][1],
                                     CirclePowerUsageRequest,
                                 ):
-                                    if mac == self.expected_responses[seq_id][1].mac.decode("ascii"):
+                                    if mac == self.expected_responses[seq_id][
+                                        1
+                                    ].mac.decode("ascii"):
                                         open_requests_found = True
                                         break
                             if not open_requests_found:
                                 self._plugwise_nodes[mac].update_power_usage()
-                        else:
-                            # Do a power update request because last request is from more than 1 hour in the past
-                            self.logger.debug(
-                                "Node '%s' is unavailable, skip update request if last (%s) is 1 hour ago",
-                                mac,
-                                str(self._plugwise_nodes[mac].last_update),
-                            )
-                            if self._plugwise_nodes[mac].last_update != None:
-                                if self._plugwise_nodes[mac].last_update < (
-                                    datetime.now() - timedelta(seconds=3600)
-                                ):
-                                    self._plugwise_nodes[mac].update_power_usage()
-                            else:
-                                self._plugwise_nodes[mac].update_power_usage()
+                            # Refresh node info once per hour and request power use afterwards
+                            if self._plugwise_nodes[mac]._last_info_message != None:
+                                if self._plugwise_nodes[mac]._last_info_message < (datetime.now().replace(minute=1, second=MAX_TIME_DRIFT, microsecond=0)):
+                                    self._plugwise_nodes[mac]._request_info(self._plugwise_nodes[mac]._request_power_buffer)
+                            if not self._plugwise_nodes[mac]._last_log_collected:
+                                self._plugwise_nodes[mac]._request_power_buffer()
                     else:
                         if self._auto_update_timer != None:
-                            self.logger.debug("First request for current power usage for node %s", mac)
+                            self.logger.debug(
+                                "First request for current power usage for node %s", mac
+                            )
                             self._plugwise_nodes[mac].update_power_usage()
             self._auto_update_first_run = False
             time.sleep(self._auto_update_timer)
