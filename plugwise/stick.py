@@ -515,7 +515,7 @@ class stick(object):
                             # Refresh node info once per hour and request power use afterwards
                             if self._plugwise_nodes[mac]._last_info_message != None:
                                 if self._plugwise_nodes[mac]._last_info_message < (datetime.now().replace(minute=1, second=MAX_TIME_DRIFT, microsecond=0)):
-                                    self.send(NodeInfoRequest(bytes(mac, "ascii"), self._plugwise_nodes[mac]._request_power_buffer))
+                                    self._plugwise_nodes[mac]._request_info(self._plugwise_nodes[mac]._request_power_buffer)
                             if not self._plugwise_nodes[mac]._last_log_collected:
                                 self._plugwise_nodes[mac]._request_power_buffer()
                     else:

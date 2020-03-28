@@ -242,7 +242,10 @@ class PlugwiseCircle(PlugwiseNode):
             log_address = self._last_log_address
         if log_address != None:
             if bool(self._power_history):
-                # Only request last power log
+                # Only request last 2 power buffer logs
+                self.stick.send(
+                    CirclePowerBufferRequest(self.mac, log_address - 1),
+                )
                 self.stick.send(
                     CirclePowerBufferRequest(self.mac, log_address), callback,
                 )
@@ -289,8 +292,8 @@ class PlugwiseCircle(PlugwiseNode):
             if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == (datetime.now().today().date() - timedelta(days=1)):
                 yesterday_power += self._power_history[dt]
         do_callback = False
-        if self._power_use_last_hour != last_hour_usage:
-            self._power_use_last_hour = last_hour_usage
+        if self._power_use_last_hour != round(last_hour_usage, 3):
+            self._power_use_last_hour = round(last_hour_usage, 3)
             do_callback = True
         if self._power_use_today != round(today_power, 3):
             self._power_use_today = round(today_power, 3)
