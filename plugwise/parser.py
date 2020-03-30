@@ -51,7 +51,14 @@ class PlugwiseParser(object):
         """
         Process next packet if present
         """
-        self.stick.new_message(message)
+        try:
+            self.stick.new_message(message)
+        except Exception as e:
+            self.stick.logger.error(
+                "Error while processing %s message : %s",
+                self._message.__class__.__name__,
+                e,
+            )
 
     def parse_data(self):
         """
