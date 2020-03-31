@@ -101,17 +101,15 @@ class CirclePowerUsageResponse(NodeResponse):
         super().__init__()
         self.pulse_1s = Int(0, 4)
         self.pulse_8s = Int(0, 4)
-        self.pulse_hour = Int(0, 8)
-        self.unknown1 = Int(0, 4)
-        self.unknown2 = Int(0, 4)
-        self.unknown3 = Int(0, 4)
+        self.pulse_hour_consumed = Int(0, 8)
+        self.pulse_hour_produced = Int(0, 8)
+        self.nanosecond_offset = Int(0, 4)
         self.params += [
             self.pulse_1s,
             self.pulse_8s,
-            self.pulse_hour,
-            self.unknown1,
-            self.unknown2,
-            self.unknown3,
+            self.pulse_hour_consumed,
+            self.pulse_hour_produced,
+            self.nanosecond_offset,
         ]
 
 
