@@ -72,8 +72,8 @@ class CircleCalibrationResponse(NodeResponse):
         self.gain_a = Float(0, 8)
         self.gain_b = Float(0, 8)
         self.off_tot = Float(0, 8)
-        self.off_ruis = Float(0, 8)
-        self.params += [self.gain_a, self.gain_b, self.off_tot, self.off_ruis]
+        self.off_noise = Float(0, 8)
+        self.params += [self.gain_a, self.gain_b, self.off_tot, self.off_noise]
 
 
 class CirclePlusRealTimeClockResponse(NodeResponse):

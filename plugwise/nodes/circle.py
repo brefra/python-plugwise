@@ -42,7 +42,7 @@ class PlugwiseCircle(PlugwiseNode):
         self._pulse_hour = None
         self._gain_a = None
         self._gain_b = None
-        self._off_ruis = None
+        self._off_noise = None
         self._off_tot = None
         self._power_history = {}
         self._power_use_last_hour = 0
@@ -221,7 +221,9 @@ class PlugwiseCircle(PlugwiseNode):
         self._do_circle_callbacks(CALLBACK_POWER)
 
     def _response_calibration(self, message):
-        for x in ("gain_a", "gain_b", "off_ruis", "off_tot"):
+        """ Store calibration properties
+        """
+        for x in ("gain_a", "gain_b", "off_noise", "off_tot"):
             val = getattr(message, x).value
             setattr(self, "_" + x, val)
 
@@ -237,8 +239,8 @@ class PlugwiseCircle(PlugwiseNode):
         pulses /= float(seconds)
         corrected_pulses = seconds * (
             (
-                (((pulses + self._off_ruis) ** 2) * self._gain_b)
-                + ((pulses + self._off_ruis) * self._gain_a)
+                (((pulses + self._off_noise) ** 2) * self._gain_b)
+                + ((pulses + self._off_noise) * self._gain_a)
             )
             + self._off_tot
         )
