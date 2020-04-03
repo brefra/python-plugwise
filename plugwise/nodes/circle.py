@@ -37,17 +37,18 @@ class PlugwiseCircle(PlugwiseNode):
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
-        self._pulse_1s = None
-        self._pulse_8s = None
-        self._pulse_hour = None
+        self.pulses_1s = None
+        self.pulses_8s = None
+        self.pulses_consumed_1h = None
+        self.pulses_produced_1h = None
         self._gain_a = None
         self._gain_b = None
-        self._off_ruis = None
+        self._off_noise = None
         self._off_tot = None
-        self._power_history = {}
-        self._power_use_last_hour = 0
-        self._power_use_today = 0
-        self._power_use_yesterday = 0
+        self.power_history = {}
+        self.power_use_previous_hour = 0
+        self.power_use_today = 0
+        self.power_use_yesterday = 0
         self._request_calibration()
 
     def _request_calibration(self, callback=None):
@@ -153,33 +154,49 @@ class PlugwiseCircle(PlugwiseNode):
 
     def get_power_usage(self):
         """
-        returns power usage for the last second in Watts
-
-        return : int
+        Returns power usage during the last second in Watts
+        Based on last received power usage information 
         """
-        if self._pulse_1s == None:
+        if self.pulses_1s == None:
             return 0.0
-        corrected_pulses = self._pulse_correction(self._pulse_1s)
-        retval = self._pulses_to_kWs(corrected_pulses) * 1000
-        # sometimes it's slightly less than 0, probably caused by calibration/calculation errors
-        # it doesn't make much sense to return negative power usage in that case
-        return retval if retval > 0.0 else 0.0
+        return self.pulses_to_kWs(self.pulses_1s) * 1000
 
-    def get_power_use_last_hour(self):
-        return self._power_use_last_hour
-
-    def get_power_use_current_hour(self):
-        if self._pulse_hour == None:
+    def get_power_consumption_current_hour(self):
+        """
+        Returns the power usage during this running hour in kWh
+        Based on last received power usage information 
+        """
+        if self.pulses_consumed_1h == None:
             return 0.0
-        corrected_pulses = self._pulse_correction(self._power_use_last_hour)
-        retval = self._pulses_to_kWs(corrected_pulses) * 1000
-        return retval if retval > 0.0 else 0.0
+        elif self.pulses_consumed_1h == 0:
+            return 0.0
+        return self.pulses_to_kWs(self.pulses_consumed_1h, 3600) / 3.6
+
+    def get_power_production_current_hour(self):
+        """
+        Returns the power production during this running hour in kWh
+        Based on last received power usage information 
+        """
+        if self.pulses_produced_1h == None:
+            return 0.0
+        elif self.pulses_produced_1h == 0:
+            return 0.0
+        return self.pulses_to_kWs(self.pulses_produced_1h, 3600) / 3.6
+
+    def get_power_use_previous_hour(self):
+        """ Returns power consumption during the previous hour in kWh
+        """
+        return self.power_use_previous_hour
 
     def get_power_use_today(self):
-        return self._power_use_today
+        """ Total power consumption during today in kWh
+        """
+        return self.power_use_today
 
     def get_power_use_yesterday(self):
-        return self._power_use_yesterday
+        """ Total power consumption of yesterday in kWh
+        """
+        return self.power_use_yesterday
 
     def _response_switch(self, message):
         """ Process switch response message
@@ -197,59 +214,83 @@ class PlugwiseCircle(PlugwiseNode):
         # sometimes the circle returns max values for some of the pulse counters
         # I have no idea what it means but it certainly isn't a reasonable value
         # so I just assume that it's meant to signal some kind of a temporary error condition
+
+        # Power consumption last second
         if message.pulse_1s.value == 65535:
             self.stick.logger.debug(
                 "1 sec power pulse counter for node %s has unreasonable value of 65535",
                 self.get_mac(),
             )
         else:
-            self._pulse_1s = message.pulse_1s.value
+            self.pulses_1s = message.pulse_1s.value
+            if message.pulse_1s.value != 0:
+                if message.nanosecond_offset.value !=0:
+                    pulses_1s = (message.pulse_1s.value * (1000000000 + message.nanosecond_offset.value)) / 1000000000
+                else:
+                    pulses_1s = message.pulse_1s.value
+                self.pulses_1s = pulses_1s
+            else:
+                self.pulses_1s = 0
+
+        # Power consumption last 8 seconds
         if message.pulse_8s.value == 65535:
             self.stick.logger.debug(
                 "8 sec power pulse counter for node %s has unreasonable value of 65535",
                 self.get_mac(),
             )
         else:
-            self._pulse_8s = message.pulse_8s.value
-        if message.pulse_hour.value == 4294967295:
+            if message.pulse_8s.value != 0:
+                if message.nanosecond_offset.value !=0:
+                    pulses_8s = (message.pulse_8s.value * (1000000000 + message.nanosecond_offset.value)) / 1000000000
+                else:
+                    pulses_8s = message.pulse_8s.value
+                self.pulses_8s = pulses_8s
+            else:
+                self.pulses_8s = 0
+
+        # Power consumption last hour
+        if message.pulse_hour_consumed.value == 4294967295:
             self.stick.logger.debug(
-                "1 hour power pulse counter for node %s has unreasonable value of 4294967295",
+                "1 hour consumption power pulse counter for node %s has unreasonable value of 4294967295",
                 self.get_mac(),
             )
         else:
-            self._pulse_hour = message.pulse_hour.value
+            self.pulses_consumed_1h = message.pulse_hour_consumed.value
+
+        # Power produced last hour
+        if message.pulse_hour_produced.value == 4294967295:
+            self.stick.logger.debug(
+                "1 hour power production pulse counter for node %s has unreasonable value of 4294967295",
+                self.get_mac(),
+            )
+        else:
+            self.pulses_produced_1h = message.pulse_hour_produced.value
         self._do_circle_callbacks(CALLBACK_POWER)
 
     def _response_calibration(self, message):
-        for x in ("gain_a", "gain_b", "off_ruis", "off_tot"):
+        """ Store calibration properties
+        """
+        for x in ("gain_a", "gain_b", "off_noise", "off_tot"):
             val = getattr(message, x).value
             setattr(self, "_" + x, val)
 
-    def _pulse_correction(self, pulses, seconds=1):
-        """correct pulse count with Circle specific calibration offsets
-        @param pulses: pulse counter
-        @param seconds: over how many seconds were the pulses counted
+    def pulses_to_kWs(self, pulses, seconds=1):
+        """
+        converts the amount of pulses to kWs using the calaboration offsets
         """
         if pulses == 0:
             return 0.0
         if self._gain_a is None:
             return None
-        pulses /= float(seconds)
+        pulses_per_s = pulses / float(seconds)
         corrected_pulses = seconds * (
             (
-                (((pulses + self._off_ruis) ** 2) * self._gain_b)
-                + ((pulses + self._off_ruis) * self._gain_a)
+                (((pulses_per_s + self._off_noise) ** 2) * self._gain_b)
+                + ((pulses_per_s + self._off_noise) * self._gain_a)
             )
             + self._off_tot
         )
-        return corrected_pulses
-
-    def _pulses_to_kWs(self, pulses):
-        """converts the pulse count to kWs
-        """
-        if pulses != None:
-            return pulses / PULSES_PER_KW_SECOND
-        return 0
+        return corrected_pulses / PULSES_PER_KW_SECOND
 
     def _request_power_buffer(self, log_address=None, callback=None):
         """Request power log of specified address
@@ -257,7 +298,7 @@ class PlugwiseCircle(PlugwiseNode):
         if log_address == None:
             log_address = self._last_log_address
         if log_address != None:
-            if bool(self._power_history):
+            if bool(self.power_history):
                 # Only request last 2 power buffer logs
                 self.stick.send(
                     CirclePowerBufferRequest(self.mac, log_address - 1),
@@ -287,42 +328,44 @@ class PlugwiseCircle(PlugwiseNode):
         for i in range(1, 5):
             if getattr(message, "logdate%d" % (i,)).value != None:
                 dt = getattr(message, "logdate%d" % (i,)).value
-                corrected_pulses = self._pulse_correction(getattr(message, "pulses%d" % (i,)).value, 3600)
-                self._power_history[dt] = self._pulses_to_kWs(corrected_pulses)
+                if getattr(message, "pulses%d" % (i,)).value == 0:
+                    self.power_history[dt] = 0.0
+                else:
+                    self.power_history[dt] = self.pulses_to_kWs(getattr(message, "pulses%d" % (i,)).value, 3600) / 3.6
 
         # Cleanup history for more than 2 day's ago
-        if len(self._power_history.keys()) > 48:
-            for dt in list(self._power_history.keys()):
+        if len(self.power_history.keys()) > 48:
+            for dt in list(self.power_history.keys()):
                 if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() < (datetime.now().today().date() - timedelta(days=1)):
-                    del self._power_history[dt]
+                    del self.power_history[dt]
 
         # Recalculate power use counters        
         last_hour_usage = 0
         today_power = 0
         yesterday_power = 0
-        for dt in self._power_history:
+        for dt in self.power_history:
             if (dt + self.stick.timezone_delta) == datetime.now().today().replace(minute=0, second=0, microsecond=0):
-                last_hour_usage = self._power_history[dt]
+                last_hour_usage = self.power_history[dt]
             if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == datetime.now().today().date():
-                today_power += self._power_history[dt]
+                today_power += self.power_history[dt]
             if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == (datetime.now().today().date() - timedelta(days=1)):
-                yesterday_power += self._power_history[dt]
+                yesterday_power += self.power_history[dt]
         do_callback = False
-        if self._power_use_last_hour != round(last_hour_usage, 3):
-            self._power_use_last_hour = round(last_hour_usage, 3)
+        if self.power_use_previous_hour != round(last_hour_usage, 3):
+            self.power_use_previous_hour = round(last_hour_usage, 3)
             do_callback = True
-        if self._power_use_today != round(today_power, 3):
-            self._power_use_today = round(today_power, 3)
+        if self.power_use_today != round(today_power, 3):
+            self.power_use_today = round(today_power, 3)
             do_callback = True
-        if self._power_use_yesterday != round(yesterday_power, 3):
-            self._power_use_yesterday = round(yesterday_power, 3)
+        if self.power_use_yesterday != round(yesterday_power, 3):
+            self.power_use_yesterday = round(yesterday_power, 3)
             do_callback = True
         if do_callback:
             self._do_circle_callbacks(CALLBACK_POWER)
             self.stick.logger.debug(
                 "Recalc powerusage for %s : h=%s, t=%s, y=%s",
                 self.get_mac(),
-                str(self._power_use_last_hour),
-                str(self._power_use_today),
-                str(self._power_use_yesterday),
+                str(self.power_use_previous_hour),
+                str(self.power_use_today),
+                str(self.power_use_yesterday),
             )

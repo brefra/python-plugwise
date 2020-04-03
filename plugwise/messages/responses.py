@@ -72,8 +72,8 @@ class CircleCalibrationResponse(NodeResponse):
         self.gain_a = Float(0, 8)
         self.gain_b = Float(0, 8)
         self.off_tot = Float(0, 8)
-        self.off_ruis = Float(0, 8)
-        self.params += [self.gain_a, self.gain_b, self.off_tot, self.off_ruis]
+        self.off_noise = Float(0, 8)
+        self.params += [self.gain_a, self.gain_b, self.off_tot, self.off_noise]
 
 
 class CirclePlusRealTimeClockResponse(NodeResponse):
@@ -101,17 +101,15 @@ class CirclePowerUsageResponse(NodeResponse):
         super().__init__()
         self.pulse_1s = Int(0, 4)
         self.pulse_8s = Int(0, 4)
-        self.pulse_hour = Int(0, 8)
-        self.unknown1 = Int(0, 4)
-        self.unknown2 = Int(0, 4)
-        self.unknown3 = Int(0, 4)
+        self.pulse_hour_consumed = Int(0, 8)
+        self.pulse_hour_produced = Int(0, 8)
+        self.nanosecond_offset = Int(0, 4)
         self.params += [
             self.pulse_1s,
             self.pulse_8s,
-            self.pulse_hour,
-            self.unknown1,
-            self.unknown2,
-            self.unknown3,
+            self.pulse_hour_consumed,
+            self.pulse_hour_produced,
+            self.nanosecond_offset,
         ]
 
 

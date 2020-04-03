@@ -295,7 +295,7 @@ class stick(object):
                 if seq_id in self.expected_responses:
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
                         self.logger.warning(
-                            "Resend %s for %s (%s) because stick did not acknowledged send request",
+                            "Resend %s for %s because stick did not acknowledge request (%s)",
                             str(self.expected_responses[seq_id][1].__class__.__name__),
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
                             str(seq_id),
