@@ -34,7 +34,8 @@ def inc_seq_id(seq_id, value=1):
     :return: 4 bytes
     """
     temp_int = int(seq_id, 16) + value
-    if temp_int >= 65536:
+    # Max seq_id = b'FFFC'
+    if temp_int >= 65532:
         temp_int = 0
     temp_str = str(hex(temp_int)).lstrip("0x").upper()
     while len(temp_str) < 4:
