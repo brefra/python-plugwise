@@ -57,10 +57,95 @@ SLEEP_TIME = 150 / 1000
 # are allowed to drift in seconds
 MAX_TIME_DRIFT = 30
 
-# Callback types
-CALLBACK_RELAY = "RELAY"
-CALLBACK_POWER = "POWER"
-CALLBACK_ALL = "ALL"
+# Unit of measurement
+TIME_MILLISECONDS = "ms"
+POWER_WATT = "W"
+ENERGY_KILO_WATT_HOUR = "kWh"
+ENERGY_WATT_HOUR = "Wh"
+
+# Sensors
+SENSOR_AVAILABLE = {
+    "id": "available",
+    "name": "Available",
+    "state": "get_available",
+    "unit": "state",
+}
+SENSOR_PING = {
+    "id": "ping",
+    "name": "Ping roundtrip",
+    "state": "get_ping",
+    "unit": TIME_MILLISECONDS,
+}
+SENSOR_POWER_USE = {
+    "id": "power_1s",
+    "name": "Power usage",
+    "state": "get_power_usage",
+    "unit": POWER_WATT,
+}
+SENSOR_POWER_USE_LAST_8_SEC = {
+    "id": "power_8s",
+    "name": "Power usage 8 seconds",
+    "state": "get_power_usage_8_sec",
+    "unit": POWER_WATT,
+}
+SENSOR_POWER_CONSUMPTION_CURRENT_HOUR = {
+    "id": "power_con_cur_hour",
+    "name": "Power consumption current hour",
+    "state": "get_power_consumption_current_hour",
+    "unit": ENERGY_KILO_WATT_HOUR,
+}
+SENSOR_POWER_CONSUMPTION_PREVIOUS_HOUR = {
+    "id": "power_con_prev_hour",
+    "name": "Power consumption previous hour",
+    "state": "get_power_consumption_previous_hour",
+    "unit": ENERGY_KILO_WATT_HOUR,
+}
+SENSOR_POWER_CONSUMPTION_TODAY = {
+    "id": "power_con_today",
+    "name": "Power consumption today",
+    "state": "get_power_consumption_today",
+    "unit": ENERGY_KILO_WATT_HOUR, 
+}
+SENSOR_POWER_CONSUMPTION_YESTERDAY = {
+    "id": "power_con_yesterday",
+    "name": "Power consumption yesterday",
+    "state": "get_power_consumption_yesterday",
+    "unit": ENERGY_KILO_WATT_HOUR, 
+}
+SENSOR_POWER_PRODUCTION_CURRENT_HOUR = {
+    "id": "power_prod_cur_hour",
+    "name": "Power production current hour",
+    "state": "get_power_production_current_hour",
+    "unit": ENERGY_KILO_WATT_HOUR, 
+}
+SENSOR_POWER_PRODUCTION_PREVIOUS_HOUR = {
+    "id": "power_prod_prev_hour",
+    "name": "Power production previous hour",
+    "state": "get_power_production_previous_hour",
+    "unit": ENERGY_KILO_WATT_HOUR, 
+}
+
+# TODO: Need to validate RSSI sensors
+SENSOR_RSSI_IN = {
+    "id": "RSSI_in",
+    "name": "RSSI in",
+    "state": "get_rssi_in",
+    "unit": "Unknown",
+}
+SENSOR_RSSI_OUT = {
+    "id": "RSSI_out",
+    "name": "RSSI out",
+    "state": "get_rssi_out",
+    "unit": "Unknown",
+}
+
+# Switches
+SWITCH_RELAY = {
+    "id": "relay",
+    "name": "Relay state",
+    "state": "get_relay_state",
+    "switch": "set_relay_state",
+}
 
 # Home Assistant entities
 HA_SWITCH = "switch"
