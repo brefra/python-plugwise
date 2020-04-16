@@ -49,7 +49,6 @@ def scan_start():
         plugwise.node("000D6F00003FD440").set_relay_state(False)
 
         time.sleep(5)
-        print ("Circle+ Ping roundtrip (ms)                  : " + str(node.get_ping()))
         print ("Circle+ Poweruse last second (W)             : " + str(node.get_power_usage()))
         print ("Circle+ Poweruse last 8 seconds (W)          : " + str(node.get_power_usage_8_sec()))
         print ("Circle+ Power consumption current hour (kWh) : " + str(node.get_power_consumption_current_hour()))
@@ -58,6 +57,9 @@ def scan_start():
         print ("Circle+ Power consumption yesterday (kWh)    : " + str(node.get_power_consumption_yesterday()))
         print ("Circle+ Power production previous hour (kWh) : " + str(node.get_power_production_current_hour()))
         print ("Circle+ Power production current hour (kWh)  : " + str(node.get_power_production_previous_hour()))
+        print ("Circle+ Ping roundtrip (ms)                  : " + str(node.get_ping()))
+        print ("Circle+ RSSI in                              : " + str(node.get_rssi_in()))
+        print ("Circle+ RSSI out                             : " + str(node.get_rssi_out()))
 
     plugwise.scan(scan_finished, True)
 
