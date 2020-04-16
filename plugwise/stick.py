@@ -56,6 +56,7 @@ from plugwise.parser import PlugwiseParser
 from plugwise.node import PlugwiseNode
 from plugwise.nodes.circle import PlugwiseCircle
 from plugwise.nodes.circle_plus import PlugwiseCirclePlus
+from plugwise.nodes.stealth import PlugwiseStealth
 from plugwise.util import inc_seq_id, validate_mac
 from queue import Queue
 
@@ -207,6 +208,8 @@ class stick(object):
             self._plugwise_nodes[mac] = PlugwiseCircle(mac, address, self)
         elif node_type == NODE_TYPE_CIRCLE_PLUS:
             self._plugwise_nodes[mac] = PlugwiseCirclePlus(mac, address, self)
+        elif node_type == NODE_TYPE_STEALTH:
+            self._plugwise_nodes[mac] = PlugwiseStealth(mac, address, self)
         else:
             self.logger.warning("Unsupported node type '%s'", str(node_type))
 

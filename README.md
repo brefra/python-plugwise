@@ -15,7 +15,7 @@ The latest version of the library is published as a python package on [pypi](htt
 | Scan | No | No | Not supported yet |
 | Sense | No | No | Not supported yet |
 | Switch | No | No | Not supported yet |
-| Stealth | No | No | Not supported yet |
+| Stealth | Yes | Yes | Experimental (not tested) |
 | Sting | No | No | Not supported yet |
 
 When the connection to the stick is initialized it will automatically connected to Scan for linked nodes
