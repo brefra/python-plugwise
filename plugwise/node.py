@@ -43,8 +43,7 @@ class PlugwiseNode(object):
         mac = mac.upper()
         if validate_mac(mac) == False:
             self.stick.logger.debug(
-                "MAC address is in unexpected format: %s",
-                str(mac),
+                "MAC address is in unexpected format: %s", str(mac),
             )
         self.mac = bytes(mac, encoding="ascii")
         self.stick = stick
@@ -231,8 +230,7 @@ class PlugwiseNode(object):
                     callback(None)
                 except Exception as e:
                     self.stick.logger.error(
-                        "Error while executing all callback : %s",
-                        e,
+                        "Error while executing all callback : %s", e,
                     )
 
     def _process_ping_response(self, message):
@@ -250,9 +248,7 @@ class PlugwiseNode(object):
 
     def _process_info_response(self, message):
         """ Process info response message"""
-        self.stick.logger.debug(
-            "Response info message for plug %s", self.get_mac()
-        )
+        self.stick.logger.debug("Response info message for plug %s", self.get_mac())
         self.set_available(True)
         if message.relay_state.serialize() == b"01":
             if not self._relay_state:
@@ -292,7 +288,9 @@ class PlugwiseNode(object):
             message.time.value.minute,
             message.time.value.second,
         )
-        clock_offset = message.timestamp.replace(microsecond=0) - (dt + self.stick.timezone_delta)
+        clock_offset = message.timestamp.replace(microsecond=0) - (
+            dt + self.stick.timezone_delta
+        )
         if clock_offset.days == -1:
             self._clock_offset = clock_offset.seconds - 86400
         else:

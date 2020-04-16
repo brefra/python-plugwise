@@ -78,7 +78,9 @@ class stick(object):
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = False
-        self.timezone_delta = datetime.now().replace(minute=0, second=0, microsecond=0) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+        self.timezone_delta = datetime.now().replace(
+            minute=0, second=0, microsecond=0
+        ) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -326,7 +328,10 @@ class stick(object):
             for seq_id in list(self.expected_responses.keys()):
                 if isinstance(self.expected_responses[seq_id][1], NodeClockSetRequest):
                     del self.expected_responses[seq_id]
-                elif isinstance(self.expected_responses[seq_id][1], CirclePlusRealTimeClockSetRequest):
+                elif isinstance(
+                    self.expected_responses[seq_id][1],
+                    CirclePlusRealTimeClockSetRequest,
+                ):
                     del self.expected_responses[seq_id]
                 else:
                     if self.expected_responses[seq_id][4] != None:
@@ -354,8 +359,12 @@ class stick(object):
                             else:
                                 self.logger.warning(
                                     "Drop %s request for mac %s because max (%s) retries reached",
-                                    self.expected_responses[seq_id][1].__class__.__name__,
-                                    self.expected_responses[seq_id][1].mac.decode("ascii"),
+                                    self.expected_responses[seq_id][
+                                        1
+                                    ].__class__.__name__,
+                                    self.expected_responses[seq_id][1].mac.decode(
+                                        "ascii"
+                                    ),
                                     str(MESSAGE_RETRY),
                                 )
                             del self.expected_responses[seq_id]
@@ -486,8 +495,7 @@ class stick(object):
             for mac in self._plugwise_nodes:
                 # Do ping request
                 self.logger.debug(
-                    "Send ping to node %s",
-                    mac,
+                    "Send ping to node %s", mac,
                 )
                 self._plugwise_nodes[mac].ping()
                 # Only power use updates for supported nodes
@@ -523,8 +531,14 @@ class stick(object):
                                 self._plugwise_nodes[mac].update_power_usage()
                             # Refresh node info once per hour and request power use afterwards
                             if self._plugwise_nodes[mac]._last_info_message != None:
-                                if self._plugwise_nodes[mac]._last_info_message < (datetime.now().replace(minute=1, second=MAX_TIME_DRIFT, microsecond=0)):
-                                    self._plugwise_nodes[mac]._request_info(self._plugwise_nodes[mac]._request_power_buffer)
+                                if self._plugwise_nodes[mac]._last_info_message < (
+                                    datetime.now().replace(
+                                        minute=1, second=MAX_TIME_DRIFT, microsecond=0
+                                    )
+                                ):
+                                    self._plugwise_nodes[mac]._request_info(
+                                        self._plugwise_nodes[mac]._request_power_buffer
+                                    )
                             if not self._plugwise_nodes[mac]._last_log_collected:
                                 self._plugwise_nodes[mac]._request_power_buffer()
                     else:
