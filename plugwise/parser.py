@@ -107,7 +107,9 @@ class PlugwiseParser(object):
                                 "Success acknowledge on message request with sequence id %s",
                                 str(seq_id),
                             )
-                        elif ack_id == ACK_CLOCK_SET or ack_id == ACK_REAL_TIME_CLOCK_SET:
+                        elif (
+                            ack_id == ACK_CLOCK_SET or ack_id == ACK_REAL_TIME_CLOCK_SET
+                        ):
                             self.stick.last_ack_seq_id = seq_id
                             self.stick.logger.warning(
                                 "Success acknowledge on clock_set message request with sequence id %s",
@@ -128,9 +130,7 @@ class PlugwiseParser(object):
                             self.stick.message_processed(seq_id, ack_id)
                         else:
                             self.stick.logger.warning(
-                                "Acknowledge message type "
-                                + str(ack_id)
-                                + " received"
+                                "Acknowledge message type %s received", str(ack_id)
                             )
                     elif footer_index < 28:
                         self.stick.logger.warning(

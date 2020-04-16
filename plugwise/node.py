@@ -5,9 +5,6 @@ General node object to control associated plugwise nodes like: Circle+, Circle, 
 """
 from datetime import datetime
 from plugwise.constants import (
-    CALLBACK_ALL,
-    CALLBACK_POWER,
-    CALLBACK_RELAY,
     HA_SWITCH,
     MAX_TIME_DRIFT,
     NODE_TYPE_CIRCLE,
@@ -17,6 +14,11 @@ from plugwise.constants import (
     NODE_TYPE_STEALTH,
     NODE_TYPE_SWITCH,
     NODE_TYPE_STICK,
+    SENSOR_AVAILABLE,
+    SENSOR_RSSI_IN,
+    SENSOR_RSSI_OUT,
+    SENSOR_PING,
+    SWITCH_RELAY,
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
@@ -41,11 +43,13 @@ class PlugwiseNode(object):
         mac = mac.upper()
         if validate_mac(mac) == False:
             self.stick.logger.debug(
-                "MAC address is in unexpected format: %s",
-                str(mac),
+                "MAC address is in unexpected format: %s", str(mac),
             )
         self.mac = bytes(mac, encoding="ascii")
         self.stick = stick
+        self.categories = ()
+        self.sensors = ()
+        self.switches = ()
         self._address = address
         self._callbacks = {}
         self.last_update = None
@@ -64,17 +68,31 @@ class PlugwiseNode(object):
         self._clock_offset = None
         self.get_clock(self.sync_clock)
 
+    def get_categories(self) -> tuple:
+        """ Return Home Assistant catagories supported by plugwise node """
+        return self.categories
+
+    def get_sensors(self) -> tuple:
+        """ Return sensors supported by plugwise node """
+        return self.sensors
+
+    def get_switches(self) -> tuple:
+        """ Return switches supported by plugwise node """
+        return self.switches
+
     def get_available(self) -> bool:
+        """ Return current network state of plugwise node """
         return self._available
 
     def set_available(self, state, request_info=False):
+        """ Set current network state of plugwise node """
         if state == True:
             if self._available == False:
                 self._available = True
                 self.stick.logger.debug(
                     "Mark node %s available", self.get_mac(),
                 )
-                self._do_all_callbacks()
+                self.do_callback(SENSOR_AVAILABLE["id"])
                 if request_info:
                     self._request_info()
         else:
@@ -83,7 +101,7 @@ class PlugwiseNode(object):
                 self.stick.logger.debug(
                     "Mark node %s unavailable", self.get_mac(),
                 )
-                self._do_all_callbacks()
+                self.do_callback(SENSOR_AVAILABLE["id"])
 
     def get_mac(self) -> str:
         """Return mac address"""
@@ -110,9 +128,6 @@ class PlugwiseNode(object):
         elif self._node_type == NODE_TYPE_STICK:
             return "Stick"
         return "Unknown"
-
-    def get_categories(self) -> str:
-        return [HA_SWITCH]
 
     def get_hardware_version(self) -> str:
         """Return hardware version"""
@@ -175,13 +190,9 @@ class PlugwiseNode(object):
                 )
                 self.last_update = message.timestamp
             if isinstance(message, NodePingResponse):
-                self.in_RSSI = message.in_RSSI.value
-                self.out_RSSI = message.out_RSSI.value
-                self.ping_ms = message.ping_ms.value
-                self.set_available(True, True)
+                self._process_ping_response(message)
                 self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeInfoResponse):
-                self.set_available(True)
                 self._process_info_response(message)
                 self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeClockResponse):
@@ -200,46 +211,53 @@ class PlugwiseNode(object):
     def _on_message(self, message):
         pass
 
-    def register_callback(self, callback, state=CALLBACK_ALL):
-        """ Register callback to execute when state change happens """
-        if state == CALLBACK_RELAY:
-            if CALLBACK_RELAY not in self._callbacks:
-                self._callbacks[CALLBACK_RELAY] = []
-            self._callbacks[CALLBACK_RELAY].append(callback)
-        if state == CALLBACK_POWER:
-            if CALLBACK_POWER not in self._callbacks:
-                self._callbacks[CALLBACK_POWER] = []
-            self._callbacks[CALLBACK_POWER].append(callback)
-        if state == CALLBACK_ALL:
-            if CALLBACK_ALL not in self._callbacks:
-                self._callbacks[CALLBACK_ALL] = []
-            self._callbacks[CALLBACK_ALL].append(callback)
+    def subscribe_callback(self, callback, sensor):
+        """ Subscribe callback to execute when state change happens """
+        if sensor not in self._callbacks:
+            self._callbacks[sensor] = []
+        self._callbacks[sensor].append(callback)
 
-    def _do_all_callbacks(self):
-        """ Execute callbacks registered for all updates """
-        if CALLBACK_ALL in self._callbacks:
-            for callback in self._callbacks[CALLBACK_ALL]:
+    def unsubscribe_callback(self, callback, sensor):
+        """ Register callback to execute when state change happens """
+        if sensor in self._callbacks:
+            self._callbacks[sensor].remove(callback)
+
+    def do_callback(self, sensor):
+        """ Execute callbacks registered for specified callback type """
+        if sensor in self._callbacks:
+            for callback in self._callbacks[sensor]:
                 try:
                     callback(None)
                 except Exception as e:
                     self.stick.logger.error(
-                        "Error while executing all callback : %s",
-                        e,
+                        "Error while executing all callback : %s", e,
                     )
+
+    def _process_ping_response(self, message):
+        """ Process ping response message"""
+        self.set_available(True, True)
+        if self.in_RSSI != message.in_RSSI.value:
+            self.in_RSSI = message.in_RSSI.value
+            self.do_callback(SENSOR_RSSI_IN["id"])
+        if self.out_RSSI != message.out_RSSI.value:
+            self.out_RSSI = message.out_RSSI.value
+            self.do_callback(SENSOR_RSSI_OUT["id"])
+        if self.ping_ms != message.ping_ms.value:
+            self.ping_ms = message.ping_ms.value
+            self.do_callback(SENSOR_PING["id"])
 
     def _process_info_response(self, message):
         """ Process info response message"""
-        self.stick.logger.debug(
-            "Response info message for plug %s", self.get_mac()
-        )
+        self.stick.logger.debug("Response info message for plug %s", self.get_mac())
+        self.set_available(True)
         if message.relay_state.serialize() == b"01":
             if not self._relay_state:
                 self._relay_state = True
-                self._do_all_callbacks()
+                self.do_callback(SWITCH_RELAY["id"])
         else:
             if self._relay_state:
                 self._relay_state = False
-                self._do_all_callbacks()
+                self.do_callback(SWITCH_RELAY["id"])
         self._hardware_version = int(message.hw_ver.value)
         self._firmware_version = message.fw_ver.value
         self._node_type = message.node_type.value
@@ -270,7 +288,9 @@ class PlugwiseNode(object):
             message.time.value.minute,
             message.time.value.second,
         )
-        clock_offset = message.timestamp.replace(microsecond=0) - (dt + self.stick.timezone_delta)
+        clock_offset = message.timestamp.replace(microsecond=0) - (
+            dt + self.stick.timezone_delta
+        )
         if clock_offset.days == -1:
             self._clock_offset = clock_offset.seconds - 86400
         else:

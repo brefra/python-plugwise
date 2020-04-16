@@ -56,6 +56,7 @@ from plugwise.parser import PlugwiseParser
 from plugwise.node import PlugwiseNode
 from plugwise.nodes.circle import PlugwiseCircle
 from plugwise.nodes.circle_plus import PlugwiseCirclePlus
+from plugwise.nodes.stealth import PlugwiseStealth
 from plugwise.util import inc_seq_id, validate_mac
 from queue import Queue
 
@@ -77,7 +78,9 @@ class stick(object):
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = False
-        self.timezone_delta = datetime.now().replace(minute=0, second=0, microsecond=0) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+        self.timezone_delta = datetime.now().replace(
+            minute=0, second=0, microsecond=0
+        ) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         if ":" in port:
             self.logger.debug("Open socket connection to Plugwise Zigbee stick")
             self.connection = SocketConnection(port, self)
@@ -86,6 +89,7 @@ class stick(object):
             self.connection = PlugwiseUSBConnection(port, self)
         self.logger.debug("Send init request to Plugwise Zigbee stick")
         # receive timeout deamon
+        self._run_receive_timeout_daemon = True
         self._receive_timeout_thread = threading.Thread(
             None, self._receive_timeout_daemon, "receive_timeout_deamon", (), {}
         )
@@ -93,6 +97,7 @@ class stick(object):
         self._receive_timeout_thread.start()
         # send deamon
         self._send_message_queue = Queue()
+        self._run_send_message_deamon = True
         self._send_message_thread = threading.Thread(
             None, self._send_message_daemon, "send_messages_deamon", (), {}
         )
@@ -205,6 +210,8 @@ class stick(object):
             self._plugwise_nodes[mac] = PlugwiseCircle(mac, address, self)
         elif node_type == NODE_TYPE_CIRCLE_PLUS:
             self._plugwise_nodes[mac] = PlugwiseCirclePlus(mac, address, self)
+        elif node_type == NODE_TYPE_STEALTH:
+            self._plugwise_nodes[mac] = PlugwiseStealth(mac, address, self)
         else:
             self.logger.warning("Unsupported node type '%s'", str(node_type))
 
@@ -252,7 +259,8 @@ class stick(object):
         )
 
     def _send_message_daemon(self):
-        while True:
+        """ deamon to send messages in queue """
+        while self._run_send_message_deamon:
             request_set = self._send_message_queue.get(block=True)
             if self.last_ack_seq_id != None:
                 # Calc new seq_id based last received ack messsage
@@ -315,11 +323,15 @@ class stick(object):
                     del self.expected_responses[seq_id]
 
     def _receive_timeout_daemon(self):
-        while True:
+        """ deamon to time out receive messages """
+        while self._run_receive_timeout_daemon:
             for seq_id in list(self.expected_responses.keys()):
                 if isinstance(self.expected_responses[seq_id][1], NodeClockSetRequest):
                     del self.expected_responses[seq_id]
-                elif isinstance(self.expected_responses[seq_id][1], CirclePlusRealTimeClockSetRequest):
+                elif isinstance(
+                    self.expected_responses[seq_id][1],
+                    CirclePlusRealTimeClockSetRequest,
+                ):
                     del self.expected_responses[seq_id]
                 else:
                     if self.expected_responses[seq_id][4] != None:
@@ -347,8 +359,12 @@ class stick(object):
                             else:
                                 self.logger.warning(
                                     "Drop %s request for mac %s because max (%s) retries reached",
-                                    self.expected_responses[seq_id][1].__class__.__name__,
-                                    self.expected_responses[seq_id][1].mac.decode("ascii"),
+                                    self.expected_responses[seq_id][
+                                        1
+                                    ].__class__.__name__,
+                                    self.expected_responses[seq_id][1].mac.decode(
+                                        "ascii"
+                                    ),
                                     str(MESSAGE_RETRY),
                                 )
                             del self.expected_responses[seq_id]
@@ -466,7 +482,9 @@ class stick(object):
         Stop connection to Plugwise Zigbee network
         """
         self._auto_update_timer = None
-
+        self._run_receive_timeout_daemon = False
+        self._run_send_message_deamon = False
+        self.connection.stop_connection()
 
     def _update_daemon(self):
         """
@@ -477,8 +495,7 @@ class stick(object):
             for mac in self._plugwise_nodes:
                 # Do ping request
                 self.logger.debug(
-                    "Send ping to node %s",
-                    mac,
+                    "Send ping to node %s", mac,
                 )
                 self._plugwise_nodes[mac].ping()
                 # Only power use updates for supported nodes
@@ -514,8 +531,14 @@ class stick(object):
                                 self._plugwise_nodes[mac].update_power_usage()
                             # Refresh node info once per hour and request power use afterwards
                             if self._plugwise_nodes[mac]._last_info_message != None:
-                                if self._plugwise_nodes[mac]._last_info_message < (datetime.now().replace(minute=1, second=MAX_TIME_DRIFT, microsecond=0)):
-                                    self._plugwise_nodes[mac]._request_info(self._plugwise_nodes[mac]._request_power_buffer)
+                                if self._plugwise_nodes[mac]._last_info_message < (
+                                    datetime.now().replace(
+                                        minute=1, second=MAX_TIME_DRIFT, microsecond=0
+                                    )
+                                ):
+                                    self._plugwise_nodes[mac]._request_info(
+                                        self._plugwise_nodes[mac]._request_power_buffer
+                                    )
                             if not self._plugwise_nodes[mac]._last_log_collected:
                                 self._plugwise_nodes[mac]._request_power_buffer()
                     else:

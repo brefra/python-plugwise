@@ -3,18 +3,8 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 
 Plugwise Circle+ node object
 """
-import threading
 from datetime import datetime
-from plugwise.constants import (
-    MAX_TIME_DRIFT,
-    NODE_TYPE_STICK,
-    NODE_TYPE_CIRCLE_PLUS,
-    NODE_TYPE_CIRCLE,
-    NODE_TYPE_SWITCH,
-    NODE_TYPE_SENSE,
-    NODE_TYPE_SCAN,
-    NODE_TYPE_STEALTH,
-)
+from plugwise.constants import MAX_TIME_DRIFT
 from plugwise.node import PlugwiseNode
 from plugwise.nodes.circle import PlugwiseCircle
 from plugwise.messages.requests import (
@@ -26,6 +16,7 @@ from plugwise.messages.responses import (
     CirclePlusRealTimeClockResponse,
     CircleScanResponse,
 )
+
 
 class PlugwiseCirclePlus(PlugwiseCircle):
     """provides interface to the Plugwise Circle+ nodes
@@ -92,7 +83,6 @@ class PlugwiseCirclePlus(PlugwiseCircle):
             self._scan_for_nodes_callback(self._plugwise_nodes)
             self._scan_for_nodes_callback = None
 
-
     def get_real_time_clock(self, callback=None):
         """ get current datetime of internal clock of CirclePlus """
         self.stick.send(
@@ -108,7 +98,9 @@ class PlugwiseCirclePlus(PlugwiseCircle):
             message.time.value.minute,
             message.time.value.second,
         )
-        realtime_clock_offset = message.timestamp.replace(microsecond=0) - (dt + self.stick.timezone_delta)
+        realtime_clock_offset = message.timestamp.replace(microsecond=0) - (
+            dt + self.stick.timezone_delta
+        )
         if realtime_clock_offset.days == -1:
             self._realtime_clock_offset = realtime_clock_offset.seconds - 86400
         else:
@@ -131,7 +123,9 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         if self._realtime_clock_offset != None:
             if max_drift == 0:
                 max_drift = MAX_TIME_DRIFT
-            if (self._realtime_clock_offset > max_drift) or (self._realtime_clock_offset < -(max_drift)):
+            if (self._realtime_clock_offset > max_drift) or (
+                self._realtime_clock_offset < -(max_drift)
+            ):
                 self.stick.logger.warning(
                     "Reset realtime clock of node %s because time has drifted %s sec",
                     self.get_mac(),
