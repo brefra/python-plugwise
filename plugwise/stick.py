@@ -467,6 +467,7 @@ class stick(object):
         """
         self._auto_update_timer = None
 
+        self.connection.stop_connection()
 
     def _update_daemon(self):
         """

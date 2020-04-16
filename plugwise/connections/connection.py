@@ -4,19 +4,14 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 Base for serial or socket connections
 """
 
-
 class StickConnection(object):
     """
     Generic Plugwise stick connection
     """
-
-    stick = None
-
-    def set_stick(self, stick):
+    def __init__(self):
         """
         :return: None
         """
-        self.stick = stick
 
     def send(self, message, callback=None):
         """
@@ -24,7 +19,7 @@ class StickConnection(object):
         """
         raise NotImplementedError
 
-    def stop(self):
+    def stop_connection(self):
         """
         :return: None
         """

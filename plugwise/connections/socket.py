@@ -51,7 +51,7 @@ class SocketConnection(StickConnection):
         self._write_process.daemon = True
         self._write_process.start()
 
-    def stop(self):
+    def stop_connection(self):
         """Close the socket."""
         self.logger.warning("Stop executed")
         try:
