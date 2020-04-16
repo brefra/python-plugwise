@@ -5,15 +5,6 @@ BYTE_SIZE = 8
 PARITY = "N"
 STOPBITS = 1
 
-# Node types
-NODE_TYPE_STICK = 0
-NODE_TYPE_CIRCLE_PLUS = 1
-NODE_TYPE_CIRCLE = 2
-NODE_TYPE_SWITCH = 3
-NODE_TYPE_SENSE = 5
-NODE_TYPE_SCAN = 6
-NODE_TYPE_STEALTH = 9
-
 # Plugwise message identifiers
 MESSAGE_FOOTER = b'\x0d\x0a'
 MESSAGE_HEADER = b'\x05\x05\x03\x03'
@@ -56,6 +47,15 @@ SLEEP_TIME = 150 / 1000
 # Max seconds the internal clock of plugwise nodes
 # are allowed to drift in seconds
 MAX_TIME_DRIFT = 30
+
+# Node types
+NODE_TYPE_STICK = 0
+NODE_TYPE_CIRCLE_PLUS = 1
+NODE_TYPE_CIRCLE = 2
+NODE_TYPE_SWITCH = 3
+NODE_TYPE_SENSE = 5
+NODE_TYPE_SCAN = 6
+NODE_TYPE_STEALTH = 9
 
 # Unit of measurement
 TIME_MILLISECONDS = "ms"
