@@ -259,4 +259,3 @@ class StickInitResponse(NodeResponse):
             self.network_id,
             self.unknown2,
         ]
-

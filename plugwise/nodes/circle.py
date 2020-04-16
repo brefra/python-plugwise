@@ -59,7 +59,7 @@ class PlugwiseCircle(PlugwiseNode):
             SENSOR_POWER_CONSUMPTION_TODAY["id"],
             SENSOR_POWER_CONSUMPTION_YESTERDAY["id"],
             SENSOR_POWER_PRODUCTION_CURRENT_HOUR["id"],
-            #SENSOR_POWER_PRODUCTION_PREVIOUS_HOUR["id"],
+            # SENSOR_POWER_PRODUCTION_PREVIOUS_HOUR["id"],
             SENSOR_RSSI_IN["id"],
             SENSOR_RSSI_OUT["id"],
         )
@@ -127,7 +127,7 @@ class PlugwiseCircle(PlugwiseNode):
             self.stick.message_processed(message.seq_id)
         else:
             self._circle_plus_message(message)
-        
+
     def _circle_plus_message(self, message):
         pass
 
@@ -224,15 +224,17 @@ class PlugwiseCircle(PlugwiseNode):
         else:
             self.pulses_1s = message.pulse_1s.value
             if message.pulse_1s.value != 0:
-                if message.nanosecond_offset.value !=0:
-                    pulses_1s = (message.pulse_1s.value * (1000000000 + message.nanosecond_offset.value)) / 1000000000
+                if message.nanosecond_offset.value != 0:
+                    pulses_1s = (
+                        message.pulse_1s.value
+                        * (1000000000 + message.nanosecond_offset.value)
+                    ) / 1000000000
                 else:
                     pulses_1s = message.pulse_1s.value
                 self.pulses_1s = pulses_1s
             else:
                 self.pulses_1s = 0
             self.do_callback(SENSOR_POWER_USE["id"])
-
         # Power consumption last 8 seconds
         if message.pulse_8s.value == 65535:
             self.stick.logger.debug(
@@ -241,15 +243,17 @@ class PlugwiseCircle(PlugwiseNode):
             )
         else:
             if message.pulse_8s.value != 0:
-                if message.nanosecond_offset.value !=0:
-                    pulses_8s = (message.pulse_8s.value * (1000000000 + message.nanosecond_offset.value)) / 1000000000
+                if message.nanosecond_offset.value != 0:
+                    pulses_8s = (
+                        message.pulse_8s.value
+                        * (1000000000 + message.nanosecond_offset.value)
+                    ) / 1000000000
                 else:
                     pulses_8s = message.pulse_8s.value
                 self.pulses_8s = pulses_8s
             else:
                 self.pulses_8s = 0
             self.do_callback(SENSOR_POWER_USE_LAST_8_SEC["id"])
-
         # Power consumption current hour
         if message.pulse_hour_consumed.value == 4294967295:
             self.stick.logger.debug(
@@ -259,7 +263,6 @@ class PlugwiseCircle(PlugwiseNode):
         else:
             self.pulses_consumed_1h = message.pulse_hour_consumed.value
             self.do_callback(SENSOR_POWER_CONSUMPTION_CURRENT_HOUR["id"])
-
         # Power produced current hour
         if message.pulse_hour_produced.value == 4294967295:
             self.stick.logger.debug(
@@ -303,9 +306,7 @@ class PlugwiseCircle(PlugwiseNode):
         if log_address != None:
             if bool(self.power_history):
                 # Only request last 2 power buffer logs
-                self.stick.send(
-                    CirclePowerBufferRequest(self.mac, log_address - 1),
-                )
+                self.stick.send(CirclePowerBufferRequest(self.mac, log_address - 1),)
                 self.stick.send(
                     CirclePowerBufferRequest(self.mac, log_address), callback,
                 )
@@ -319,14 +320,13 @@ class PlugwiseCircle(PlugwiseNode):
                 self.stick.send(
                     CirclePowerBufferRequest(self.mac, log_address), callback,
                 )
-        
+
     def _response_power_buffer(self, message):
         """returns information about historical power usage
         each response contains 4 log buffers and each log buffer contains data for 1 hour
         """
         if message.logaddr.value == self._last_log_address:
             self._last_log_collected = True
-
         # Collect logged power usage
         for i in range(1, 5):
             if getattr(message, "logdate%d" % (i,)).value != None:
@@ -334,24 +334,32 @@ class PlugwiseCircle(PlugwiseNode):
                 if getattr(message, "pulses%d" % (i,)).value == 0:
                     self.power_history[dt] = 0.0
                 else:
-                    self.power_history[dt] = self.pulses_to_kWs(getattr(message, "pulses%d" % (i,)).value, 3600)
-
+                    self.power_history[dt] = self.pulses_to_kWs(
+                        getattr(message, "pulses%d" % (i,)).value, 3600
+                    )
         # Cleanup history for more than 2 day's ago
         if len(self.power_history.keys()) > 48:
             for dt in list(self.power_history.keys()):
-                if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() < (datetime.now().today().date() - timedelta(days=1)):
+                if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() < (
+                    datetime.now().today().date() - timedelta(days=1)
+                ):
                     del self.power_history[dt]
-
-        # Recalculate power use counters        
+        # Recalculate power use counters
         last_hour_usage = 0
         today_power = 0
         yesterday_power = 0
         for dt in self.power_history:
-            if (dt + self.stick.timezone_delta) == datetime.now().today().replace(minute=0, second=0, microsecond=0):
+            if (dt + self.stick.timezone_delta) == datetime.now().today().replace(
+                minute=0, second=0, microsecond=0
+            ):
                 last_hour_usage = self.power_history[dt]
-            if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == datetime.now().today().date():
+            if (
+                dt + self.stick.timezone_delta - timedelta(hours=1)
+            ).date() == datetime.now().today().date():
                 today_power += self.power_history[dt]
-            if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == (datetime.now().today().date() - timedelta(days=1)):
+            if (dt + self.stick.timezone_delta - timedelta(hours=1)).date() == (
+                datetime.now().today().date() - timedelta(days=1)
+            ):
                 yesterday_power += self.power_history[dt]
         if self.power_consumption_prev_hour != round(last_hour_usage, 3):
             self.power_consumption_prev_hour = round(last_hour_usage, 3)
@@ -362,4 +370,3 @@ class PlugwiseCircle(PlugwiseNode):
         if self.power_consumption_yesterday != round(yesterday_power, 3):
             self.power_consumption_yesterday = round(yesterday_power, 3)
             self.do_callback(SENSOR_POWER_CONSUMPTION_YESTERDAY["id"])
-
