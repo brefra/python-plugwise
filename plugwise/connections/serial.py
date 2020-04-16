@@ -64,25 +64,19 @@ class PlugwiseUSBConnection(StickConnection):
         self._write_process.start()
         self.stick.logger.debug("Serial port initialized")
 
-    def stop(self):
+    def stop_connection(self):
         """Close serial port."""
-        self.stick.logger.warning("Stop executed")
         try:
             self._reader.close()
         except serial.serialutil.SerialException:
             self.stick.logger.error("Error while closing device")
             raise PlugwiseException("Error while closing device")
-        time.sleep(1)
 
     def feed_parser(self, data):
         """Parse received message."""
-        #assert isinstance(data, bytes)
+        assert isinstance(data, bytes)
         self.stick.feed_parser(data)
 
-    def write(self, data, callback=None):
-        """Add message to write queue."""
-        #assert isinstance(message, Message)
-        self._write_queue.put_nowait((data, callback))
 
     def send(self, message, callback=None):
         """Add message to write queue."""
