@@ -86,6 +86,7 @@ class stick(object):
             self.connection = PlugwiseUSBConnection(port, self)
         self.logger.debug("Send init request to Plugwise Zigbee stick")
         # receive timeout deamon
+        self._run_receive_timeout_daemon = True
         self._receive_timeout_thread = threading.Thread(
             None, self._receive_timeout_daemon, "receive_timeout_deamon", (), {}
         )
@@ -93,6 +94,7 @@ class stick(object):
         self._receive_timeout_thread.start()
         # send deamon
         self._send_message_queue = Queue()
+        self._run_send_message_deamon = True
         self._send_message_thread = threading.Thread(
             None, self._send_message_daemon, "send_messages_deamon", (), {}
         )
@@ -252,7 +254,8 @@ class stick(object):
         )
 
     def _send_message_daemon(self):
-        while True:
+        """ deamon to send messages in queue """
+        while self._run_send_message_deamon:
             request_set = self._send_message_queue.get(block=True)
             if self.last_ack_seq_id != None:
                 # Calc new seq_id based last received ack messsage
@@ -315,7 +318,8 @@ class stick(object):
                     del self.expected_responses[seq_id]
 
     def _receive_timeout_daemon(self):
-        while True:
+        """ deamon to time out receive messages """
+        while self._run_receive_timeout_daemon:
             for seq_id in list(self.expected_responses.keys()):
                 if isinstance(self.expected_responses[seq_id][1], NodeClockSetRequest):
                     del self.expected_responses[seq_id]
@@ -466,7 +470,8 @@ class stick(object):
         Stop connection to Plugwise Zigbee network
         """
         self._auto_update_timer = None
-
+        self._run_receive_timeout_daemon = False
+        self._run_send_message_deamon = False
         self.connection.stop_connection()
 
     def _update_daemon(self):
