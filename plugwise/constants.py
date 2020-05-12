@@ -48,6 +48,9 @@ SLEEP_TIME = 150 / 1000
 # are allowed to drift in seconds
 MAX_TIME_DRIFT = 30
 
+# Default sleep time for watchdog deamon
+WATCHDOG_DEAMON = 60
+
 # Node types
 NODE_TYPE_STICK = 0
 NODE_TYPE_CIRCLE_PLUS = 1

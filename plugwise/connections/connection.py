@@ -5,22 +5,28 @@ Base for serial or socket connections
 """
 
 class StickConnection(object):
-    """
-    Generic Plugwise stick connection
-    """
-    def __init__(self):
-        """
-        :return: None
-        """
+    """ Generic Plugwise stick connection"""
 
-    def send(self, message, callback=None):
-        """
-        :return: None
-        """
+    def open_port(self) -> bool:
+        """Placeholder to initialize the connection"""
         raise NotImplementedError
 
-    def stop_connection(self):
-        """
-        :return: None
-        """
+    def is_connected(self):
+        """Placeholder to get current state of connection"""
+        raise NotImplementedError
+
+    def read_thread_alive(self):
+        """Placeholder to get current state of the reader thread"""
+        raise NotImplementedError
+
+    def write_thread_alive(self):
+        """Placeholder to get current state of the writer thread"""
+        raise NotImplementedError
+
+    def send(self, message, callback=None):
+        """Placeholder to send message"""
+        raise NotImplementedError
+
+    def close_port(self):
+        """Placeholder to disconnect"""
         raise NotImplementedError

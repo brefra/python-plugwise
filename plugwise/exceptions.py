@@ -3,10 +3,32 @@
 
 
 class PlugwiseException(Exception):
+    """Base error class for this Plugwise library"""
+    pass
+
+class PortError(PlugwiseException):
+    """Connection to USBstick failed"""
+    pass
+
+class StickInitError(PlugwiseException):
+    """Initialization of USBstick failed"""
+    pass
+
+class NetworkDown(PlugwiseException):
+    """Zigbee network not online"""
+    pass
+
+class CirclePlusError(PlugwiseException):
+    """Connection to Circle+ node failed"""
     pass
 
 class ProtocolError(PlugwiseException):
+    """Error while decode received data"""
     pass
 
+
+#TimeoutError
+
 class TimeoutException(PlugwiseException):
+    """Timeout expired while waiting for response from node"""
     pass
