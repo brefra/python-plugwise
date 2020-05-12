@@ -44,7 +44,7 @@ class PlugwiseParser(object):
         self.stick.logger.debug("Feed data: %s", str(data))
         self._buffer += data
         if len(self._buffer) >= 8:
-            if self._parsing == False:
+            if not self._parsing:
                 self.parse_data()
 
     def next_message(self, message):

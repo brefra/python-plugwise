@@ -17,6 +17,7 @@ from plugwise.constants import (
     STOPBITS,
 )
 from plugwise.connections.connection import StickConnection
+from plugwise.exceptions import PortError
 from plugwise.message import PlugwiseMessage
 from plugwise.util import PlugwiseException
 
@@ -39,7 +40,13 @@ class PlugwiseUSBConnection(StickConnection):
         self.stop = STOPBITS
         self.parity = serial.PARITY_NONE
         self.stick = stick
-        self.stick.logger.debug("start serial port")
+        self.run_writer_thread = True
+        self.run_reader_thread = True
+        self._is_connected = False
+
+    def open_port(self):
+        """Open serial port"""
+        self.stick.logger.debug("Open serial port")
         try:
             self.serial = serial.Serial(
                 port = self.port,
@@ -48,47 +55,65 @@ class PlugwiseUSBConnection(StickConnection):
                 parity = self.parity,
                 stopbits = self.stop,
             )
-        except serial.serialutil.SerialException:
-            self.stick.logger.error(
-                "Could not open serial port, no connection to the plugwise Zigbee network"
+            self._reader_thread = serial.threaded.ReaderThread(self.serial, Protocol)
+            self._reader_thread.start()
+            self._reader_thread.protocol.parser = self.feed_parser
+            self._reader_thread.connect()
+        except serial.serialutil.SerialException as err:
+            self.stick.logger.debug(
+                "Failed to connect to port %s, %s",
+                self.port,
+                err,
             )
-            raise PlugwiseException("Could not open serial port")
-        self._reader = serial.threaded.ReaderThread(self.serial, Protocol)
-        self._reader.start()
-        self._reader.protocol.parser = self.feed_parser
-        self._reader.connect()
-        self._write_queue = Queue()
-        self._write_process = threading.Thread(None, self.write_daemon,
-                                               "write_packets_process", (), {})
-        self._write_process.daemon = True
-        self._write_process.start()
-        self.stick.logger.debug("Serial port initialized")
+            raise PortError(err)
+        else:
+            self.stick.logger.debug("Successfully connected to serial port %s", self.port)
+            self._write_queue = Queue()
+            self._writer_thread = threading.Thread(None, self.writer_loop,
+                                                "write_packets_process", (), {})
+            self._writer_thread.daemon = True
+            self._writer_thread.start()
+            self.stick.logger.debug("Successfully connected to port %s", self.port)
+            self._is_connected = True
 
-    def stop_connection(self):
+    def close_port(self):
         """Close serial port."""
+        self._is_connected = False
+        self.run_writer_thread = False
         try:
-            self._reader.close()
+            self._reader_thread.close()
         except serial.serialutil.SerialException:
             self.stick.logger.error("Error while closing device")
             raise PlugwiseException("Error while closing device")
+
+    def read_thread_alive(self):
+        """Return state of write thread"""
+        return self._reader_thread.isAlive()
+
+    def write_thread_alive(self):
+        """Return state of write thread"""
+        return self._writer_thread.isAlive()
+
+    def is_connected(self):
+        """Return connection state"""
+        return self._is_connected
 
     def feed_parser(self, data):
         """Parse received message."""
         assert isinstance(data, bytes)
         self.stick.feed_parser(data)
 
-
     def send(self, message, callback=None):
         """Add message to write queue."""
         assert isinstance(message, PlugwiseMessage)
         self._write_queue.put_nowait((message, callback))
 
-    def write_daemon(self):
+    def writer_loop(self):
         """Write thread."""
-        while True:
+        while self.run_writer_thread:
             (message, callback) = self._write_queue.get(block=True)
             self.stick.logger.debug("Sending %s to plugwise stick (%s)", message.__class__.__name__, message.serialize())
-            self._reader.write(message.serialize())
+            self._reader_thread.write(message.serialize())
             time.sleep(SLEEP_TIME)
             if callback:
                 callback()
