@@ -35,7 +35,6 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         Process received message
         """
         if isinstance(message, CirclePlusRealTimeClockResponse):
-            print("CirclePlusRealTimeClockResponse")
             self._response_realtime_clock(message)
         elif isinstance(message, CircleScanResponse):
             self._process_scan_response(message)
