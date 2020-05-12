@@ -68,6 +68,7 @@ class PlugwiseCircle(PlugwiseNode):
         self.pulses_8s = None
         self.pulses_consumed_1h = None
         self.pulses_produced_1h = None
+        self.calibration = False
         self._gain_a = None
         self._gain_b = None
         self._off_noise = None
@@ -104,13 +105,20 @@ class PlugwiseCircle(PlugwiseNode):
         Process received message
         """
         if isinstance(message, CirclePowerUsageResponse):
-            self._response_power_usage(message)
-            self.stick.logger.debug(
-                "Power update for %s, last update %s",
-                self.get_mac(),
-                str(self.last_update),
-            )
-            self.stick.message_processed(message.seq_id)
+            if self.calibration:
+                self._response_power_usage(message)
+                self.stick.logger.debug(
+                    "Power update for %s, last update %s",
+                    self.get_mac(),
+                    str(self.last_update),
+                )
+                self.stick.message_processed(message.seq_id)
+            else:
+                self.stick.logger.debug(
+                    "Received power update for %s before calibration information is known",
+                    self.get_mac(),
+                )
+                self._request_calibration()
         elif isinstance(message, CircleSwitchResponse):
             self._response_switch(message)
             self.stick.logger.debug(
@@ -123,8 +131,15 @@ class PlugwiseCircle(PlugwiseNode):
             self._response_calibration(message)
             self.stick.message_processed(message.seq_id)
         elif isinstance(message, CirclePowerBufferResponse):
-            self._response_power_buffer(message)
-            self.stick.message_processed(message.seq_id)
+            if self.calibration:
+                self._response_power_buffer(message)
+                self.stick.message_processed(message.seq_id)
+            else:
+                self.stick.logger.debug(
+                    "Received power buffer log for %s before calibration information is known",
+                    self.get_mac(),
+                )
+                self._request_calibration()
         else:
             self._circle_plus_message(message)
 
@@ -279,15 +294,14 @@ class PlugwiseCircle(PlugwiseNode):
         for x in ("gain_a", "gain_b", "off_noise", "off_tot"):
             val = getattr(message, x).value
             setattr(self, "_" + x, val)
+        self.calibration = True
 
     def pulses_to_kWs(self, pulses, seconds=1):
         """
         converts the amount of pulses to kWs using the calaboration offsets
         """
-        if pulses == 0:
+        if pulses == 0 or not self.calibration:
             return 0.0
-        if self._gain_a is None:
-            return None
         pulses_per_s = pulses / float(seconds)
         corrected_pulses = seconds * (
             (
