@@ -375,12 +375,22 @@ class PlugwiseCircle(PlugwiseNode):
                 datetime.now().today().date() - timedelta(days=1)
             ):
                 yesterday_power += self.power_history[dt]
-        if self.power_consumption_prev_hour != round(last_hour_usage, 3):
+        if (
+            self.power_consumption_prev_hour != round(last_hour_usage, 3)
+            or self.power_consumption_prev_hour == 0
+        ):
             self.power_consumption_prev_hour = round(last_hour_usage, 3)
             self.do_callback(SENSOR_POWER_CONSUMPTION_PREVIOUS_HOUR["id"])
-        if self.power_consumption_today != round(today_power, 3):
+        if (
+            self.power_consumption_today != round(today_power, 3)
+            or self.power_consumption_today == 0
+        ):
             self.power_consumption_today = round(today_power, 3)
             self.do_callback(SENSOR_POWER_CONSUMPTION_TODAY["id"])
-        if self.power_consumption_yesterday != round(yesterday_power, 3):
+        if (
+            self.power_consumption_yesterday != round(yesterday_power, 3)
+            or self.power_consumption_yesterday == 0
+        ):
             self.power_consumption_yesterday = round(yesterday_power, 3)
             self.do_callback(SENSOR_POWER_CONSUMPTION_YESTERDAY["id"])
+
