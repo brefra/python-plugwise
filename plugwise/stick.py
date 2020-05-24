@@ -93,7 +93,6 @@ class stick(object):
         self.timezone_delta = datetime.now().replace(
             minute=0, second=0, microsecond=0
         ) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
-        
         self._run_receive_timeout_thread = False
         self._run_send_message_thread = False
         self._run_update_thread = False
@@ -178,7 +177,6 @@ class stick(object):
             self.init_finished = True
             if not self.network_online:
                 raise NetworkDown
-
             # Start watchdog deamon
             self._run_watchdog = True
             self._watchdog_thread = threading.Thread(
@@ -317,7 +315,9 @@ class stick(object):
                 self.logger.debug("Scan Circle+ for linked nodes...")
                 self._plugwise_nodes[self.circle_plus_mac].scan_for_nodes(scan_finished)
             else:
-                self.logger.error("Circle+ is not discovered in %s", self._plugwise_nodes)
+                self.logger.error(
+                    "Circle+ is not discovered in %s", self._plugwise_nodes
+                )
 
         # Discover Circle+
         if self.circle_plus_mac:
@@ -669,7 +669,11 @@ class stick(object):
                         "Unexpected halt of receive thread, restart thread",
                     )
                     self._receive_timeout_thread = threading.Thread(
-                        None, self._receive_timeout_loop, "receive_timeout_deamon", (), {}
+                        None,
+                        self._receive_timeout_loop,
+                        "receive_timeout_deamon",
+                        (),
+                        {},
                     )
                     self._receive_timeout_thread.daemon = True
                     self._receive_timeout_thread.start()
@@ -714,11 +718,13 @@ class stick(object):
                     )
                     self._plugwise_nodes[mac].ping()
                     # Only power use updates for supported nodes
-                    if isinstance(self._plugwise_nodes[mac], PlugwiseCircle) or isinstance(
-                        self._plugwise_nodes[mac], PlugwiseCirclePlus
-                    ):
+                    if isinstance(
+                        self._plugwise_nodes[mac], PlugwiseCircle
+                    ) or isinstance(self._plugwise_nodes[mac], PlugwiseCirclePlus):
                         # Don't check at first time
-                        self.logger.debug("Request current power usage for node %s", mac)
+                        self.logger.debug(
+                            "Request current power usage for node %s", mac
+                        )
                         if not self._auto_update_first_run and self._run_update_thread:
                             # Only request update if node is available
                             if self._plugwise_nodes[mac].get_available():
@@ -745,18 +751,23 @@ class stick(object):
                                 if self._plugwise_nodes[mac]._last_info_message != None:
                                     if self._plugwise_nodes[mac]._last_info_message < (
                                         datetime.now().replace(
-                                            minute=1, second=MAX_TIME_DRIFT, microsecond=0
+                                            minute=1,
+                                            second=MAX_TIME_DRIFT,
+                                            microsecond=0,
                                         )
                                     ):
                                         self._plugwise_nodes[mac]._request_info(
-                                            self._plugwise_nodes[mac]._request_power_buffer
+                                            self._plugwise_nodes[
+                                                mac
+                                            ]._request_power_buffer
                                         )
                                 if not self._plugwise_nodes[mac]._last_log_collected:
                                     self._plugwise_nodes[mac]._request_power_buffer()
                         else:
                             if self._run_update_thread:
                                 self.logger.debug(
-                                    "First request for current power usage for node %s", mac
+                                    "First request for current power usage for node %s",
+                                    mac,
                                 )
                                 self._plugwise_nodes[mac].update_power_usage()
                 self._auto_update_first_run = False
@@ -768,21 +779,40 @@ class stick(object):
                     if firstrequest and lastrequest:
                         if firstrequest < (lastrequest - timedelta(hours=1)):
                             # first hour, so do every update a request
-                            self.send(NodeInfoRequest(bytes(mac, "ascii")), self.discover_after_scan)
-                            self._nodes_not_discovered[mac] = (firstrequest, datetime.now())
+                            self.send(
+                                NodeInfoRequest(bytes(mac, "ascii")),
+                                self.discover_after_scan,
+                            )
+                            self._nodes_not_discovered[mac] = (
+                                firstrequest,
+                                datetime.now(),
+                            )
                         else:
                             if lastrequest < (datetime.now() - timedelta(hours=1)):
-                                self.send(NodeInfoRequest(bytes(mac, "ascii")), self.discover_after_scan)
-                                self._nodes_not_discovered[mac] = (firstrequest, datetime.now())
+                                self.send(
+                                    NodeInfoRequest(bytes(mac, "ascii")),
+                                    self.discover_after_scan,
+                                )
+                                self._nodes_not_discovered[mac] = (
+                                    firstrequest,
+                                    datetime.now(),
+                                )
                     else:
-                        self.send(NodeInfoRequest(bytes(mac, "ascii")), self.discover_after_scan)
-                        self._nodes_not_discovered[mac] = (datetime.now(), datetime.now())
-
+                        self.send(
+                            NodeInfoRequest(bytes(mac, "ascii")),
+                            self.discover_after_scan,
+                        )
+                        self._nodes_not_discovered[mac] = (
+                            datetime.now(),
+                            datetime.now(),
+                        )
                 if self._auto_update_timer:
                     time.sleep(self._auto_update_timer)
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            self.logger.error("Error at line %s of _update_loop : %s", exc_tb.tb_lineno, e)
+            self.logger.error(
+                "Error at line %s of _update_loop : %s", exc_tb.tb_lineno, e
+            )
 
     def auto_update(self, timer=None):
         """
