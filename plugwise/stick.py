@@ -85,6 +85,8 @@ class stick(object):
         self.parser = PlugwiseParser(self)
         self._plugwise_nodes = {}
         self._nodes_to_discover = []
+        self._nodes_not_discovered = []
+        self._discover_callbacks = {}
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = print_progress
@@ -206,6 +208,36 @@ class stick(object):
                 "Error while disconnect port: %s", e,
             )
 
+    def subscribe_stick_callback(self, callback, callback_type):
+        """ Subscribe callback to execute """
+        if callback_type not in self._stick_callbacks:
+            self._stick_callbacks[callback_type] = []
+        self._stick_callbacks[callback_type].append(callback)
+
+    def unsubscribe_stick_callback(self, callback, callback_type):
+        """ Register callback to execute """
+        if callback_type in self._stick_callbacks:
+            self._stick_callbacks[callback_type].remove(callback)
+
+    def do_callback(self, callback_type, callback_arg=None):
+        """ Execute callbacks registered for specified callback type """
+        if callback_type in self._stick_callbacks:
+            for callback in self._stick_callbacks[callback_type]:
+                try:
+                    callback(callback_arg)
+                except Exception as e:
+                    self.stick.logger.error("Error while executing callback : %s", e)
+
+    def discover_after_scan(self):
+        """ Helper to do callback for new node """
+        mac_found = None
+        for mac in self._nodes_not_discovered.keys():
+            if mac in self._plugwise_nodes:
+                self.do_callback("NEW_NODE", mac)
+                mac_found = mac
+        if mac_found:
+            del self._nodes_not_discovered[mac_found]
+
     def nodes(self) -> list:
         """ Return mac addresses of known plugwise nodes """
         return list(self._plugwise_nodes.keys())
@@ -259,8 +291,8 @@ class stick(object):
                                 "Failed to discover Plugwise node %s before timeout expired.",
                                 str(mac),
                             )
-                            # do 1 retry
-                            self.send(NodeInfoRequest(bytes(mac, "ascii")))
+                            # Add nodes to be discovered later at update loop
+                            self._nodes_not_discovered[mac] = (None, None)
                     if callback != None:
                         callback()
 
@@ -728,6 +760,24 @@ class stick(object):
                                 )
                                 self._plugwise_nodes[mac].update_power_usage()
                 self._auto_update_first_run = False
+
+                # Try to rediscover node(s) which where not available at initial scan
+                # Do this the first hour at every update, there after only once an hour
+                for mac in self._nodes_not_discovered:
+                    (firstrequest, lastrequest) = self._nodes_not_discovered[mac]
+                    if firstrequest and lastrequest:
+                        if firstrequest < (lastrequest - timedelta(hours=1)):
+                            # first hour, so do every update a request
+                            self.send(NodeInfoRequest(bytes(mac, "ascii")), self.discover_after_scan)
+                            self._nodes_not_discovered[mac] = (firstrequest, datetime.now())
+                        else:
+                            if lastrequest < (datetime.now() - timedelta(hours=1)):
+                                self.send(NodeInfoRequest(bytes(mac, "ascii")), self.discover_after_scan)
+                                self._nodes_not_discovered[mac] = (firstrequest, datetime.now())
+                    else:
+                        self.send(NodeInfoRequest(bytes(mac, "ascii")), self.discover_after_scan)
+                        self._nodes_not_discovered[mac] = (datetime.now(), datetime.now())
+
                 if self._auto_update_timer:
                     time.sleep(self._auto_update_timer)
         except Exception as e:
