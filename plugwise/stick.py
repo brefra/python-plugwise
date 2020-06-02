@@ -646,7 +646,7 @@ class stick(object):
         self._auto_update_timer = None
         self._run_receive_timeout_thread = False
         self._run_send_message_thread = False
-        self.connection.stop_connection()
+        self.connection.close_port()
 
     def _watchdog_loop(self):
         """
