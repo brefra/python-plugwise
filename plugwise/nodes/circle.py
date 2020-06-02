@@ -310,7 +310,11 @@ class PlugwiseCircle(PlugwiseNode):
             )
             + self._off_tot
         )
-        return corrected_pulses / PULSES_PER_KW_SECOND / seconds
+        calc_value = corrected_pulses / PULSES_PER_KW_SECOND / seconds
+        # Fix minor miscalculations
+        if calc_value < 0.001 and calc_value > -0.001:
+            calc_value = 0.0
+        return calc_value
 
     def _request_power_buffer(self, log_address=None, callback=None):
         """Request power log of specified address
@@ -375,22 +379,12 @@ class PlugwiseCircle(PlugwiseNode):
                 datetime.now().today().date() - timedelta(days=1)
             ):
                 yesterday_power += self.power_history[dt]
-        if (
-            self.power_consumption_prev_hour != round(last_hour_usage, 3)
-            or self.power_consumption_prev_hour == 0
-        ):
-            self.power_consumption_prev_hour = round(last_hour_usage, 3)
+        if self.power_consumption_prev_hour != last_hour_usage:
+            self.power_consumption_prev_hour = last_hour_usage
             self.do_callback(SENSOR_POWER_CONSUMPTION_PREVIOUS_HOUR["id"])
-        if (
-            self.power_consumption_today != round(today_power, 3)
-            or self.power_consumption_today == 0
-        ):
-            self.power_consumption_today = round(today_power, 3)
+        if self.power_consumption_today != today_power:
+            self.power_consumption_today = today_power
             self.do_callback(SENSOR_POWER_CONSUMPTION_TODAY["id"])
-        if (
-            self.power_consumption_yesterday != round(yesterday_power, 3)
-            or self.power_consumption_yesterday == 0
-        ):
-            self.power_consumption_yesterday = round(yesterday_power, 3)
+        if self.power_consumption_yesterday != yesterday_power:
+            self.power_consumption_yesterday = yesterday_power
             self.do_callback(SENSOR_POWER_CONSUMPTION_YESTERDAY["id"])
-
