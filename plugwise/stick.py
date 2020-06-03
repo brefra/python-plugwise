@@ -85,8 +85,8 @@ class stick(object):
         self.parser = PlugwiseParser(self)
         self._plugwise_nodes = {}
         self._nodes_to_discover = []
-        self._nodes_not_discovered = []
-        self._discover_callbacks = {}
+        self._nodes_not_discovered = {}
+        self._stick_callbacks = {}
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = print_progress
