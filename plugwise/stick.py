@@ -777,7 +777,7 @@ class stick(object):
                 for mac in self._nodes_not_discovered:
                     (firstrequest, lastrequest) = self._nodes_not_discovered[mac]
                     if firstrequest and lastrequest:
-                        if firstrequest < (lastrequest - timedelta(hours=1)):
+                        if (firstrequest + timedelta(hours=1)) > datetime.now():
                             # first hour, so do every update a request
                             self.send(
                                 NodeInfoRequest(bytes(mac, "ascii")),
@@ -788,11 +788,11 @@ class stick(object):
                                 datetime.now(),
                             )
                         else:
-                            if lastrequest < (datetime.now() - timedelta(hours=1)):
                                 self.send(
                                     NodeInfoRequest(bytes(mac, "ascii")),
                                     self.discover_after_scan,
                                 )
+                            if (lastrequest + timedelta(hours=1)) < datetime.now():
                                 self._nodes_not_discovered[mac] = (
                                     firstrequest,
                                     datetime.now(),
