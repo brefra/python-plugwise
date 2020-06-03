@@ -278,7 +278,7 @@ class stick(object):
                 if (len(self._plugwise_nodes) - 1) >= len(self._nodes_to_discover):
                     self._discovery_finished = True
                     self._nodes_to_discover = None
-                    if callback != None:
+                    if callback:
                         callback()
 
             def timeout_expired():
@@ -291,7 +291,7 @@ class stick(object):
                             )
                             # Add nodes to be discovered later at update loop
                             self._nodes_not_discovered[mac] = (None, None)
-                    if callback != None:
+                    if callback:
                         callback()
 
             # setup timeout for loading nodes
@@ -303,9 +303,7 @@ class stick(object):
             ).start()
             self.logger.debug("Start discovery of linked node types...")
             for (mac, address) in nodes_to_discover:
-                self.send(
-                    NodeInfoRequest(bytes(mac, "ascii")), node_discovered,
-                )
+                self.discover_node(mac, node_discovered)
 
         def scan_circle_plus():
             """Callback when Circle+ is discovered"""
@@ -779,29 +777,20 @@ class stick(object):
                     if firstrequest and lastrequest:
                         if (firstrequest + timedelta(hours=1)) > datetime.now():
                             # first hour, so do every update a request
-                            self.send(
-                                NodeInfoRequest(bytes(mac, "ascii")),
-                                self.discover_after_scan,
-                            )
+                            self.discover_node(mac, self.discover_after_scan)
                             self._nodes_not_discovered[mac] = (
                                 firstrequest,
                                 datetime.now(),
                             )
                         else:
-                                self.send(
-                                    NodeInfoRequest(bytes(mac, "ascii")),
-                                    self.discover_after_scan,
-                                )
                             if (lastrequest + timedelta(hours=1)) < datetime.now():
+                                self.discover_node(mac, self.discover_after_scan)
                                 self._nodes_not_discovered[mac] = (
                                     firstrequest,
                                     datetime.now(),
                                 )
                     else:
-                        self.send(
-                            NodeInfoRequest(bytes(mac, "ascii")),
-                            self.discover_after_scan,
-                        )
+                        self.discover_node(mac, self.discover_after_scan)
                         self._nodes_not_discovered[mac] = (
                             datetime.now(),
                             datetime.now(),
