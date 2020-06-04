@@ -78,9 +78,10 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                     + str(message.node_address.value)
                     + " => no node found"
                 )
-        if message.node_address.value == 63 and self._scan_for_nodes_callback != None:
+        if message.node_address.value == 63 and self._scan_for_nodes_callback:
             self._scan_for_nodes_callback(self._plugwise_nodes)
             self._scan_for_nodes_callback = None
+            self._plugwise_nodes = []
 
     def get_real_time_clock(self, callback=None):
         """ get current datetime of internal clock of CirclePlus """

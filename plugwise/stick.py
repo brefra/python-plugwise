@@ -85,13 +85,14 @@ class stick(object):
         self.parser = PlugwiseParser(self)
         self._plugwise_nodes = {}
         self._nodes_to_discover = []
+        self._nodes_not_discovered = {}
+        self._stick_callbacks = {}
         self.last_ack_seq_id = None
         self.expected_responses = {}
         self.print_progress = print_progress
         self.timezone_delta = datetime.now().replace(
             minute=0, second=0, microsecond=0
         ) - datetime.utcnow().replace(minute=0, second=0, microsecond=0)
-        
         self._run_receive_timeout_thread = False
         self._run_send_message_thread = False
         self._run_update_thread = False
@@ -176,7 +177,6 @@ class stick(object):
             self.init_finished = True
             if not self.network_online:
                 raise NetworkDown
-
             # Start watchdog deamon
             self._run_watchdog = True
             self._watchdog_thread = threading.Thread(
@@ -205,6 +205,36 @@ class stick(object):
             self.logger.error(
                 "Error while disconnect port: %s", e,
             )
+
+    def subscribe_stick_callback(self, callback, callback_type):
+        """ Subscribe callback to execute """
+        if callback_type not in self._stick_callbacks:
+            self._stick_callbacks[callback_type] = []
+        self._stick_callbacks[callback_type].append(callback)
+
+    def unsubscribe_stick_callback(self, callback, callback_type):
+        """ Register callback to execute """
+        if callback_type in self._stick_callbacks:
+            self._stick_callbacks[callback_type].remove(callback)
+
+    def do_callback(self, callback_type, callback_arg=None):
+        """ Execute callbacks registered for specified callback type """
+        if callback_type in self._stick_callbacks:
+            for callback in self._stick_callbacks[callback_type]:
+                try:
+                    callback(callback_arg)
+                except Exception as e:
+                    self.stick.logger.error("Error while executing callback : %s", e)
+
+    def discover_after_scan(self):
+        """ Helper to do callback for new node """
+        mac_found = None
+        for mac in self._nodes_not_discovered.keys():
+            if mac in self._plugwise_nodes:
+                self.do_callback("NEW_NODE", mac)
+                mac_found = mac
+        if mac_found:
+            del self._nodes_not_discovered[mac_found]
 
     def nodes(self) -> list:
         """ Return mac addresses of known plugwise nodes """
@@ -248,7 +278,7 @@ class stick(object):
                 if (len(self._plugwise_nodes) - 1) >= len(self._nodes_to_discover):
                     self._discovery_finished = True
                     self._nodes_to_discover = None
-                    if callback != None:
+                    if callback:
                         callback()
 
             def timeout_expired():
@@ -259,9 +289,9 @@ class stick(object):
                                 "Failed to discover Plugwise node %s before timeout expired.",
                                 str(mac),
                             )
-                            # do 1 retry
-                            self.send(NodeInfoRequest(bytes(mac, "ascii")))
-                    if callback != None:
+                            # Add nodes to be discovered later at update loop
+                            self._nodes_not_discovered[mac] = (None, None)
+                    if callback:
                         callback()
 
             # setup timeout for loading nodes
@@ -273,9 +303,7 @@ class stick(object):
             ).start()
             self.logger.debug("Start discovery of linked node types...")
             for (mac, address) in nodes_to_discover:
-                self.send(
-                    NodeInfoRequest(bytes(mac, "ascii")), node_discovered,
-                )
+                self.discover_node(mac, node_discovered)
 
         def scan_circle_plus():
             """Callback when Circle+ is discovered"""
@@ -285,7 +313,9 @@ class stick(object):
                 self.logger.debug("Scan Circle+ for linked nodes...")
                 self._plugwise_nodes[self.circle_plus_mac].scan_for_nodes(scan_finished)
             else:
-                self.logger.error("Circle+ is not discovered in %s", self._plugwise_nodes)
+                self.logger.error(
+                    "Circle+ is not discovered in %s", self._plugwise_nodes
+                )
 
         # Discover Circle+
         if self.circle_plus_mac:
@@ -614,7 +644,7 @@ class stick(object):
         self._auto_update_timer = None
         self._run_receive_timeout_thread = False
         self._run_send_message_thread = False
-        self.connection.stop_connection()
+        self.connection.close_port()
 
     def _watchdog_loop(self):
         """
@@ -637,7 +667,11 @@ class stick(object):
                         "Unexpected halt of receive thread, restart thread",
                     )
                     self._receive_timeout_thread = threading.Thread(
-                        None, self._receive_timeout_loop, "receive_timeout_deamon", (), {}
+                        None,
+                        self._receive_timeout_loop,
+                        "receive_timeout_deamon",
+                        (),
+                        {},
                     )
                     self._receive_timeout_thread.daemon = True
                     self._receive_timeout_thread.start()
@@ -682,11 +716,13 @@ class stick(object):
                     )
                     self._plugwise_nodes[mac].ping()
                     # Only power use updates for supported nodes
-                    if isinstance(self._plugwise_nodes[mac], PlugwiseCircle) or isinstance(
-                        self._plugwise_nodes[mac], PlugwiseCirclePlus
-                    ):
+                    if isinstance(
+                        self._plugwise_nodes[mac], PlugwiseCircle
+                    ) or isinstance(self._plugwise_nodes[mac], PlugwiseCirclePlus):
                         # Don't check at first time
-                        self.logger.debug("Request current power usage for node %s", mac)
+                        self.logger.debug(
+                            "Request current power usage for node %s", mac
+                        )
                         if not self._auto_update_first_run and self._run_update_thread:
                             # Only request update if node is available
                             if self._plugwise_nodes[mac].get_available():
@@ -713,26 +749,59 @@ class stick(object):
                                 if self._plugwise_nodes[mac]._last_info_message != None:
                                     if self._plugwise_nodes[mac]._last_info_message < (
                                         datetime.now().replace(
-                                            minute=1, second=MAX_TIME_DRIFT, microsecond=0
+                                            minute=1,
+                                            second=MAX_TIME_DRIFT,
+                                            microsecond=0,
                                         )
                                     ):
                                         self._plugwise_nodes[mac]._request_info(
-                                            self._plugwise_nodes[mac]._request_power_buffer
+                                            self._plugwise_nodes[
+                                                mac
+                                            ]._request_power_buffer
                                         )
                                 if not self._plugwise_nodes[mac]._last_log_collected:
                                     self._plugwise_nodes[mac]._request_power_buffer()
                         else:
                             if self._run_update_thread:
                                 self.logger.debug(
-                                    "First request for current power usage for node %s", mac
+                                    "First request for current power usage for node %s",
+                                    mac,
                                 )
                                 self._plugwise_nodes[mac].update_power_usage()
                 self._auto_update_first_run = False
+
+                # Try to rediscover node(s) which where not available at initial scan
+                # Do this the first hour at every update, there after only once an hour
+                for mac in self._nodes_not_discovered:
+                    (firstrequest, lastrequest) = self._nodes_not_discovered[mac]
+                    if firstrequest and lastrequest:
+                        if (firstrequest + timedelta(hours=1)) > datetime.now():
+                            # first hour, so do every update a request
+                            self.discover_node(mac, self.discover_after_scan)
+                            self._nodes_not_discovered[mac] = (
+                                firstrequest,
+                                datetime.now(),
+                            )
+                        else:
+                            if (lastrequest + timedelta(hours=1)) < datetime.now():
+                                self.discover_node(mac, self.discover_after_scan)
+                                self._nodes_not_discovered[mac] = (
+                                    firstrequest,
+                                    datetime.now(),
+                                )
+                    else:
+                        self.discover_node(mac, self.discover_after_scan)
+                        self._nodes_not_discovered[mac] = (
+                            datetime.now(),
+                            datetime.now(),
+                        )
                 if self._auto_update_timer:
                     time.sleep(self._auto_update_timer)
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            self.logger.error("Error at line %s of _update_loop : %s", exc_tb.tb_lineno, e)
+            self.logger.error(
+                "Error at line %s of _update_loop : %s", exc_tb.tb_lineno, e
+            )
 
     def auto_update(self, timer=None):
         """
