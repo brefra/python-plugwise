@@ -74,9 +74,9 @@ class PlugwiseCircle(PlugwiseNode):
         self._off_noise = None
         self._off_tot = None
         self.power_history = {}
-        self.power_consumption_prev_hour = 0
-        self.power_consumption_today = 0
-        self.power_consumption_yesterday = 0
+        self.power_consumption_prev_hour = None
+        self.power_consumption_today = None
+        self.power_consumption_yesterday = None
         self._request_calibration()
 
     def _request_calibration(self, callback=None):
@@ -163,8 +163,8 @@ class PlugwiseCircle(PlugwiseNode):
         Returns power usage during the last second in Watts
         Based on last received power usage information 
         """
-        if self.pulses_1s == None:
-            return 0.0
+        if self.pulses_1s is None:
+            return None
         return self.pulses_to_kWs(self.pulses_1s) * 1000
 
     def get_power_usage_8_sec(self):
@@ -172,8 +172,8 @@ class PlugwiseCircle(PlugwiseNode):
         Returns power usage during the last 8 second in Watts
         Based on last received power usage information 
         """
-        if self.pulses_8s == None:
-            return 0.0
+        if self.pulses_8s is None:
+            return None
         return self.pulses_to_kWs(self.pulses_8s, 8) * 1000
 
     def get_power_consumption_current_hour(self):
@@ -181,8 +181,8 @@ class PlugwiseCircle(PlugwiseNode):
         Returns the power usage during this running hour in kWh
         Based on last received power usage information 
         """
-        if self.pulses_consumed_1h == None:
-            return 0.0
+        if self.pulses_consumed_1h is None:
+            return None
         elif self.pulses_consumed_1h == 0:
             return 0.0
         return self.pulses_to_kWs(self.pulses_consumed_1h, 3600)
@@ -192,8 +192,8 @@ class PlugwiseCircle(PlugwiseNode):
         Returns the power production during this running hour in kWh
         Based on last received power usage information 
         """
-        if self.pulses_produced_1h == None:
-            return 0.0
+        if self.pulses_produced_1h is None:
+            return None
         elif self.pulses_produced_1h == 0:
             return 0.0
         return self.pulses_to_kWs(self.pulses_produced_1h, 3600)
