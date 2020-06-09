@@ -127,7 +127,7 @@ class stick(object):
         except TimeoutException as e:
             self.logger.error("Timeout exception while initializing USBstick")
         except Exception as e:
-            self.logger.error("Unknown error : %s"), e
+            self.logger.error("Unknown error : %s", e)
 
     def connect(self, callback=None):
         """ Connect to stick and raise error if it fails"""
