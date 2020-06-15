@@ -33,7 +33,7 @@ ACK_SLEEP_SET = 246
 ACK_POWER_LOG_INTERVAL_SET = 248
 
 # Max timeout in seconds
-MESSAGE_TIME_OUT = 10
+MESSAGE_TIME_OUT = 5
 MESSAGE_RETRY = 2
 
 # plugwise year information is offset from y2k
@@ -48,7 +48,7 @@ SLEEP_TIME = 150 / 1000
 # are allowed to drift in seconds
 MAX_TIME_DRIFT = 30
 
-# Default sleep time for watchdog deamon
+# Default sleep time in seconds for watchdog deamon
 WATCHDOG_DEAMON = 60
 
 # Node types
