@@ -81,11 +81,14 @@ class stick(object):
         self.port = port
         self.network_online = False
         self.circle_plus_mac = None
+        self._circle_plus_discovered = False
+        self._circle_plus_retries = 0
         self.network_id = None
         self.parser = PlugwiseParser(self)
         self._plugwise_nodes = {}
         self._nodes_to_discover = []
         self._nodes_not_discovered = {}
+        self._stick_initialized = False
         self._stick_callbacks = {}
         self.last_ack_seq_id = None
         self.expected_responses = {}
@@ -166,17 +169,15 @@ class stick(object):
         self._update_thread.daemon = True
         self.logger.debug("All threads started")
 
-    def initialize_stick(self, callback=None) -> bool:
+    def initialize_stick(self, callback=None, timeout=MESSAGE_TIME_OUT):
         # Initialize USBstick
         if not self.connection.is_connected():
             raise StickInitError
-        self.init_finished = False
 
         def cb_stick_initialized():
             """ Callback when initialization of Plugwise USBstick is finished """
-            self.init_finished = True
-            if not self.network_online:
-                raise NetworkDown
+            self._stick_initialized = True
+
             # Start watchdog deamon
             self._run_watchdog = True
             self._watchdog_thread = threading.Thread(
@@ -185,17 +186,41 @@ class stick(object):
             self._watchdog_thread.daemon = True
             self._watchdog_thread.start()
 
+            # Try to discover Circle+
+            if self.circle_plus_mac:
+                self.discover_node(self.circle_plus_mac)
             if callback:
                 callback()
 
         self.logger.debug("Send init request to Plugwise Zigbee stick")
         self.send(StickInitRequest(), cb_stick_initialized)
-        timeout = 0
-        while not self.init_finished and (timeout < MESSAGE_TIME_OUT):
-            timeout += 1
-            time.sleep(1)
-        if not self.init_finished:
+        time_counter = 0
+        while not self._stick_initialized and (time_counter < timeout):
+            time_counter += 0.1
+            time.sleep(0.1)
+        if not self._stick_initialized:
             raise StickInitError
+        if not self.network_online:
+            raise NetworkDown
+
+    def initialize_circle_plus(self, callback=None, timeout=MESSAGE_TIME_OUT):
+        # Initialize Circle+
+        if (
+            not self.connection.is_connected()
+            or not self._stick_initialized
+            or not self.circle_plus_mac
+        ):
+            raise StickInitError
+        
+        # discover circle+ node
+        self.discover_node(self.circle_plus_mac)
+
+        time_counter = 0
+        while not self._circle_plus_discovered and (time_counter < timeout):
+            time_counter += 0.1
+            time.sleep(0.1)
+        if not self._circle_plus_discovered:
+            raise CirclePlusError
 
     def disconnect(self):
         """ Disconnect from stick and raise error if it fails"""
@@ -286,7 +311,7 @@ class stick(object):
                     for (mac, address) in self._nodes_to_discover:
                         if mac not in self._plugwise_nodes.keys():
                             self.logger.warning(
-                                "Failed to discover Plugwise node %s before timeout expired.",
+                                "Failed to discover registered Plugwise node with MAC '%s' before timeout expired.",
                                 str(mac),
                             )
                             # Add nodes to be discovered later at update loop
@@ -319,10 +344,16 @@ class stick(object):
 
         # Discover Circle+
         if self.circle_plus_mac:
-            if self.print_progress:
-                print("Discover Circle+")
-            self.logger.debug("Discover Circle+ at %s", self.circle_plus_mac)
-            self.discover_node(self.circle_plus_mac, scan_circle_plus)
+            if self.circle_plus_mac in self._plugwise_nodes:
+                if self.print_progress:
+                    print("Scan Circle+ for linked nodes")
+                self.logger.debug("Scan Circle+ for linked nodes...")
+                self._plugwise_nodes[self.circle_plus_mac].scan_for_nodes(scan_finished)
+            else:
+                if self.print_progress:
+                    print("Discover Circle+")
+                self.logger.debug("Discover Circle+ at %s", self.circle_plus_mac)
+                self.discover_node(self.circle_plus_mac, scan_circle_plus)
         else:
             self.logger.error(
                 "Plugwise stick not properly initialized, Circle+ MAC is missing."
@@ -543,6 +574,7 @@ class stick(object):
         elif isinstance(message, NodeInfoResponse):
             if not mac in self._plugwise_nodes:
                 if message.node_type.value == NODE_TYPE_CIRCLE_PLUS:
+                    self._circle_plus_discovered = True
                     self._append_node(mac, 0, message.node_type.value)
                 else:
                     for (mac_to_discover, address) in self._nodes_to_discover:
@@ -651,6 +683,7 @@ class stick(object):
         Main worker loop to watch all other worker threads
         """
         time.sleep(5)
+        circle_plus_retry_counter = 0
         while self._run_watchdog:
             # Connection
             if self.connection.is_connected():
@@ -698,6 +731,17 @@ class stick(object):
                     )
                     self._update_thread.daemon = True
                     self._update_thread.start()
+            # Circle+ discovery
+            if self._circle_plus_discovered == False:
+                # First hour every once an hour
+                if self._circle_plus_retries < 60 or circle_plus_retry_counter > 60:
+                    self.logger.debug(
+                        "Circle+ not yet discovered, resubmit discovery request",
+                    )
+                    self.discover_node(self.circle_plus_mac, self.scan)
+                    self._circle_plus_retries += 1
+                    circle_plus_retry_counter = 0
+                circle_plus_retry_counter += 1
             time.sleep(WATCHDOG_DEAMON)
 
     def _update_loop(self):
@@ -707,6 +751,7 @@ class stick(object):
         """
         self._run_update_thread = True
         self._auto_update_first_run = True
+        day_of_month = datetime.now().day
         try:
             while self._run_update_thread:
                 for mac in self._plugwise_nodes:
@@ -795,6 +840,12 @@ class stick(object):
                             datetime.now(),
                             datetime.now(),
                         )
+                # Sync internal clock of all available nodes once a day
+                if datetime.now().day != day_of_month:
+                    day_of_month = datetime.now().day
+                    for mac in self._plugwise_nodes:
+                        if self._plugwise_nodes[mac].get_available():
+                            self._plugwise_nodes[mac].sync_clock()
                 if self._auto_update_timer:
                     time.sleep(self._auto_update_timer)
         except Exception as e:
