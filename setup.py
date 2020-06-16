@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
   name='python-plugwise',
-  version="0.9",
+  version="0.9.1",
   author='Frank van Breugel',
   author_email='f.v.breugel@gmail.com',
   description='Async library for Plugwise stick',
