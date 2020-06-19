@@ -60,6 +60,9 @@ NODE_TYPE_SENSE = 5
 NODE_TYPE_SCAN = 6
 NODE_TYPE_STEALTH = 9
 
+# Callback types
+CB_NEW_NODE = "NEW_NODE"
+
 # Unit of measurement
 TIME_MILLISECONDS = "ms"
 POWER_WATT = "W"
