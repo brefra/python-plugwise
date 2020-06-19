@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from plugwise.constants import (
     ACK_ERROR,
     ACK_TIMEOUT,
+    CB_NEW_NODE,
     MAX_TIME_DRIFT,
     MESSAGE_TIME_OUT,
     MESSAGE_RETRY,
@@ -256,7 +257,7 @@ class stick(object):
         mac_found = None
         for mac in self._nodes_not_discovered.keys():
             if mac in self._plugwise_nodes:
-                self.do_callback("NEW_NODE", mac)
+                self.do_callback(CB_NEW_NODE, mac)
                 mac_found = mac
         if mac_found:
             del self._nodes_not_discovered[mac_found]
