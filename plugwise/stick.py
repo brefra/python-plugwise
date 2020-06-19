@@ -212,7 +212,6 @@ class stick(object):
             or not self.circle_plus_mac
         ):
             raise StickInitError
-        
         # discover circle+ node
         self.discover_node(self.circle_plus_mac)
 
@@ -273,7 +272,7 @@ class stick(object):
             return self._plugwise_nodes[mac]
         return None
 
-    def discover_node(self, mac : str, callback=None) -> bool:
+    def discover_node(self, mac: str, callback=None) -> bool:
         """ Discovery of plugwise node """
         if validate_mac(mac) == True:
             if mac not in self._plugwise_nodes.keys():
@@ -290,7 +289,6 @@ class stick(object):
                 return False
         else:
             return False
-
 
     def scan(self, callback=None):
         """ scan for connected plugwise nodes """
