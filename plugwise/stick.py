@@ -273,15 +273,24 @@ class stick(object):
             return self._plugwise_nodes[mac]
         return None
 
-    def discover_node(self, mac, callback=None) -> bool:
-        """ Discovery plugwise node """
-        assert isinstance(mac, str)
+    def discover_node(self, mac : str, callback=None) -> bool:
+        """ Discovery of plugwise node """
         if validate_mac(mac) == True:
-            self.send(
-                NodeInfoRequest(bytes(mac, "ascii")), callback,
-            )
-            return True
-        return False
+            if mac not in self._plugwise_nodes.keys():
+                if mac not in self._nodes_not_discovered.keys():
+                    self._nodes_not_discovered[mac] = (
+                        None,
+                        None,
+                    )
+                self.send(
+                    NodeInfoRequest(bytes(mac, "ascii")), callback,
+                )
+                return True
+            else:
+                return False
+        else:
+            return False
+
 
     def scan(self, callback=None):
         """ scan for connected plugwise nodes """
@@ -315,8 +324,6 @@ class stick(object):
                                 "Failed to discover registered Plugwise node with MAC '%s' before timeout expired.",
                                 str(mac),
                             )
-                            # Add nodes to be discovered later at update loop
-                            self._nodes_not_discovered[mac] = (None, None)
                     if callback:
                         callback()
 
