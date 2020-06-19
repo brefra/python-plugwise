@@ -224,12 +224,12 @@ class stick(object):
 
     def disconnect(self):
         """ Disconnect from stick and raise error if it fails"""
-        try:
-            self.connection.close_port()
-        except Exception as e:
-            self.logger.error(
-                "Error while disconnect port: %s", e,
-            )
+        self._run_watchdog = False
+        self._run_update_thread = False
+        self._auto_update_timer = None
+        self._run_receive_timeout_thread = False
+        self._run_send_message_thread = False
+        self.connection.close_port()
 
     def subscribe_stick_callback(self, callback, callback_type):
         """ Subscribe callback to execute """
@@ -667,16 +667,6 @@ class stick(object):
                                 e,
                             )
             del self.expected_responses[seq_id]
-
-    def stop(self):
-        """
-        Stop connection to Plugwise Zigbee network
-        """
-        self._run_watchdog = False
-        self._auto_update_timer = None
-        self._run_receive_timeout_thread = False
-        self._run_send_message_thread = False
-        self.connection.close_port()
 
     def _watchdog_loop(self):
         """
