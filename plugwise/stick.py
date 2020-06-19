@@ -251,7 +251,7 @@ class stick(object):
                 except Exception as e:
                     self.stick.logger.error("Error while executing callback : %s", e)
 
-    def discover_after_scan(self):
+    def _discover_after_scan(self):
         """ Helper to do callback for new node """
         mac_found = None
         for mac in self._nodes_not_discovered.keys():
@@ -812,20 +812,20 @@ class stick(object):
                     if firstrequest and lastrequest:
                         if (firstrequest + timedelta(hours=1)) > datetime.now():
                             # first hour, so do every update a request
-                            self.discover_node(mac, self.discover_after_scan)
+                            self.discover_node(mac, self._discover_after_scan)
                             self._nodes_not_discovered[mac] = (
                                 firstrequest,
                                 datetime.now(),
                             )
                         else:
                             if (lastrequest + timedelta(hours=1)) < datetime.now():
-                                self.discover_node(mac, self.discover_after_scan)
+                                self.discover_node(mac, self._discover_after_scan)
                                 self._nodes_not_discovered[mac] = (
                                     firstrequest,
                                     datetime.now(),
                                 )
                     else:
-                        self.discover_node(mac, self.discover_after_scan)
+                        self.discover_node(mac, self._discover_after_scan)
                         self._nodes_not_discovered[mac] = (
                             datetime.now(),
                             datetime.now(),
