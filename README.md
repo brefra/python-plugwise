@@ -103,7 +103,7 @@ plugwise.auto_update(0)
 time.sleep(5)
 
 print("Exiting ...")
-plugwise.stop()
+plugwise.disconnect()
 ```
 
 ## Usage
