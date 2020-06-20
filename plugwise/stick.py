@@ -473,7 +473,7 @@ class stick(object):
             ):
                 time.sleep(0.1)
                 timeout_counter += 1
-            if timeout_counter > 10:
+            if timeout_counter > 10 and self._run_send_message_thread:
                 if seq_id in self.expected_responses:
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
                         self.logger.warning(
