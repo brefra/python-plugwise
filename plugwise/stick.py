@@ -432,7 +432,7 @@ class stick(object):
         """ deamon to send messages in queue """
         while self._run_send_message_thread:
             request_set = self._send_message_queue.get(block=True)
-            if self.last_ack_seq_id != None:
+            if self.last_ack_seq_id:
                 # Calc new seq_id based last received ack messsage
                 seq_id = inc_seq_id(self.last_ack_seq_id)
             else:
