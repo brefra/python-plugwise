@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from plugwise.constants import (
     ACK_ERROR,
     ACK_TIMEOUT,
+    CB_NEW_NODE,
     MAX_TIME_DRIFT,
     MESSAGE_TIME_OUT,
     MESSAGE_RETRY,
@@ -211,7 +212,6 @@ class stick(object):
             or not self.circle_plus_mac
         ):
             raise StickInitError
-        
         # discover circle+ node
         self.discover_node(self.circle_plus_mac)
 
@@ -224,12 +224,12 @@ class stick(object):
 
     def disconnect(self):
         """ Disconnect from stick and raise error if it fails"""
-        try:
-            self.connection.close_port()
-        except Exception as e:
-            self.logger.error(
-                "Error while disconnect port: %s", e,
-            )
+        self._run_watchdog = False
+        self._run_update_thread = False
+        self._auto_update_timer = None
+        self._run_receive_timeout_thread = False
+        self._run_send_message_thread = False
+        self.connection.close_port()
 
     def subscribe_stick_callback(self, callback, callback_type):
         """ Subscribe callback to execute """
@@ -249,14 +249,14 @@ class stick(object):
                 try:
                     callback(callback_arg)
                 except Exception as e:
-                    self.stick.logger.error("Error while executing callback : %s", e)
+                    self.logger.error("Error while executing callback : %s", e)
 
-    def discover_after_scan(self):
+    def _discover_after_scan(self):
         """ Helper to do callback for new node """
         mac_found = None
         for mac in self._nodes_not_discovered.keys():
             if mac in self._plugwise_nodes:
-                self.do_callback("NEW_NODE", mac)
+                self.do_callback(CB_NEW_NODE, mac)
                 mac_found = mac
         if mac_found:
             del self._nodes_not_discovered[mac_found]
@@ -272,15 +272,23 @@ class stick(object):
             return self._plugwise_nodes[mac]
         return None
 
-    def discover_node(self, mac, callback=None) -> bool:
-        """ Discovery plugwise node """
-        assert isinstance(mac, str)
+    def discover_node(self, mac: str, callback=None) -> bool:
+        """ Discovery of plugwise node """
         if validate_mac(mac) == True:
-            self.send(
-                NodeInfoRequest(bytes(mac, "ascii")), callback,
-            )
-            return True
-        return False
+            if mac not in self._plugwise_nodes.keys():
+                if mac not in self._nodes_not_discovered.keys():
+                    self._nodes_not_discovered[mac] = (
+                        None,
+                        None,
+                    )
+                self.send(
+                    NodeInfoRequest(bytes(mac, "ascii")), callback,
+                )
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def scan(self, callback=None):
         """ scan for connected plugwise nodes """
@@ -314,8 +322,6 @@ class stick(object):
                                 "Failed to discover registered Plugwise node with MAC '%s' before timeout expired.",
                                 str(mac),
                             )
-                            # Add nodes to be discovered later at update loop
-                            self._nodes_not_discovered[mac] = (None, None)
                     if callback:
                         callback()
 
@@ -426,7 +432,7 @@ class stick(object):
         """ deamon to send messages in queue """
         while self._run_send_message_thread:
             request_set = self._send_message_queue.get(block=True)
-            if self.last_ack_seq_id != None:
+            if self.last_ack_seq_id:
                 # Calc new seq_id based last received ack messsage
                 seq_id = inc_seq_id(self.last_ack_seq_id)
             else:
@@ -467,7 +473,7 @@ class stick(object):
             ):
                 time.sleep(0.1)
                 timeout_counter += 1
-            if timeout_counter > 10:
+            if timeout_counter > 10 and self._run_send_message_thread:
                 if seq_id in self.expected_responses:
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
                         self.logger.warning(
@@ -668,16 +674,6 @@ class stick(object):
                             )
             del self.expected_responses[seq_id]
 
-    def stop(self):
-        """
-        Stop connection to Plugwise Zigbee network
-        """
-        self._run_watchdog = False
-        self._auto_update_timer = None
-        self._run_receive_timeout_thread = False
-        self._run_send_message_thread = False
-        self.connection.close_port()
-
     def _watchdog_loop(self):
         """
         Main worker loop to watch all other worker threads
@@ -822,20 +818,20 @@ class stick(object):
                     if firstrequest and lastrequest:
                         if (firstrequest + timedelta(hours=1)) > datetime.now():
                             # first hour, so do every update a request
-                            self.discover_node(mac, self.discover_after_scan)
+                            self.discover_node(mac, self._discover_after_scan)
                             self._nodes_not_discovered[mac] = (
                                 firstrequest,
                                 datetime.now(),
                             )
                         else:
                             if (lastrequest + timedelta(hours=1)) < datetime.now():
-                                self.discover_node(mac, self.discover_after_scan)
+                                self.discover_node(mac, self._discover_after_scan)
                                 self._nodes_not_discovered[mac] = (
                                     firstrequest,
                                     datetime.now(),
                                 )
                     else:
-                        self.discover_node(mac, self.discover_after_scan)
+                        self.discover_node(mac, self._discover_after_scan)
                         self._nodes_not_discovered[mac] = (
                             datetime.now(),
                             datetime.now(),
