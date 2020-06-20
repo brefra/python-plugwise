@@ -249,7 +249,7 @@ class stick(object):
                 try:
                     callback(callback_arg)
                 except Exception as e:
-                    self.stick.logger.error("Error while executing callback : %s", e)
+                    self.logger.error("Error while executing callback : %s", e)
 
     def _discover_after_scan(self):
         """ Helper to do callback for new node """
