@@ -226,67 +226,68 @@ class PlugwiseCircle(PlugwiseNode):
                 self.do_callback(SWITCH_RELAY["id"])
 
     def _response_power_usage(self, message):
-        # sometimes the circle returns max values for some of the pulse counters
-        # I have no idea what it means but it certainly isn't a reasonable value
-        # so I just assume that it's meant to signal some kind of a temporary error condition
+        # Sometimes the circle returns -1 for some of the pulse counters
+        # likely this means the circle measures very little power and is suffering from
+        # rounding errors. Zero these out. However, negative pulse values are valid
+        # for power producing appliances, like solar panels, so don't complain too loudly.
 
         # Power consumption last second
-        if message.pulse_1s.value == 65535:
+        if message.pulse_1s.value == -1:
+            message.pulse_1s.value = 0
             self.stick.logger.debug(
-                "1 sec power pulse counter for node %s has unreasonable value of 65535",
+                "1 sec power pulse counter for node %s has value of -1, corrected to 0",
                 self.get_mac(),
             )
-        else:
-            self.pulses_1s = message.pulse_1s.value
-            if message.pulse_1s.value != 0:
-                if message.nanosecond_offset.value != 0:
-                    pulses_1s = (
-                        message.pulse_1s.value
-                        * (1000000000 + message.nanosecond_offset.value)
-                    ) / 1000000000
-                else:
-                    pulses_1s = message.pulse_1s.value
-                self.pulses_1s = pulses_1s
+        self.pulses_1s = message.pulse_1s.value
+        if message.pulse_1s.value != 0:
+            if message.nanosecond_offset.value != 0:
+                pulses_1s = (
+                    message.pulse_1s.value
+                    * (1000000000 + message.nanosecond_offset.value)
+                ) / 1000000000
             else:
-                self.pulses_1s = 0
-            self.do_callback(SENSOR_POWER_USE["id"])
+                pulses_1s = message.pulse_1s.value
+            self.pulses_1s = pulses_1s
+        else:
+            self.pulses_1s = 0
+        self.do_callback(SENSOR_POWER_USE["id"])
         # Power consumption last 8 seconds
-        if message.pulse_8s.value == 65535:
+        if message.pulse_8s.value == -1:
+            message.pulse_8s.value = 0
             self.stick.logger.debug(
-                "8 sec power pulse counter for node %s has unreasonable value of 65535",
+                "8 sec power pulse counter for node %s has value of -1, corrected to 0",
                 self.get_mac(),
             )
-        else:
-            if message.pulse_8s.value != 0:
-                if message.nanosecond_offset.value != 0:
-                    pulses_8s = (
-                        message.pulse_8s.value
-                        * (1000000000 + message.nanosecond_offset.value)
-                    ) / 1000000000
-                else:
-                    pulses_8s = message.pulse_8s.value
-                self.pulses_8s = pulses_8s
+        if message.pulse_8s.value != 0:
+            if message.nanosecond_offset.value != 0:
+                pulses_8s = (
+                    message.pulse_8s.value
+                    * (1000000000 + message.nanosecond_offset.value)
+                ) / 1000000000
             else:
-                self.pulses_8s = 0
-            self.do_callback(SENSOR_POWER_USE_LAST_8_SEC["id"])
+                pulses_8s = message.pulse_8s.value
+            self.pulses_8s = pulses_8s
+        else:
+            self.pulses_8s = 0
+        self.do_callback(SENSOR_POWER_USE_LAST_8_SEC["id"])
         # Power consumption current hour
-        if message.pulse_hour_consumed.value == 4294967295:
+        if message.pulse_hour_consumed.value == -1:
+            message.pulse_hour_consumed.value = 0
             self.stick.logger.debug(
-                "1 hour consumption power pulse counter for node %s has unreasonable value of 4294967295",
+                "1 hour consumption power pulse counter for node %s has value of -1, corrected to 0",
                 self.get_mac(),
             )
-        else:
-            self.pulses_consumed_1h = message.pulse_hour_consumed.value
-            self.do_callback(SENSOR_POWER_CONSUMPTION_CURRENT_HOUR["id"])
+        self.pulses_consumed_1h = message.pulse_hour_consumed.value
+        self.do_callback(SENSOR_POWER_CONSUMPTION_CURRENT_HOUR["id"])
         # Power produced current hour
-        if message.pulse_hour_produced.value == 4294967295:
+        if message.pulse_hour_produced.value == -1:
+            message.pulse_hour_produced.value = 0
             self.stick.logger.debug(
-                "1 hour power production pulse counter for node %s has unreasonable value of 4294967295",
+                "1 hour power production pulse counter for node %s has value of -1, corrected to 0",
                 self.get_mac(),
             )
-        else:
-            self.pulses_produced_1h = message.pulse_hour_produced.value
-            self.do_callback(SENSOR_POWER_PRODUCTION_CURRENT_HOUR["id"])
+        self.pulses_produced_1h = message.pulse_hour_produced.value
+        self.do_callback(SENSOR_POWER_PRODUCTION_CURRENT_HOUR["id"])
 
     def _response_calibration(self, message):
         """ Store calibration properties

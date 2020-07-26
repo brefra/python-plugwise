@@ -102,7 +102,8 @@ class Int(BaseType):
 
     def unserialize(self, val):
         self.value = int(val, 16)
-
+        mask = 1 << (self.length*4 - 1)
+        self.value = -(self.value & mask) + (self.value & ~mask)
 
 class UnixTimestamp(Int):
     def __init__(self, value, length=8):
