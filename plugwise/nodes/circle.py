@@ -164,8 +164,8 @@ class PlugwiseCircle(PlugwiseNode):
         Based on last received power usage information 
         """
         if self.pulses_1s:
-            return None
-        return self.pulses_to_kWs(self.pulses_1s) * 1000
+            return self.pulses_to_kWs(self.pulses_1s) * 1000
+        return None
 
     def get_power_usage_8_sec(self):
         """
@@ -173,8 +173,8 @@ class PlugwiseCircle(PlugwiseNode):
         Based on last received power usage information 
         """
         if self.pulses_8s:
-            return None
-        return self.pulses_to_kWs(self.pulses_8s, 8) * 1000
+            return self.pulses_to_kWs(self.pulses_8s, 8) * 1000
+        return None
 
     def get_power_consumption_current_hour(self):
         """
@@ -182,10 +182,8 @@ class PlugwiseCircle(PlugwiseNode):
         Based on last received power usage information 
         """
         if self.pulses_consumed_1h:
-            return None
-        elif self.pulses_consumed_1h == 0:
-            return 0.0
-        return self.pulses_to_kWs(self.pulses_consumed_1h, 3600)
+            return self.pulses_to_kWs(self.pulses_consumed_1h, 3600)
+        return None
 
     def get_power_production_current_hour(self):
         """
@@ -193,10 +191,8 @@ class PlugwiseCircle(PlugwiseNode):
         Based on last received power usage information 
         """
         if self.pulses_produced_1h:
-            return None
-        elif self.pulses_produced_1h == 0:
-            return 0.0
-        return self.pulses_to_kWs(self.pulses_produced_1h, 3600)
+            return self.pulses_to_kWs(self.pulses_produced_1h, 3600)
+        return None
 
     def get_power_consumption_prev_hour(self):
         """ Returns power consumption during the previous hour in kWh
