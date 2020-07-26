@@ -143,7 +143,7 @@ class stick(object):
         else:
             self.logger.debug("Open USB serial connection to Plugwise Zigbee stick")
             self.connection = PlugwiseUSBConnection(self.port, self)
-        self.connection.open_port()
+        self.connection.connect()
 
         self.logger.debug("Starting threads...")
         # receive timeout deamon
@@ -229,7 +229,7 @@ class stick(object):
         self._auto_update_timer = None
         self._run_send_message_thread = False
         self._run_receive_timeout_thread = False
-        self.connection.close_connection()
+        self.connection.disconnect()
 
     def subscribe_stick_callback(self, callback, callback_type):
         """ Subscribe callback to execute """
