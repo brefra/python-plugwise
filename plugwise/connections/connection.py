@@ -3,30 +3,127 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 
 Base for serial or socket connections
 """
+from plugwise.constants import SLEEP_TIME
+from plugwise.message import PlugwiseMessage
+from queue import Queue
+import threading
+import time
+
 
 class StickConnection(object):
     """ Generic Plugwise stick connection"""
 
-    def open_port(self) -> bool:
+    def __init__(self, port, stick=None):
+        self.port = port
+        self.stick = stick
+        self.run_reader_thread = False
+        self.run_writer_thread = False
+        self._is_connected = False
+        self._writer = None
+
+    ################################################
+    ###             Open connection              ###
+    ################################################
+
+    def connect(self):
+        """Open the connection"""
+        if not self._is_connected:
+            self._open_connection()
+
+    def _open_connection(self):
         """Placeholder to initialize the connection"""
         raise NotImplementedError
 
-    def is_connected(self):
-        """Placeholder to get current state of connection"""
+    ################################################
+    ###                   Reader                 ###
+    ################################################
+
+    def _reader_start(self, name):
+        """Start the reader thread to receive data"""
+        self._reader_thread = threading.Thread(None, self._reader_deamon, name, (), {})
+        self.run_reader_thread = True
+        self._reader_thread.start()
+
+    def _reader_deamon(self):
+        """Thread to collect available data from connection"""
+        while self.run_reader_thread:
+            data = self._reader()
+            if data:
+                self.stick.feed_parser(data)
+            time.sleep(0.01)
+
+    def _reader(self):
+        """Placeholder to receive message from the connection"""
         raise NotImplementedError
+
+    ################################################
+    ###                 Writer                   ###
+    ################################################
+
+    def _writer_start(self, name: str):
+        """Start the writer thread to send data"""
+        self._write_queue = Queue()
+        self._writer_thread = threading.Thread(
+            None, self.serial_writer_deamon, name, (), {}
+        )
+        self._writer_thread.daemon = True
+        self.run_writer_thread = True
+        self._writer_thread.start()
+
+    def _writer_deamon(self):
+        """Thread to write data from queue to existing connection."""
+        while self.run_writer_thread:
+            (message, callback) = self._write_queue.get(block=True)
+            self.stick.logger.debug(
+                "Sending %s to plugwise stick (%s)",
+                message.__class__.__name__,
+                message.serialize(),
+            )
+            self._writer(message.serialize())
+            time.sleep(SLEEP_TIME)
+            if callback:
+                callback()
+
+    def _writer(self, data):
+        """Placeholder to write message to the connection"""
+        raise NotImplementedError
+
+    def send(self, message: PlugwiseMessage, callback=None):
+        """Add message to write queue."""
+        self._write_queue.put_nowait((message, callback))
+
+    ################################################
+    ###             Connection state             ###
+    ################################################
+
+    def is_connected(self):
+        """Return connection state"""
+        return self._is_connected
 
     def read_thread_alive(self):
-        """Placeholder to get current state of the reader thread"""
-        raise NotImplementedError
+        """Return state of write thread"""
+        return self._reader_thread.isAlive() if run_reader_thread else False
 
     def write_thread_alive(self):
-        """Placeholder to get current state of the writer thread"""
-        raise NotImplementedError
+        """Return state of write thread"""
+        return self._writer_thread.isAlive() if run_writer_thread else False
 
-    def send(self, message, callback=None):
-        """Placeholder to send message"""
-        raise NotImplementedError
+    ################################################
+    ###             Close connection             ###
+    ################################################
 
-    def close_port(self):
-        """Placeholder to disconnect"""
+    def disconnect(self):
+        """Close the connection"""
+        if self._is_connected:
+            self._is_connected = False
+            self.run_writer_thread = False
+            max_wait = 5 * SLEEP_TIME
+            while self._writer_thread.isAlive():
+                time.sleep(SLEEP_TIME)
+                max_wait -= SLEEP_TIME
+            self.run_writer_thread = False
+            self.close_port()
+
+    def _close_connection(self):
+        """Placeholder to close the port"""
         raise NotImplementedError

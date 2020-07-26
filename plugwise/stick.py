@@ -229,7 +229,7 @@ class stick(object):
         self._auto_update_timer = None
         self._run_receive_timeout_thread = False
         self._run_send_message_thread = False
-        self.connection.close_port()
+        self.connection.close_connection()
 
     def subscribe_stick_callback(self, callback, callback_type):
         """ Subscribe callback to execute """
