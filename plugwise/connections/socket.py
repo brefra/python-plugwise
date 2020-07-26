@@ -66,7 +66,7 @@ class SocketConnection(StickConnection):
             )
             raise PortError(err)
 
-    def _reader(self):
+    def _read_data(self):
         """Read data from socket."""
         if self._is_connected:
             try:
@@ -84,7 +84,7 @@ class SocketConnection(StickConnection):
                 return socket_data
         return None
 
-    def _writer(self, data):
+    def _write_data(self, data):
         """Write data to socket"""
         try:
             self._socket.send(data)

@@ -47,12 +47,12 @@ class StickConnection(object):
     def _reader_deamon(self):
         """Thread to collect available data from connection"""
         while self.run_reader_thread:
-            data = self._reader()
+            data = self._read_data()
             if data:
                 self.stick.feed_parser(data)
             time.sleep(0.01)
 
-    def _reader(self):
+    def _read_data(self):
         """Placeholder to receive message from the connection"""
         raise NotImplementedError
 
@@ -64,7 +64,7 @@ class StickConnection(object):
         """Start the writer thread to send data"""
         self._write_queue = Queue()
         self._writer_thread = threading.Thread(
-            None, self.serial_writer_deamon, name, (), {}
+            None, self._writer_deamon, name, (), {}
         )
         self._writer_thread.daemon = True
         self.run_writer_thread = True
@@ -79,12 +79,12 @@ class StickConnection(object):
                 message.__class__.__name__,
                 message.serialize(),
             )
-            self._writer(message.serialize())
+            self._write_data(message.serialize())
             time.sleep(SLEEP_TIME)
             if callback:
                 callback()
 
-    def _writer(self, data):
+    def _write_data(self, data):
         """Placeholder to write message to the connection"""
         raise NotImplementedError
 
@@ -122,7 +122,7 @@ class StickConnection(object):
                 time.sleep(SLEEP_TIME)
                 max_wait -= SLEEP_TIME
             self.run_writer_thread = False
-            self.close_port()
+            self._close_connection()
 
     def _close_connection(self):
         """Placeholder to close the port"""
