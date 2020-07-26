@@ -3,7 +3,6 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 
 Serial connection
 """
-import logging
 import serial
 import serial.threaded
 from plugwise.constants import (
@@ -17,14 +16,6 @@ from plugwise.connections.connection import StickConnection
 from plugwise.exceptions import PortError
 from plugwise.message import PlugwiseMessage
 from plugwise.util import PlugwiseException
-
-
-class Protocol(serial.threaded.Protocol):
-    """Serial protocol."""
-
-    def data_received(self, data):
-        # pylint: disable-msg=E1101
-        self.parser(data)
 
 
 class PlugwiseUSBConnection(StickConnection):
