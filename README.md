@@ -8,7 +8,7 @@ Be aware this library does NOT support the new [Plug](https://www.plugwise.com/e
 There's no official documentation available about the protocol of the Plugwise so this library is based on partial reverse engineering by [Maarten Damen](https://maartendamen.com/category/plugwise-unleashed/)
 and several other sources [bitbucket.org/hadara/python-plugwise](https://bitbucket.org/hadara/python-plugwise/wiki/Home) and [openHAB](https://github.com/openhab/openhab-addons)
 
-The latest version of the library is published as a python package on [pypi](https://pypi.python.org/pypi/python-plugwise) and currently supports the devices an functions listed below:
+The latest version of the library is published as a python package on [pypi](https://pypi.python.org/pypi/python-plugwise) and currently supports the devices and functions listed below:
 
 | Plugwise node | Relay control | Power monitoring | Comments |
 | ----------- | ----------- | ----------- | ----------- |
