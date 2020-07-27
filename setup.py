@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
   name='python-plugwise',
-  version="1.0.1",
+  version="1.1.0",
   author='Frank van Breugel',
   author_email='f.v.breugel@gmail.com',
-  description='Async library for Plugwise stick',
+  description='Async library for Plugwise USB-stick',
   long_description=long_description,
   long_description_content_type="text/markdown",
   url="https://github.com/brefra/python-plugwise",
