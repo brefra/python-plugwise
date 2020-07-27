@@ -43,17 +43,6 @@ def inc_seq_id(seq_id, value=1):
     return temp_str.encode()
 
 
-class PlugwiseException(Exception):
-    """Plugwise Exception."""
-
-    def __init__(self, value):
-        Exception.__init__(self)
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
 class BaseType(object):
     def __init__(self, value, length):
         self.value = value
