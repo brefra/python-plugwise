@@ -43,8 +43,8 @@ class SocketConnection(StickConnection):
             )
             raise PortError(err)
         else:
-            self._reader_start("socket_reader_deamon")
-            self._writer_start("socket_writer_deamon")
+            self._reader_start("socket_reader_thread")
+            self._writer_start("socket_writer_thread")
             self._is_connected = True
             self.stick.logger.debug(
                 "Successfully connected to host '%s' at port %s",

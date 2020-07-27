@@ -149,7 +149,7 @@ class stick(object):
         # receive timeout deamon
         self._run_receive_timeout_thread = True
         self._receive_timeout_thread = threading.Thread(
-            None, self._receive_timeout_loop, "receive_timeout_deamon", (), {}
+            None, self._receive_timeout_loop, "receive_timeout_thread", (), {}
         )
         self._receive_timeout_thread.daemon = True
         self._receive_timeout_thread.start()
@@ -157,7 +157,7 @@ class stick(object):
         self._send_message_queue = Queue()
         self._run_send_message_thread = True
         self._send_message_thread = threading.Thread(
-            None, self._send_message_loop, "send_messages_deamon", (), {}
+            None, self._send_message_loop, "send_messages_thread", (), {}
         )
         self._send_message_thread.daemon = True
         self._send_message_thread.start()
@@ -165,7 +165,7 @@ class stick(object):
         self._run_update_thread = False
         self._auto_update_timer = None
         self._update_thread = threading.Thread(
-            None, self._update_loop, "update_daemon", (), {}
+            None, self._update_loop, "update_thread", (), {}
         )
         self._update_thread.daemon = True
         self.logger.debug("All threads started")
@@ -182,7 +182,7 @@ class stick(object):
             # Start watchdog deamon
             self._run_watchdog = True
             self._watchdog_thread = threading.Thread(
-                None, self._watchdog_loop, "watchdog_daemon", (), {}
+                None, self._watchdog_loop, "watchdog_thread", (), {}
             )
             self._watchdog_thread.daemon = True
             self._watchdog_thread.start()
@@ -698,7 +698,7 @@ class stick(object):
                     self._receive_timeout_thread = threading.Thread(
                         None,
                         self._receive_timeout_loop,
-                        "receive_timeout_deamon",
+                        "receive_timeout_thread",
                         (),
                         {},
                     )
@@ -711,7 +711,7 @@ class stick(object):
                         "Unexpected halt of send thread, restart thread",
                     )
                     self._send_message_thread = threading.Thread(
-                        None, self._send_message_loop, "send_messages_deamon", (), {}
+                        None, self._send_message_loop, "send_messages_thread", (), {}
                     )
                     self._send_message_thread.daemon = True
                     self._send_message_thread.start()
@@ -723,7 +723,7 @@ class stick(object):
                     )
                     self._run_update_thread = True
                     self._update_thread = threading.Thread(
-                        None, self._update_loop, "update_daemon", (), {}
+                        None, self._update_loop, "update_thread", (), {}
                     )
                     self._update_thread.daemon = True
                     self._update_thread.start()

@@ -46,8 +46,8 @@ class PlugwiseUSBConnection(StickConnection):
 
         self._is_connected = self._serial.isOpen()
         if self._is_connected:
-            self._reader_start("serial_reader_deamon")
-            self._writer_start("serial_writer_deamon")
+            self._reader_start("serial_reader_thread")
+            self._writer_start("serial_writer_thread")
             self.stick.logger.debug(
                 "Successfully connected to serial port %s", self.port
             )
