@@ -63,9 +63,7 @@ class StickConnection(object):
     def _writer_start(self, name: str):
         """Start the writer thread to send data"""
         self._write_queue = Queue()
-        self._writer_thread = threading.Thread(
-            None, self._writer_deamon, name, (), {}
-        )
+        self._writer_thread = threading.Thread(None, self._writer_deamon, name, (), {})
         self._writer_thread.daemon = True
         self.run_writer_thread = True
         self._writer_thread.start()
