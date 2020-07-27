@@ -43,7 +43,6 @@ class PlugwiseUSBConnection(StickConnection):
                 "Failed to connect to serial port %s, %s", self.port, err,
             )
             raise PortError(err)
-
         self._is_connected = self._serial.isOpen()
         if self._is_connected:
             self._reader_start("serial_reader_thread")
@@ -72,12 +71,13 @@ class PlugwiseUSBConnection(StickConnection):
             try:
                 serial_data = self._serial.read_all()
             except serial.serialutil.SerialException as err:
-                self.stick.logger.debug("Error while reading data from serial port : %s", err)
+                self.stick.logger.debug(
+                    "Error while reading data from serial port : %s", err
+                )
                 self._is_connected = False
                 raise PortError(err)
             except Exception as e:
                 self.stick.logger.debug("Error _read_data : %s", err)
-            
             return serial_data
         return None
 
