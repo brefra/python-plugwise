@@ -87,6 +87,7 @@ class stick(object):
         self.network_id = None
         self.parser = PlugwiseParser(self)
         self._plugwise_nodes = {}
+        self._nodes_registered = 0
         self._nodes_to_discover = []
         self._nodes_not_discovered = {}
         self._stick_initialized = False
@@ -261,6 +262,11 @@ class stick(object):
         if mac_found:
             del self._nodes_not_discovered[mac_found]
 
+    def registered_nodes(self) -> int:
+        """ Return number of nodes registered in Circle+ """
+        # Include Circle+ too
+        return self._nodes_registered + 1
+
     def nodes(self) -> list:
         """ Return mac addresses of known plugwise nodes """
         return list(self._plugwise_nodes.keys())
@@ -299,6 +305,7 @@ class stick(object):
             self.logger.debug("Scan plugwise network finished")
             self._nodes_discovered = 0
             self._nodes_to_discover = nodes_to_discover
+            self._nodes_registered = len(nodes_to_discover)
             self._discovery_finished = False
 
             def node_discovered():
