@@ -77,7 +77,7 @@ class stick(object):
     """
 
     def __init__(self, port, callback=None, print_progress=False):
-        self.logger = logging.getLogger("plugwise")
+        self.logger = logging.getLogger("python-plugwise")
         self._mac_stick = None
         self.port = port
         self.network_online = False
