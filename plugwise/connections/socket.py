@@ -9,7 +9,6 @@ from plugwise.constants import SLEEP_TIME
 from plugwise.connections.connection import StickConnection
 from plugwise.exceptions import PortError
 from plugwise.message import PlugwiseMessage
-from plugwise.util import PlugwiseException
 
 
 class SocketConnection(StickConnection):
