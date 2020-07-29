@@ -85,6 +85,7 @@ class CirclePlusScanRequest(NodeRequest):
     def __init__(self, mac, node_address):
         super().__init__(mac)
         self.args.append(Int(node_address, length=2))
+        self.node_address = node_address
 
 
 class NodeClockGetRequest(NodeRequest):
