@@ -77,7 +77,7 @@ class stick(object):
     """
 
     def __init__(self, port, callback=None, print_progress=False):
-        self.logger = logging.getLogger("plugwise")
+        self.logger = logging.getLogger("python-plugwise")
         self._mac_stick = None
         self.port = port
         self.network_online = False
@@ -87,7 +87,8 @@ class stick(object):
         self.network_id = None
         self.parser = PlugwiseParser(self)
         self._plugwise_nodes = {}
-        self._nodes_to_discover = []
+        self._nodes_registered = 0
+        self._nodes_to_discover = {}
         self._nodes_not_discovered = {}
         self._stick_initialized = False
         self._stick_callbacks = {}
@@ -143,13 +144,13 @@ class stick(object):
         else:
             self.logger.debug("Open USB serial connection to Plugwise Zigbee stick")
             self.connection = PlugwiseUSBConnection(self.port, self)
-        self.connection.open_port()
+        self.connection.connect()
 
         self.logger.debug("Starting threads...")
         # receive timeout deamon
         self._run_receive_timeout_thread = True
         self._receive_timeout_thread = threading.Thread(
-            None, self._receive_timeout_loop, "receive_timeout_deamon", (), {}
+            None, self._receive_timeout_loop, "receive_timeout_thread", (), {}
         )
         self._receive_timeout_thread.daemon = True
         self._receive_timeout_thread.start()
@@ -157,7 +158,7 @@ class stick(object):
         self._send_message_queue = Queue()
         self._run_send_message_thread = True
         self._send_message_thread = threading.Thread(
-            None, self._send_message_loop, "send_messages_deamon", (), {}
+            None, self._send_message_loop, "send_messages_thread", (), {}
         )
         self._send_message_thread.daemon = True
         self._send_message_thread.start()
@@ -165,7 +166,7 @@ class stick(object):
         self._run_update_thread = False
         self._auto_update_timer = None
         self._update_thread = threading.Thread(
-            None, self._update_loop, "update_daemon", (), {}
+            None, self._update_loop, "update_thread", (), {}
         )
         self._update_thread.daemon = True
         self.logger.debug("All threads started")
@@ -182,7 +183,7 @@ class stick(object):
             # Start watchdog deamon
             self._run_watchdog = True
             self._watchdog_thread = threading.Thread(
-                None, self._watchdog_loop, "watchdog_daemon", (), {}
+                None, self._watchdog_loop, "watchdog_thread", (), {}
             )
             self._watchdog_thread.daemon = True
             self._watchdog_thread.start()
@@ -227,9 +228,9 @@ class stick(object):
         self._run_watchdog = False
         self._run_update_thread = False
         self._auto_update_timer = None
-        self._run_receive_timeout_thread = False
         self._run_send_message_thread = False
-        self.connection.close_port()
+        self._run_receive_timeout_thread = False
+        self.connection.disconnect()
 
     def subscribe_stick_callback(self, callback, callback_type):
         """ Subscribe callback to execute """
@@ -260,6 +261,11 @@ class stick(object):
                 mac_found = mac
         if mac_found:
             del self._nodes_not_discovered[mac_found]
+
+    def registered_nodes(self) -> int:
+        """ Return number of nodes registered in Circle+ """
+        # Include Circle+ too
+        return self._nodes_registered + 1
 
     def nodes(self) -> list:
         """ Return mac addresses of known plugwise nodes """
@@ -299,6 +305,7 @@ class stick(object):
             self.logger.debug("Scan plugwise network finished")
             self._nodes_discovered = 0
             self._nodes_to_discover = nodes_to_discover
+            self._nodes_registered = len(nodes_to_discover)
             self._discovery_finished = False
 
             def node_discovered():
@@ -306,17 +313,17 @@ class stick(object):
                 self.logger.debug(
                     "Discovered Plugwise node %s of %s",
                     str(len(self._plugwise_nodes)),
-                    str(self._nodes_to_discover),
+                    str(len(self._nodes_to_discover)),
                 )
                 if (len(self._plugwise_nodes) - 1) >= len(self._nodes_to_discover):
                     self._discovery_finished = True
-                    self._nodes_to_discover = None
+                    self._nodes_to_discover = {}
                     if callback:
                         callback()
 
             def timeout_expired():
                 if not self._discovery_finished:
-                    for (mac, address) in self._nodes_to_discover:
+                    for mac in self._nodes_to_discover:
                         if mac not in self._plugwise_nodes.keys():
                             self.logger.warning(
                                 "Failed to discover registered Plugwise node with MAC '%s' before timeout expired.",
@@ -333,7 +340,7 @@ class stick(object):
                 discover_timeout, timeout_expired
             ).start()
             self.logger.debug("Start discovery of linked node types...")
-            for (mac, address) in nodes_to_discover:
+            for mac in nodes_to_discover:
                 self.discover_node(mac, node_discovered)
 
         def scan_circle_plus():
@@ -583,9 +590,9 @@ class stick(object):
                     self._circle_plus_discovered = True
                     self._append_node(mac, 0, message.node_type.value)
                 else:
-                    for (mac_to_discover, address) in self._nodes_to_discover:
+                    for mac_to_discover in self._nodes_to_discover:
                         if mac == mac_to_discover:
-                            self._append_node(mac, address, message.node_type.value)
+                            self._append_node(mac, self._nodes_to_discover[mac_to_discover], message.node_type.value)
             self._plugwise_nodes[mac].on_message(message)
         else:
             if mac in self._plugwise_nodes:
@@ -698,7 +705,7 @@ class stick(object):
                     self._receive_timeout_thread = threading.Thread(
                         None,
                         self._receive_timeout_loop,
-                        "receive_timeout_deamon",
+                        "receive_timeout_thread",
                         (),
                         {},
                     )
@@ -711,7 +718,7 @@ class stick(object):
                         "Unexpected halt of send thread, restart thread",
                     )
                     self._send_message_thread = threading.Thread(
-                        None, self._send_message_loop, "send_messages_deamon", (), {}
+                        None, self._send_message_loop, "send_messages_thread", (), {}
                     )
                     self._send_message_thread.daemon = True
                     self._send_message_thread.start()
@@ -723,7 +730,7 @@ class stick(object):
                     )
                     self._run_update_thread = True
                     self._update_thread = threading.Thread(
-                        None, self._update_loop, "update_daemon", (), {}
+                        None, self._update_loop, "update_thread", (), {}
                     )
                     self._update_thread.daemon = True
                     self._update_thread.start()

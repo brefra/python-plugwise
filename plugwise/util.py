@@ -43,17 +43,6 @@ def inc_seq_id(seq_id, value=1):
     return temp_str.encode()
 
 
-class PlugwiseException(Exception):
-    """Plugwise Exception."""
-
-    def __init__(self, value):
-        Exception.__init__(self)
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
 class BaseType(object):
     def __init__(self, value, length):
         self.value = value
@@ -102,7 +91,8 @@ class Int(BaseType):
 
     def unserialize(self, val):
         self.value = int(val, 16)
-
+        mask = 1 << (self.length*4 - 1)
+        self.value = -(self.value & mask) + (self.value & ~mask)
 
 class UnixTimestamp(Int):
     def __init__(self, value, length=8):

@@ -1,14 +1,9 @@
 """
 Use of this source code is governed by the MIT license found in the LICENSE file.
 
-Serial USB connection
+Serial connection
 """
-import time
-import threading
-import logging
-from queue import Queue
 import serial
-import serial.threaded
 from plugwise.constants import (
     BAUD_RATE,
     BYTE_SIZE,
@@ -19,101 +14,78 @@ from plugwise.constants import (
 from plugwise.connections.connection import StickConnection
 from plugwise.exceptions import PortError
 from plugwise.message import PlugwiseMessage
-from plugwise.util import PlugwiseException
-
-
-class Protocol(serial.threaded.Protocol):
-    """Serial protocol."""
-
-    def data_received(self, data):
-        # pylint: disable-msg=E1101
-        self.parser(data)
 
 
 class PlugwiseUSBConnection(StickConnection):
     """simple wrapper around serial module"""
 
     def __init__(self, port, stick=None):
-        self.port = port
-        self.baud = BAUD_RATE
-        self.bits = BYTE_SIZE
-        self.stop = STOPBITS
-        self.parity = serial.PARITY_NONE
-        self.stick = stick
-        self.run_writer_thread = True
-        self.run_reader_thread = True
-        self._is_connected = False
+        super().__init__(port, stick)
+        self._baud = BAUD_RATE
+        self._byte_size = BYTE_SIZE
+        self._stopbits = STOPBITS
+        self._parity = serial.PARITY_NONE
 
-    def open_port(self):
+    def _open_connection(self):
         """Open serial port"""
-        self.stick.logger.debug("Open serial port")
+        self.stick.logger.debug("Open serial port %s", self.port)
         try:
-            self.serial = serial.Serial(
-                port = self.port,
-                baudrate = self.baud,
-                bytesize = self.bits,
-                parity = self.parity,
-                stopbits = self.stop,
+            self._serial = serial.Serial(
+                port=self.port,
+                baudrate=self._baud,
+                bytesize=self._byte_size,
+                parity=self._parity,
+                stopbits=self._stopbits,
+                timeout=1,
             )
-            self._reader_thread = serial.threaded.ReaderThread(self.serial, Protocol)
-            self._reader_thread.start()
-            self._reader_thread.protocol.parser = self.feed_parser
-            self._reader_thread.connect()
         except serial.serialutil.SerialException as err:
             self.stick.logger.debug(
-                "Failed to connect to port %s, %s",
-                self.port,
-                err,
+                "Failed to connect to serial port %s, %s", self.port, err,
             )
             raise PortError(err)
+        self._is_connected = self._serial.isOpen()
+        if self._is_connected:
+            self._reader_start("serial_reader_thread")
+            self._writer_start("serial_writer_thread")
+            self.stick.logger.debug(
+                "Successfully connected to serial port %s", self.port
+            )
         else:
-            self.stick.logger.debug("Successfully connected to serial port %s", self.port)
-            self._write_queue = Queue()
-            self._writer_thread = threading.Thread(None, self.writer_loop,
-                                                "write_packets_process", (), {})
-            self._writer_thread.daemon = True
-            self._writer_thread.start()
-            self.stick.logger.debug("Successfully connected to port %s", self.port)
-            self._is_connected = True
+            self.stick.logger.error(
+                "Failed to open serial port %s", self.port,
+            )
 
-    def close_port(self):
+    def _close_connection(self):
         """Close serial port."""
-        self._is_connected = False
-        self.run_writer_thread = False
         try:
-            self._reader_thread.close()
-        except serial.serialutil.SerialException:
-            self.stick.logger.error("Error while closing device")
-            raise PlugwiseException("Error while closing device")
+            self._serial.close()
+        except serial.serialutil.SerialException as err:
+            self.stick.logger.debug(
+                "Failed to close serial port %s, %s", self.port, err,
+            )
+            raise PortError(err)
 
-    def read_thread_alive(self):
-        """Return state of write thread"""
-        return self._reader_thread.isAlive()
+    def _read_data(self):
+        """Read thread."""
+        if self._is_connected:
+            try:
+                serial_data = self._serial.read_all()
+            except serial.serialutil.SerialException as err:
+                self.stick.logger.debug(
+                    "Error while reading data from serial port : %s", err
+                )
+                self._is_connected = False
+                raise PortError(err)
+            except Exception as e:
+                self.stick.logger.debug("Error _read_data : %s", err)
+            return serial_data
+        return None
 
-    def write_thread_alive(self):
-        """Return state of write thread"""
-        return self._writer_thread.isAlive()
-
-    def is_connected(self):
-        """Return connection state"""
-        return self._is_connected
-
-    def feed_parser(self, data):
-        """Parse received message."""
-        assert isinstance(data, bytes)
-        self.stick.feed_parser(data)
-
-    def send(self, message, callback=None):
-        """Add message to write queue."""
-        assert isinstance(message, PlugwiseMessage)
-        self._write_queue.put_nowait((message, callback))
-
-    def writer_loop(self):
-        """Write thread."""
-        while self.run_writer_thread:
-            (message, callback) = self._write_queue.get(block=True)
-            self.stick.logger.debug("Sending %s to plugwise stick (%s)", message.__class__.__name__, message.serialize())
-            self._reader_thread.write(message.serialize())
-            time.sleep(SLEEP_TIME)
-            if callback:
-                callback()
+    def _write_data(self, data):
+        """Write data to serial port"""
+        try:
+            self._serial.write(data)
+        except serial.serialutil.SerialException as err:
+            self.stick.logger.debug("Error while writing data to serial port : %s", err)
+            self._is_connected = False
+            raise PortError(err)
