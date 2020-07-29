@@ -24,7 +24,8 @@ class PlugwiseCirclePlus(PlugwiseCircle):
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
-        self._plugwise_nodes = []
+        self._plugwise_nodes = {}
+        self._scan_response = {}
         self._scan_for_nodes_callback = None
         self._print_progress = False
         self._realtime_clock_offset = None
@@ -47,9 +48,11 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         self.stick.message_processed(message.seq_id)
 
     def scan_for_nodes(self, callback=None):
+        """ Scan for registered nodes """
         self._scan_for_nodes_callback = callback
         for node_address in range(0, 64):
             self.stick.send(CirclePlusScanRequest(self.mac, node_address))
+            self._scan_response[node_address] = False
 
     def _process_scan_response(self, message):
         """ Process scan response message """
@@ -68,9 +71,8 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                 "Linked plugwise node with mac %s found",
                 message.node_mac.value.decode("ascii"),
             )
-            self._plugwise_nodes.append(
-                [message.node_mac.value.decode("ascii"), message.node_address.value]
-            )
+            if message.node_mac.value.decode("ascii") not in self._plugwise_nodes.keys():
+                self._plugwise_nodes[message.node_mac.value.decode("ascii")] = message.node_address.value
         else:
             if self.stick.print_progress:
                 print(
@@ -78,10 +80,30 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                     + str(message.node_address.value)
                     + " => no node found"
                 )
-        if message.node_address.value == 63 and self._scan_for_nodes_callback:
-            self._scan_for_nodes_callback(self._plugwise_nodes)
-            self._scan_for_nodes_callback = None
-            self._plugwise_nodes = []
+        if self._scan_for_nodes_callback:
+            # Check if scan is complete before execute callback
+            scan_complete = False
+            self._scan_response[message.node_address.value] = True
+            for node_address in range(0, 64):
+                if not self._scan_response[node_address]:
+                    if node_address < message.node_address.value:
+                        # Apparently missed response so send new scan request if it's not in queue yet
+                        request_not_in_queue = True
+                        for msg_request in list(self.stick.expected_responses.values()):
+                            if isinstance(msg_request[1], CirclePlusScanRequest):
+                                if msg_request[1].node_address == node_address:
+                                    request_not_in_queue = False
+                                    break
+                        if request_not_in_queue:
+                            self.stick.logger.debug("Resend missing scan request for address %s", str(node_address))
+                            self.stick.send(CirclePlusScanRequest(self.mac, node_address))
+                    break
+                elif node_address == 63:
+                    scan_complete = True
+            if scan_complete and self._scan_for_nodes_callback:
+                self._scan_for_nodes_callback(self._plugwise_nodes)
+                self._scan_for_nodes_callback = None
+                self._plugwise_nodes = {}
 
     def get_real_time_clock(self, callback=None):
         """ get current datetime of internal clock of CirclePlus """

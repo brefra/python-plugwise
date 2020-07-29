@@ -88,7 +88,7 @@ class stick(object):
         self.parser = PlugwiseParser(self)
         self._plugwise_nodes = {}
         self._nodes_registered = 0
-        self._nodes_to_discover = []
+        self._nodes_to_discover = {}
         self._nodes_not_discovered = {}
         self._stick_initialized = False
         self._stick_callbacks = {}
@@ -313,17 +313,17 @@ class stick(object):
                 self.logger.debug(
                     "Discovered Plugwise node %s of %s",
                     str(len(self._plugwise_nodes)),
-                    str(self._nodes_to_discover),
+                    str(len(self._nodes_to_discover)),
                 )
                 if (len(self._plugwise_nodes) - 1) >= len(self._nodes_to_discover):
                     self._discovery_finished = True
-                    self._nodes_to_discover = None
+                    self._nodes_to_discover = {}
                     if callback:
                         callback()
 
             def timeout_expired():
                 if not self._discovery_finished:
-                    for (mac, address) in self._nodes_to_discover:
+                    for mac in self._nodes_to_discover:
                         if mac not in self._plugwise_nodes.keys():
                             self.logger.warning(
                                 "Failed to discover registered Plugwise node with MAC '%s' before timeout expired.",
@@ -340,7 +340,7 @@ class stick(object):
                 discover_timeout, timeout_expired
             ).start()
             self.logger.debug("Start discovery of linked node types...")
-            for (mac, address) in nodes_to_discover:
+            for mac in nodes_to_discover:
                 self.discover_node(mac, node_discovered)
 
         def scan_circle_plus():
@@ -590,9 +590,9 @@ class stick(object):
                     self._circle_plus_discovered = True
                     self._append_node(mac, 0, message.node_type.value)
                 else:
-                    for (mac_to_discover, address) in self._nodes_to_discover:
+                    for mac_to_discover in self._nodes_to_discover:
                         if mac == mac_to_discover:
-                            self._append_node(mac, address, message.node_type.value)
+                            self._append_node(mac, self._nodes_to_discover[mac_to_discover], message.node_type.value)
             self._plugwise_nodes[mac].on_message(message)
         else:
             if mac in self._plugwise_nodes:
