@@ -318,6 +318,7 @@ class stick(object):
                 if (len(self._plugwise_nodes) - 1) >= len(self._nodes_to_discover):
                     self._discovery_finished = True
                     self._nodes_to_discover = {}
+                    self._nodes_not_discovered = {}
                     if callback:
                         callback()
 
@@ -329,6 +330,9 @@ class stick(object):
                                 "Failed to discover registered Plugwise node with MAC '%s' before timeout expired.",
                                 str(mac),
                             )
+                        else:
+                            if mac in self._nodes_not_discovered:
+                                del self._nodes_not_discovered[mac]
                     if callback:
                         callback()
 
@@ -377,8 +381,6 @@ class stick(object):
         self.logger.debug(
             "Add new node type (%s) with mac %s", str(node_type), mac,
         )
-        if mac in self._nodes_not_discovered:
-            del self._nodes_not_discovered[mac]
         if node_type == NODE_TYPE_CIRCLE:
             if self.print_progress:
                 print("Circle node found using mac " + mac)
@@ -595,7 +597,8 @@ class stick(object):
                     for mac_to_discover in self._nodes_to_discover:
                         if mac == mac_to_discover:
                             self._append_node(mac, self._nodes_to_discover[mac_to_discover], message.node_type.value)
-            self._plugwise_nodes[mac].on_message(message)
+            if mac in self._plugwise_nodes:
+                self._plugwise_nodes[mac].on_message(message)
         else:
             if mac in self._plugwise_nodes:
                 self._plugwise_nodes[mac].on_message(message)
