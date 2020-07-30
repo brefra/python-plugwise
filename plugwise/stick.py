@@ -377,6 +377,8 @@ class stick(object):
         self.logger.debug(
             "Add new node type (%s) with mac %s", str(node_type), mac,
         )
+        if mac in self._nodes_not_discovered:
+            del self._nodes_not_discovered[mac]
         if node_type == NODE_TYPE_CIRCLE:
             if self.print_progress:
                 print("Circle node found using mac " + mac)
