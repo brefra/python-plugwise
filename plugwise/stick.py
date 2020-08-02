@@ -271,12 +271,9 @@ class stick(object):
         """ Return mac addresses of known plugwise nodes """
         return list(self._plugwise_nodes.keys())
 
-    def node(self, mac) -> PlugwiseNode:
+    def node(self, mac : str) -> PlugwiseNode:
         """ Return specific Plugwise node object"""
-        assert isinstance(mac, str)
-        if mac in self._plugwise_nodes:
-            return self._plugwise_nodes[mac]
-        return None
+        return self._plugwise_nodes.get(mac, None)
 
     def discover_node(self, mac: str, callback=None) -> bool:
         """ Discovery of plugwise node """
@@ -349,7 +346,7 @@ class stick(object):
 
         def scan_circle_plus():
             """Callback when Circle+ is discovered"""
-            if self.circle_plus_mac in self._plugwise_nodes:
+            if self._plugwise_nodes.get(self.circle_plus_mac):
                 if self.print_progress:
                     print("Scan Circle+ for linked nodes")
                 self.logger.debug("Scan Circle+ for linked nodes...")
@@ -361,7 +358,7 @@ class stick(object):
 
         # Discover Circle+
         if self.circle_plus_mac:
-            if self.circle_plus_mac in self._plugwise_nodes:
+            if self._plugwise_nodes.get(self.circle_plus_mac):
                 if self.print_progress:
                     print("Scan Circle+ for linked nodes")
                 self.logger.debug("Scan Circle+ for linked nodes...")
@@ -458,7 +455,7 @@ class stick(object):
                     mac,
                     str(seq_id),
                 )
-                if mac in self._plugwise_nodes:
+                if self._plugwise_nodes.get(mac):
                     self._plugwise_nodes[mac].last_request = datetime.now()
                 if self.expected_responses[seq_id][3] > 0:
                     self.logger.debug(
@@ -597,10 +594,10 @@ class stick(object):
                     for mac_to_discover in self._nodes_to_discover:
                         if mac == mac_to_discover:
                             self._append_node(mac, self._nodes_to_discover[mac_to_discover], message.node_type.value)
-            if mac in self._plugwise_nodes:
+            if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
         else:
-            if mac in self._plugwise_nodes:
+            if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
 
     def message_processed(self, seq_id, ack_response=None):
@@ -626,7 +623,7 @@ class stick(object):
                             str(self.expected_responses[seq_id][1].__class__.__name__),
                             mac,
                         )
-                        if mac in self._plugwise_nodes:
+                        if self._plugwise_nodes.get(mac):
                             if self._plugwise_nodes[mac].get_available():
                                 self.send(
                                     self.expected_responses[seq_id][1],
@@ -642,7 +639,7 @@ class stick(object):
                         )
                         # Mark node as unavailable
                         mac = self.expected_responses[seq_id][1].mac.decode("ascii")
-                        if mac in self._plugwise_nodes:
+                        if self._plugwise_nodes.get(mac):
                             if self._plugwise_nodes[mac].get_available():
                                 self.logger.warning(
                                     "Mark %s as unavailabe because %s time out responses reached",
@@ -660,7 +657,7 @@ class stick(object):
                             str(self.expected_responses[seq_id][1].__class__.__name__),
                             mac,
                         )
-                        if mac in self._plugwise_nodes:
+                        if self._plugwise_nodes.get(mac):
                             if self._plugwise_nodes[mac].get_available():
                                 self.send(
                                     self.expected_responses[seq_id][1],
