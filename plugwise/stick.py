@@ -254,13 +254,10 @@ class stick(object):
 
     def _discover_after_scan(self):
         """ Helper to do callback for new node """
-        mac_found = None
         for mac in self._nodes_not_discovered.keys():
-            if mac in self._plugwise_nodes:
+            if self._plugwise_nodes.get(mac, None):
                 self.do_callback(CB_NEW_NODE, mac)
-                mac_found = mac
-        if mac_found:
-            del self._nodes_not_discovered[mac_found]
+                del self._nodes_not_discovered[mac]
 
     def registered_nodes(self) -> int:
         """ Return number of nodes registered in Circle+ """
@@ -268,8 +265,8 @@ class stick(object):
         return self._nodes_registered + 1
 
     def nodes(self) -> list:
-        """ Return mac addresses of known plugwise nodes """
-        return list(self._plugwise_nodes.keys())
+        """ Return list of mac addresses of discovered and supported plugwise nodes """
+        return list(dict(filter(lambda item: item[1] is not None, self._plugwise_nodes.items())).keys())
 
     def node(self, mac : str) -> PlugwiseNode:
         """ Return specific Plugwise node object"""
@@ -387,11 +384,12 @@ class stick(object):
                 print("Circle+ node found using mac " + mac)
             self._plugwise_nodes[mac] = PlugwiseCirclePlus(mac, address, self)
         elif node_type == NODE_TYPE_STEALTH:
-            self._plugwise_nodes[mac] = PlugwiseStealth(mac, address, self)
             if self.print_progress:
                 print("Stealth node found using mac " + mac)
+            self._plugwise_nodes[mac] = PlugwiseStealth(mac, address, self)
         else:
             self.logger.warning("Unsupported node type '%s'", str(node_type))
+            self._plugwise_nodes[mac] = None
 
     def _remove_node(self, mac):
         """
@@ -760,11 +758,12 @@ class stick(object):
         try:
             while self._run_update_thread:
                 for mac in self._plugwise_nodes:
-                    # Do ping request
-                    self.logger.debug(
-                        "Send ping to node %s", mac,
-                    )
-                    self._plugwise_nodes[mac].ping()
+                    if self._plugwise_nodes[mac]:
+                        # Do ping request
+                        self.logger.debug(
+                            "Send ping to node %s", mac,
+                        )
+                        self._plugwise_nodes[mac].ping()
                     # Only power use updates for supported nodes
                     if isinstance(
                         self._plugwise_nodes[mac], PlugwiseCircle
@@ -849,8 +848,9 @@ class stick(object):
                 if datetime.now().day != day_of_month:
                     day_of_month = datetime.now().day
                     for mac in self._plugwise_nodes:
-                        if self._plugwise_nodes[mac].get_available():
-                            self._plugwise_nodes[mac].sync_clock()
+                        if self._plugwise_nodes[mac]:
+                            if self._plugwise_nodes[mac].get_available():
+                                self._plugwise_nodes[mac].sync_clock()
                 if self._auto_update_timer:
                     time.sleep(self._auto_update_timer)
         except Exception as e:
