@@ -356,10 +356,7 @@ class stick(object):
         # Discover Circle+
         if self.circle_plus_mac:
             if self._plugwise_nodes.get(self.circle_plus_mac):
-                if self.print_progress:
-                    print("Scan Circle+ for linked nodes")
-                self.logger.debug("Scan Circle+ for linked nodes...")
-                self._plugwise_nodes[self.circle_plus_mac].scan_for_nodes(scan_finished)
+                scan_circle_plus()
             else:
                 if self.print_progress:
                     print("Discover Circle+")
