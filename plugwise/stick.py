@@ -248,16 +248,23 @@ class stick(object):
         if callback_type in self._stick_callbacks:
             for callback in self._stick_callbacks[callback_type]:
                 try:
-                    callback(callback_arg)
+                    if callback_arg is None:
+                        callback()
+                    else:
+                        callback(callback_arg)
                 except Exception as e:
                     self.logger.error("Error while executing callback : %s", e)
 
     def _discover_after_scan(self):
         """ Helper to do callback for new node """
+        node_discovered = None
         for mac in self._nodes_not_discovered.keys():
             if self._plugwise_nodes.get(mac, None):
-                self.do_callback(CB_NEW_NODE, mac)
-                del self._nodes_not_discovered[mac]
+                node_discovered = mac
+                break
+        if node_discovered:
+            del self._nodes_not_discovered[node_discovered]
+            self.do_callback(CB_NEW_NODE, node_discovered)
 
     def registered_nodes(self) -> int:
         """ Return number of nodes registered in Circle+ """
@@ -585,6 +592,8 @@ class stick(object):
                 if message.node_type.value == NODE_TYPE_CIRCLE_PLUS:
                     self._circle_plus_discovered = True
                     self._append_node(mac, 0, message.node_type.value)
+                    if mac in self._nodes_not_discovered:
+                        del self._nodes_not_discovered[mac]
                 else:
                     for mac_to_discover in self._nodes_to_discover:
                         if mac == mac_to_discover:
