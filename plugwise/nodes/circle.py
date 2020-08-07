@@ -163,7 +163,7 @@ class PlugwiseCircle(PlugwiseNode):
         Returns power usage during the last second in Watts
         Based on last received power usage information 
         """
-        if self.pulses_1s:
+        if self.pulses_1s is not None:
             return self.pulses_to_kWs(self.pulses_1s) * 1000
         return None
 
@@ -172,7 +172,7 @@ class PlugwiseCircle(PlugwiseNode):
         Returns power usage during the last 8 second in Watts
         Based on last received power usage information 
         """
-        if self.pulses_8s:
+        if self.pulses_8s is not None:
             return self.pulses_to_kWs(self.pulses_8s, 8) * 1000
         return None
 
@@ -181,7 +181,7 @@ class PlugwiseCircle(PlugwiseNode):
         Returns the power usage during this running hour in kWh
         Based on last received power usage information 
         """
-        if self.pulses_consumed_1h:
+        if self.pulses_consumed_1h is not None:
             return self.pulses_to_kWs(self.pulses_consumed_1h, 3600)
         return None
 
@@ -190,7 +190,7 @@ class PlugwiseCircle(PlugwiseNode):
         Returns the power production during this running hour in kWh
         Based on last received power usage information 
         """
-        if self.pulses_produced_1h:
+        if self.pulses_produced_1h is not None:
             return self.pulses_to_kWs(self.pulses_produced_1h, 3600)
         return None
 
