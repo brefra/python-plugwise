@@ -28,10 +28,11 @@ Note: This library does not support linking or removing nodes from the Plugwise 
 
 ## Install
 
-To install this library use the following command:
+To install and use this library standalone use the following command:
 ```
 pip install python-plugwise
 ```
+If you want to control the Plugwise devices from Home Assisant, do not install this library but install [this custom integration](https://github.com/brefra/home-assistant-plugwise-stick) instead.
 
 ## Example usage
 
