@@ -486,7 +486,7 @@ class stick(object):
             if timeout_counter > 10 and self._run_send_message_thread:
                 if seq_id in self.expected_responses:
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                        self.logger.warning(
+                        self.logger.info(
                             "Resend %s for %s because stick did not acknowledge request (%s)",
                             str(self.expected_responses[seq_id][1].__class__.__name__),
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
@@ -498,7 +498,7 @@ class stick(object):
                             self.expected_responses[seq_id][3] + 1,
                         )
                     else:
-                        self.logger.warning(
+                        self.logger.info(
                             "Drop %s request for mac %s because max (%s) retries reached",
                             self.expected_responses[seq_id][1].__class__.__name__,
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
@@ -547,7 +547,7 @@ class stick(object):
                                     self.expected_responses[seq_id][3] + 1,
                                 )
                             else:
-                                self.logger.warning(
+                                self.logger.info(
                                     "Drop %s request for mac %s because max (%s) retries reached",
                                     self.expected_responses[seq_id][
                                         1
@@ -645,7 +645,7 @@ class stick(object):
                         mac = self.expected_responses[seq_id][1].mac.decode("ascii")
                         if self._plugwise_nodes.get(mac):
                             if self._plugwise_nodes[mac].get_available():
-                                self.logger.warning(
+                                self.logger.info(
                                     "Mark %s as unavailabe because %s time out responses reached",
                                     mac,
                                     str(MESSAGE_RETRY + 1),
@@ -744,7 +744,7 @@ class stick(object):
             if self._circle_plus_discovered == False:
                 # First hour every once an hour
                 if self._circle_plus_retries < 60 or circle_plus_retry_counter > 60:
-                    self.logger.debug(
+                    self.logger.info(
                         "Circle+ not yet discovered, resubmit discovery request",
                     )
                     self.discover_node(self.circle_plus_mac, self.scan)
