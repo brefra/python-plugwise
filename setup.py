@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
   name='python-plugwise',
-  version="1.2.1",
+  version="1.2.2",
   author='Frank van Breugel',
   author_email='f.v.breugel@gmail.com',
   description='Async library for Plugwise USB-stick',
