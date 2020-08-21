@@ -148,7 +148,7 @@ class PlugwiseCirclePlus(PlugwiseCircle):
             if (self._realtime_clock_offset > max_drift) or (
                 self._realtime_clock_offset < -(max_drift)
             ):
-                self.stick.logger.warning(
+                self.stick.logger.info(
                     "Reset realtime clock of node %s because time has drifted %s sec",
                     self.get_mac(),
                     str(self._clock_offset),

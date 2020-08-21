@@ -314,7 +314,7 @@ class PlugwiseNode(object):
             if max_drift == 0:
                 max_drift = MAX_TIME_DRIFT
             if (self._clock_offset > max_drift) or (self._clock_offset < -(max_drift)):
-                self.stick.logger.warning(
+                self.stick.logger.info(
                     "Reset clock of node %s because time has drifted %s sec",
                     self.get_mac(),
                     str(self._clock_offset),

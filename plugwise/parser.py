@@ -110,7 +110,7 @@ class PlugwiseParser(object):
                         elif (
                             ack_id == ACK_CLOCK_SET or ack_id == ACK_REAL_TIME_CLOCK_SET
                         ):
-                            self.stick.logger.warning(
+                            self.stick.logger.debug(
                                 "Success acknowledge on clock_set message request with sequence id %s",
                                 str(seq_id),
                             )
@@ -122,17 +122,17 @@ class PlugwiseParser(object):
                             )
                             self.stick.message_processed(seq_id, ack_id)
                         elif ack_id == ACK_ERROR:
-                            self.stick.logger.warning(
+                            self.stick.logger.info(
                                 "Error acknowledge on message request with sequence id %s",
                                 str(seq_id),
                             )
                             self.stick.message_processed(seq_id, ack_id)
                         else:
-                            self.stick.logger.warning(
+                            self.stick.logger.debug(
                                 "Acknowledge message type %s received", str(ack_id)
                             )
                     elif footer_index < 28:
-                        self.stick.logger.warning(
+                        self.stick.logger.debug(
                             "Received message %s to small, skip parsing",
                             self._buffer[: footer_index + 2],
                         )
@@ -160,7 +160,7 @@ class PlugwiseParser(object):
                         else:
                             # Lookup expected message based on request
                             if message_id != b"0000":
-                                self.stick.logger.warning(
+                                self.stick.logger.debug(
                                     "Message id %s", str(message_id),
                                 )
                             if seq_id in self.stick.expected_responses:
@@ -171,12 +171,12 @@ class PlugwiseParser(object):
                                     str(message_id),
                                 )
                             else:
-                                self.stick.logger.warning(
+                                self.stick.logger.debug(
                                     "No expected message type found for sequence id %s in %s",
                                     str(seq_id),
                                     self.stick.expected_responses.keys(),
                                 )
-                                self.stick.logger.warning(
+                                self.stick.logger.debug(
                                     "Message %s", self._buffer[: footer_index + 2],
                                 )
                     # Decode message
