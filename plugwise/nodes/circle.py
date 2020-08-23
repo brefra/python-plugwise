@@ -79,6 +79,10 @@ class PlugwiseCircle(PlugwiseNode):
         self.power_consumption_yesterday = None
         self._request_calibration()
 
+    def get_node_type(self) -> str:
+        """Return node type"""
+        return "Circle"
+
     def _request_calibration(self, callback=None):
         """Request calibration info
         """

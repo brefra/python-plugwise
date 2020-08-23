@@ -7,13 +7,6 @@ from datetime import datetime
 from plugwise.constants import (
     HA_SWITCH,
     MAX_TIME_DRIFT,
-    NODE_TYPE_CIRCLE,
-    NODE_TYPE_CIRCLE_PLUS,
-    NODE_TYPE_SCAN,
-    NODE_TYPE_SENSE,
-    NODE_TYPE_STEALTH,
-    NODE_TYPE_SWITCH,
-    NODE_TYPE_STICK,
     SENSOR_AVAILABLE,
     SENSOR_RSSI_IN,
     SENSOR_RSSI_OUT,
@@ -110,24 +103,6 @@ class PlugwiseNode(object):
     def get_name(self) -> str:
         """Return unique name"""
         return self.get_node_type() + " (" + str(self._address) + ")"
-
-    def get_node_type(self) -> str:
-        """Return Circle type"""
-        if self._node_type == NODE_TYPE_CIRCLE:
-            return "Circle"
-        elif self._node_type == NODE_TYPE_CIRCLE_PLUS:
-            return "Circle+"
-        elif self._node_type == NODE_TYPE_SCAN:
-            return "Scan"
-        elif self._node_type == NODE_TYPE_SENSE:
-            return "Sense"
-        elif self._node_type == NODE_TYPE_STEALTH:
-            return "Stealth"
-        elif self._node_type == NODE_TYPE_SWITCH:
-            return "Switch"
-        elif self._node_type == NODE_TYPE_STICK:
-            return "Stick"
-        return "Unknown"
 
     def get_hardware_version(self) -> str:
         """Return hardware version"""

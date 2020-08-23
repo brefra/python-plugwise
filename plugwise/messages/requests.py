@@ -135,6 +135,12 @@ class SEDSleepConfigRequest(NodeRequest):
         ]
 
 
+class NodeSwitchGroupRequest(NodeRequest):
+    """ TODO:  """
+
+    ID = b"0055"
+
+
 class ScanConfigRequest(NodeRequest):
     """Configure a Scan node"""
 
