@@ -51,6 +51,9 @@ MAX_TIME_DRIFT = 30
 # Default sleep time in seconds for watchdog deamon
 WATCHDOG_DEAMON = 60
 
+# Automatically accept new join requests
+ACCEPT_JOIN_REQUESTS = True
+
 # Node types
 NODE_TYPE_STICK = 0
 NODE_TYPE_CIRCLE_PLUS = 1
@@ -72,6 +75,7 @@ SCAN_LIGHT_DETECTION = False    #
 
 # Callback types
 CB_NEW_NODE = "NEW_NODE"
+CB_JOIN_REQUEST = "JOIN_REQUEST"
 
 # Unit of measurement
 TIME_MILLISECONDS = "ms"

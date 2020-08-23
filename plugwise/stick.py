@@ -10,8 +10,10 @@ import sys
 import threading
 from datetime import datetime, timedelta
 from plugwise.constants import (
+    ACCEPT_JOIN_REQUESTS,
     ACK_ERROR,
     ACK_TIMEOUT,
+    CB_JOIN_REQUEST,
     CB_NEW_NODE,
     MAX_TIME_DRIFT,
     MESSAGE_TIME_OUT,
@@ -43,6 +45,7 @@ from plugwise.messages.requests import (
     CirclePlusRealTimeClockSetRequest,
     CirclePowerUsageRequest,
     CircleSwitchRequest,
+    NodeJoinAcceptRequest,
     NodeClockGetRequest,
     NodeClockSetRequest,
     NodeInfoRequest,
@@ -56,6 +59,7 @@ from plugwise.messages.responses import (
     CirclePlusRealTimeClockResponse,
     CirclePowerUsageResponse,
     CircleSwitchResponse,
+    NodeJoinAvailableResponse,
     SEDAwakeResponse,
     NodeClockResponse,
     NodeInfoResponse,
@@ -92,6 +96,7 @@ class stick(object):
         self._nodes_registered = 0
         self._nodes_to_discover = {}
         self._nodes_not_discovered = {}
+        self._accept_join_requests = ACCEPT_JOIN_REQUESTS
         self._stick_initialized = False
         self._stick_callbacks = {}
         self.last_ack_seq_id = None
@@ -616,6 +621,20 @@ class stick(object):
                 )
                 self.discover_node(mac)
                 self.message_processed(seq_id)
+        elif isinstance(message, NodeJoinAvailableResponse):
+            # New node that is not part of a plugwise network yet and wants to join
+            if not self._plugwise_nodes.get(mac):
+                if self._accept_join_requests:
+                    # Send accept join request
+                    self.send(NodeJoinAcceptRequest(mac, True))
+                    # TODO: Circle+ registration ??
+                else:
+                    self.do_callback(CB_JOIN_REQUEST, mac)
+            else:
+                self.logger.info(
+                    "Received node available message for node %s which is already joined.",
+                    mac,
+                )
         else:
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
