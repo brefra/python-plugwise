@@ -264,6 +264,11 @@ class NodeSwitchGroupResponse(NodeResponse):
         ]
 
 
+# Message to notify a node is available to join a plugwise network
+class NodeJoinAvailableResponse(NodeResponse):
+    ID = b"0006"
+
+
 class StickInitResponse(NodeResponse):
     ID = b"0011"
 

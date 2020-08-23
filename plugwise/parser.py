@@ -13,14 +13,17 @@ from plugwise.constants import (
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
-    NodeClockResponse,
     CirclePlusRealTimeClockResponse,
     CirclePowerBufferResponse,
     CirclePowerUsageResponse,
     CircleScanResponse,
     CircleSwitchResponse,
+    NodeClockResponse,
     NodeInfoResponse,
+    NodeJoinAvailableResponse,
     NodePingResponse,
+    NodeSwitchGroupResponse,
+    SEDAwakeResponse,
     StickInitResponse,
 )
 from plugwise.util import inc_seq_id
@@ -139,7 +142,11 @@ class PlugwiseParser(object):
                     else:
                         # Footer and Header available, check for known message id's
                         message_id = self._buffer[4:8]
-                        if message_id == b"0011":
+                        if message_id == b"0006":
+                            self._message = NodeJoinAvailableResponse()
+                        elif message_id == b"000E":
+                            self._message = NodePingResponse()
+                        elif message_id == b"0011":
                             self._message = StickInitResponse()
                         elif message_id == b"0013":
                             self._message = CirclePowerUsageResponse()
@@ -149,14 +156,18 @@ class PlugwiseParser(object):
                             self._message = NodeInfoResponse()
                         elif message_id == b"0027":
                             self._message = CircleCalibrationResponse()
-                        elif message_id == b"000E":
-                            self._message = NodePingResponse()
-                        elif message_id == b"0049":
-                            self._message = CirclePowerBufferResponse()
-                        elif message_id == b"003F":
-                            self._message = NodeClockResponse()
                         elif message_id == b"003A":
                             self._message = CirclePlusRealTimeClockResponse()
+                        elif message_id == b"003F":
+                            self._message = NodeClockResponse()
+                        elif message_id == b"0049":
+                            self._message = CirclePowerBufferResponse()
+                        elif message_id == b"004F":
+                            self._message = SEDAwakeResponse()
+                        elif message_id == b"0056":
+                            self._message = NodeSwitchGroupResponse()
+                        elif message_id == b"0099":
+                            self._message = CircleSwitchResponse()
                         else:
                             # Lookup expected message based on request
                             if message_id != b"0000":
