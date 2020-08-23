@@ -5,7 +5,6 @@ Plugwise Circle+ node object
 """
 from datetime import datetime
 from plugwise.constants import MAX_TIME_DRIFT
-from plugwise.node import PlugwiseNode
 from plugwise.nodes.circle import PlugwiseCircle
 from plugwise.messages.requests import (
     CirclePlusRealTimeClockGetRequest,

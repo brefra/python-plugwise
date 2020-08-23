@@ -245,9 +245,6 @@ class PlugwiseNode(object):
         self.stick.logger.debug("Hardware version = %s", str(self._hardware_version))
         self.stick.logger.debug("Firmware version = %s", str(self._firmware_version))
 
-    def _request_power_buffer(self, log_address=None, callback=None):
-        pass
-
     def get_clock(self, callback=None):
         """ get current datetime of internal clock of CirclePlus """
         self.stick.send(
