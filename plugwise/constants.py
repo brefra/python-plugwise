@@ -176,4 +176,4 @@ SWITCH_RELAY = {
 # Home Assistant entities
 HA_SWITCH = "switch"
 HA_SENSOR = "sensor"
-HA_BINARY_SENSOR = "binary_sensor"
+HA_BINARY_SENSOR_MOTION = "binary_sensor_motion"
