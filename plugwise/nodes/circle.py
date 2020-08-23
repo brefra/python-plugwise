@@ -43,7 +43,7 @@ from plugwise.util import Int
 
 
 class PlugwiseCircle(PlugwiseNode):
-    """provides interface to the Plugwise Circle nodes
+    """provides interface to the Plugwise Circle nodes and base class for Circle+ nodes
     """
 
     def __init__(self, mac, address, stick):

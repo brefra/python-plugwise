@@ -193,7 +193,7 @@ class PlugwiseNode(object):
         self._callbacks[sensor].append(callback)
 
     def unsubscribe_callback(self, callback, sensor):
-        """ Register callback to execute when state change happens """
+        """ Unsubscribe callback to execute when state change happens """
         if sensor in self._callbacks:
             self._callbacks[sensor].remove(callback)
 
