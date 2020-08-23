@@ -56,6 +56,7 @@ from plugwise.messages.responses import (
     CirclePlusRealTimeClockResponse,
     CirclePowerUsageResponse,
     CircleSwitchResponse,
+    SEDAwakeResponse,
     NodeClockResponse,
     NodeInfoResponse,
     NodePingResponse,
@@ -66,6 +67,7 @@ from plugwise.parser import PlugwiseParser
 from plugwise.node import PlugwiseNode
 from plugwise.nodes.circle import PlugwiseCircle
 from plugwise.nodes.circle_plus import PlugwiseCirclePlus
+from plugwise.nodes.scan import PlugwiseScan
 from plugwise.nodes.stealth import PlugwiseStealth
 from plugwise.util import inc_seq_id, validate_mac
 from queue import Queue
@@ -391,6 +393,10 @@ class stick(object):
             if self.print_progress:
                 print("Stealth node found using mac " + mac)
             self._plugwise_nodes[mac] = PlugwiseStealth(mac, address, self)
+        elif node_type == NODE_TYPE_SCAN:
+            if self.print_progress:
+                print("Scan node found using mac " + mac)
+            self._plugwise_nodes[mac] = PlugwiseScan(mac, address, self)
         else:
             self.logger.warning("Unsupported node type '%s'", str(node_type))
             self._plugwise_nodes[mac] = None
@@ -600,6 +606,16 @@ class stick(object):
                             self._append_node(mac, self._nodes_to_discover[mac_to_discover], message.node_type.value)
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
+        elif isinstance(message, SEDAwakeResponse):
+            if self._plugwise_nodes.get(mac):
+                self._plugwise_nodes[mac].on_message(message)
+            else:
+                self.logger.debug(
+                    "Received awake message from unknown node with mac %s, discover node now",
+                    mac,
+                )
+                self.discover_node(mac)
+                self.message_processed(seq_id)
         else:
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
