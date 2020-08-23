@@ -60,6 +60,11 @@ NODE_TYPE_SENSE = 5
 NODE_TYPE_SCAN = 6
 NODE_TYPE_STEALTH = 9
 
+# Defaults for SED's (Sleeping End Devices)
+SED_AWAKE_DURATION = 10         # Time in seconds the SED keep itself awake to receive and respond to other messages
+SED_SLEEP_DURATION = 10         # Time in seconds the SED sleeps
+SED_AWAKE_INTERVAL = 3600       # Interval in seconds the SED node is sending an awake message
+
 # Callback types
 CB_NEW_NODE = "NEW_NODE"
 
