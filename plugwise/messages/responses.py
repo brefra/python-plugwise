@@ -227,6 +227,15 @@ class NodeInfoResponse(NodeResponse):
         ]
 
 
+class SEDAwakeResponse(NodeResponse):
+    ID = b"004F"
+
+    def __init__(self):
+        super().__init__()
+        self.awake_type = Int(0, length=2)
+        self.params += [self.awake_type]
+
+
 class NodePingResponse(NodeResponse):
     ID = b"000E"
 
@@ -239,6 +248,19 @@ class NodePingResponse(NodeResponse):
             self.in_RSSI,
             self.out_RSSI,
             self.ping_ms,
+        ]
+
+
+class NodeSwitchGroupResponse(NodeResponse):
+    ID = b"0056"
+
+    def __init__(self):
+        super().__init__()
+        self.group = Int(0, length=2)
+        self.power_state = Int(0, length=2)
+        self.params += [
+            self.group,
+            self.power_state,
         ]
 
 
