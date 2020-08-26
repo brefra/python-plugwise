@@ -3,6 +3,10 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 
 All (known) request messages to be send to plugwise plugs
 """
+from plugwise.constants import (
+    MESSAGE_FOOTER,
+    MESSAGE_HEADER,
+)
 from plugwise.message import PlugwiseMessage
 from plugwise.util import (
     DateTime,
@@ -178,8 +182,26 @@ class NodeInfoRequest(NodeRequest):
     ID = b"0023"
 
 
-class NodeJoinAcceptRequest(NodeRequest):
-    """Request Node to join by accepting join request"""
+class NodeAllowJoiningRequest(NodeRequest):
+    """
+    Send a flag which enables or disables joining nodes request
+    """
+    
+    ID = b'0008'
+    
+    def __init__(self, mac, on):
+        super().__init__(mac)
+        #TODO: Make sure that '01' means enable, and '00' disable joining
+        val = 1 if on == True else 0
+        self.args.append(Int(val, length=2))
+
+
+class NodeAddRequest(NodeRequest):
+    """
+    Inform node it is added to the Plugwise Network it to memory of Circle+ node
+
+    Response message: 
+    """
 
     ID = b"0007"
 
@@ -187,6 +209,28 @@ class NodeJoinAcceptRequest(NodeRequest):
         super().__init__(mac)
         accept_value = 1 if accept == True else 0
         self.args.append(Int(accept_value, length=2))
+
+    # This message has an exceptional format (MAC at end of message)
+    # and therefore need to override the serialize method
+    def serialize(self):
+        args = b''.join(a.serialize() for a in self.args)
+        msg = self.ID + args + self.mac
+        checksum = self.calculate_checksum(msg)
+        return MESSAGE_HEADER + msg + checksum + MESSAGE_FOOTER
+
+
+class NodeRemoveRequest(NodeRequest):
+    """
+    Request node to be removed from Plugwise network by 
+    removing it from memory of Circle+ node.
+        
+    Response message: NodeRemoveResponse
+    """
+    ID = b'001C'
+    
+    def __init__(self, mac_circle_plus, mac_to_unjoined):
+        super().__init__(mac_circle_plus)
+        self.args.append(String(mac_to_unjoined, length=16))
 
 
 class StickInitRequest(NodeRequest):
@@ -198,3 +242,36 @@ class StickInitRequest(NodeRequest):
         """message for that initializes the Stick"""
         # init is the only request message that doesn't send MAC address
         super().__init__("")
+
+
+class PlugwiseClearGroupMacRequest(NodeRequest):
+    ID = b'0058'
+
+    def __init__(self, mac, taskId):
+        super().__init__(mac)
+        self.args.append(Int(taskId, length=2))
+
+
+class PlugwiseFeatureSetRequest(NodeRequest):
+    ID = b'005F'
+
+
+class NodeFeatureSetRequest(NodeRequest):
+    """
+    Request feature set node supports
+        
+    Response message: NodeFeatureSetResponse
+    """
+    ID = b'005F'
+
+
+class PlugwiseResetRequest(NodeRequest):
+    """Send preset circle request"""
+    ID = b'0009'
+    
+    def __init__(self, mac, moduletype, timeout):
+        super().__init__(mac)
+        self.args += [
+            Int(moduletype, length=2),
+            Int(timeout, length=2),
+        ]
