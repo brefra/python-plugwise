@@ -9,6 +9,7 @@ from plugwise.constants import (
     MESSAGE_FOOTER,
     MESSAGE_HEADER,
 )
+from plugwise.exceptions import ProtocolError
 from plugwise.message import PlugwiseMessage
 from plugwise.util import (
     DateTime,
