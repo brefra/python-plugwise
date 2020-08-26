@@ -24,6 +24,8 @@ from plugwise.util import (
 
 
 class NodeResponse(PlugwiseMessage):
+    """ Base class for response messages received by USB-Stick)."""
+
     def __init__(self):
         super().__init__()
         self.params = []
@@ -210,6 +212,11 @@ class NodeClockResponse(NodeResponse):
 
 
 class NodeInfoResponse(NodeResponse):
+    """
+    Returns the status information of Node
+    
+    Response to: NodeInfoRequest
+    """
     ID = b"0024"
 
     def __init__(self):
@@ -269,8 +276,8 @@ class NodeSwitchGroupResponse(NodeResponse):
         ]
 
 
-# Message to notify a node is available to join a plugwise network
 class NodeJoinAvailableResponse(NodeResponse):
+    """ Message from unjoined node to notify it's available to join a plugwise network"""
     ID = b"0006"
 
 

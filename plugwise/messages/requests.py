@@ -81,7 +81,9 @@ class CirclePlusRealTimeClockGetRequest(NodeRequest):
 class CirclePlusScanRequest(NodeRequest):
     """
     Get all linked Circle plugs from Circle+
-    a Plugwise network can have 64 devices the node ID value has a range from 0 to 63    
+    a Plugwise network can have 64 devices the node ID value has a range from 0 to 63
+
+    Response message: CirclePlusScanResponse
     """
 
     ID = b"0018"
@@ -116,8 +118,11 @@ class NodeClockSetRequest(NodeRequest):
 
 
 class SEDSleepConfigRequest(NodeRequest):
-    """Configure timers for SED nodes (battery powered)"""
-
+    """
+    Configure timers for SED nodes to minimize battery usage
+    
+    Response message: Ack message with: ACK_SLEEP_SET
+    """
     ID = b"0050"
 
     def __init__(self, mac, wake_up_duration : int, sleep : int, wake_up_interval : int):
@@ -177,8 +182,11 @@ class NodePingRequest(NodeRequest):
 
 
 class NodeInfoRequest(NodeRequest):
-    """Request status info of node"""
-
+    """
+    Request status info of node 
+        
+    Response message: NodeInfoResponse
+    """
     ID = b"0023"
 
 
@@ -235,7 +243,6 @@ class NodeRemoveRequest(NodeRequest):
 
 class StickInitRequest(NodeRequest):
     """initialize Stick"""
-
     ID = b"000A"
 
     def __init__(self):
