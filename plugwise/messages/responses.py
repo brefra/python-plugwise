@@ -144,7 +144,12 @@ class CirclePowerBufferResponse(NodeResponse):
         ]
 
 
-class CircleScanResponse(NodeResponse):
+class CirclePlusScanResponse(NodeResponse):
+    """
+    Returns the MAC of a registered node at the specified memory address
+    
+    Response to: CirclePlusScanRequest
+    """
     ID = b"0019"
 
     def __init__(self):
@@ -286,3 +291,85 @@ class StickInitResponse(NodeResponse):
             self.network_id,
             self.unknown2,
         ]
+
+
+class NodeFeatureSetResponse(NodeResponse):
+    """returns feature set of modules
+    """
+    ID = b'0060'
+
+    def __init__(self):
+        super().__init__()
+        self.features = Int(0, 16)
+        self.params += [self.features]
+
+        
+class QueryCirclePlusEndResponse(NodeResponse):
+    ID = b'0003'
+
+    def __init__(self):
+        super().__init__()
+        self.status = Int(0, 4)
+        self.params += [self.status]
+       
+    def __len__(self):
+        arglen = sum(len(x) for x in self.params)
+        return 18 + arglen
+
+
+class PlugwiseConnectCirclePlusResponse(NodeResponse):
+    ID = b'0005'
+
+    def __init__(self):
+        super().__init__()
+        self.existing = Int(0, 2)
+        self.allowed = Int(0, 2)
+        self.params += [self.existing, self.allowed]
+       
+    def __len__(self):
+        arglen = sum(len(x) for x in self.params)
+        return 18 + arglen
+
+
+class NodeRemoveResponse(NodeResponse):
+    """
+    Returns conformation (or not) if node is removed from the Plugwise network
+    by having it removed from the memory of the Circle+
+    
+    Response to: NodeRemoveRequest
+    """
+    ID = b'001D'
+
+    def __init__(self):
+        super().__init__()
+        self.node_mac_id = String(None, length=16)
+        self.status = Int(0, 2)
+        self.params += [self.node_mac_id, self.status]
+
+
+class NodeFeatureSetResponse(NodeResponse):
+    """
+    Returns supported features of node
+    
+    Response to: NodeFeatureSetRequest
+    """
+    ID = b'0060'
+
+    def __init__(self):
+        super().__init__()
+        self.features = Int(0, 16)
+        self.params += [self.features]
+
+
+class NodeJoinAckAssociationResponse(NodeResponse):
+    """
+    Notification mesage when node (re)joined existing network again. 
+    Sent when a SED (re)joins the network e.g. when you reinsert the battery of a Scan
+
+    Response to: <nothing> or NodeAddRequest
+    """
+    ID = b'0061'
+
+    def __init__(self):
+        super().__init__()
+        #sequence number is always FFFD
