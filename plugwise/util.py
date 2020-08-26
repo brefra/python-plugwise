@@ -35,6 +35,7 @@ def inc_seq_id(seq_id, value=1):
     """
     temp_int = int(seq_id, 16) + value
     # Max seq_id = b'FFFC'
+    # b'FFFD' is reserved for 'NodeJoinAckAssociationResponse' message
     if temp_int >= 65532:
         temp_int = 0
     temp_str = str(hex(temp_int)).lstrip("0x").upper()
