@@ -16,7 +16,7 @@ from plugwise.messages.responses import (
     CirclePlusRealTimeClockResponse,
     CirclePowerBufferResponse,
     CirclePowerUsageResponse,
-    CircleScanResponse,
+    CirclePlusScanResponse,
     CircleSwitchResponse,
     NodeClockResponse,
     NodeInfoResponse,
@@ -151,7 +151,7 @@ class PlugwiseParser(object):
                         elif message_id == b"0013":
                             self._message = CirclePowerUsageResponse()
                         elif message_id == b"0019":
-                            self._message = CircleScanResponse()
+                            self._message = CirclePlusScanResponse()
                         elif message_id == b"0024":
                             self._message = NodeInfoResponse()
                         elif message_id == b"0027":

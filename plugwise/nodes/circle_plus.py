@@ -13,7 +13,7 @@ from plugwise.messages.requests import (
 )
 from plugwise.messages.responses import (
     CirclePlusRealTimeClockResponse,
-    CircleScanResponse,
+    CirclePlusScanResponse,
 )
 
 
@@ -40,7 +40,7 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         """
         if isinstance(message, CirclePlusRealTimeClockResponse):
             self._response_realtime_clock(message)
-        elif isinstance(message, CircleScanResponse):
+        elif isinstance(message, CirclePlusScanResponse):
             self._process_scan_response(message)
         else:
             self.stick.logger.waning(

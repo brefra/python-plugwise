@@ -36,7 +36,7 @@ from plugwise.messages.responses import (
     CircleCalibrationResponse,
     CirclePowerBufferResponse,
     CirclePowerUsageResponse,
-    CircleScanResponse,
+    CirclePlusScanResponse,
     CircleSwitchResponse,
 )
 from plugwise.util import Int

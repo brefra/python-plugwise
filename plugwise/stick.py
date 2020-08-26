@@ -54,7 +54,7 @@ from plugwise.messages.requests import (
     StickInitRequest,
 )
 from plugwise.messages.responses import (
-    CircleScanResponse,
+    CirclePlusScanResponse,
     CircleCalibrationResponse,
     CirclePlusRealTimeClockResponse,
     CirclePowerUsageResponse,
@@ -436,7 +436,7 @@ class stick(object):
         elif isinstance(request, CircleCalibrationRequest):
             response_message = CircleCalibrationResponse()
         elif isinstance(request, CirclePlusScanRequest):
-            response_message = CircleScanResponse()
+            response_message = CirclePlusScanResponse()
         elif isinstance(request, CirclePlusRealTimeClockGetRequest):
             response_message = CirclePlusRealTimeClockResponse()
         elif isinstance(request, NodeClockGetRequest):
