@@ -6,6 +6,7 @@ from plugwise.constants import (
     ACK_ERROR,
     ACK_REAL_TIME_CLOCK_SET,
     ACK_SUCCESS,
+    ACK_SLEEP_SET,
     ACK_TIMEOUT,
     MESSAGE_FOOTER,
     MESSAGE_HEADER,
@@ -19,10 +20,13 @@ from plugwise.messages.responses import (
     CirclePlusScanResponse,
     CircleSwitchResponse,
     NodeClockResponse,
+    NodeFeatureSetResponse,
     NodeInfoResponse,
     NodeJoinAvailableResponse,
+    NodeJoinAckAssociationResponse,
     NodePingResponse,
     NodeSwitchGroupResponse,
+    NodeRemoveResponse,
     SEDAwakeResponse,
     StickInitResponse,
 )
@@ -66,7 +70,6 @@ class PlugwiseParser(object):
     def parse_data(self):
         """
         Process next set of packet data
-        
         """
         self.stick.logger.debug("Parse data: %s ", str(self._buffer))
         if self._parsing == False:
@@ -114,7 +117,13 @@ class PlugwiseParser(object):
                             ack_id == ACK_CLOCK_SET or ack_id == ACK_REAL_TIME_CLOCK_SET
                         ):
                             self.stick.logger.debug(
-                                "Success acknowledge on clock_set message request with sequence id %s",
+                                "Success acknowledge on NodeClockSetRequest or CirclePlusRealTimeClockSetRequest message request with sequence id %s",
+                                str(seq_id),
+                            )
+                            self.stick.message_processed(seq_id, ack_id)
+                        elif ack_id == ACK_SLEEP_SET:
+                            self.stick.logger.debug(
+                                "Success acknowledge on SEDSleepConfigRequest message request with sequence id %s",
                                 str(seq_id),
                             )
                             self.stick.message_processed(seq_id, ack_id)
@@ -134,6 +143,10 @@ class PlugwiseParser(object):
                             self.stick.logger.debug(
                                 "Acknowledge message type %s received", str(ack_id)
                             )
+                    elif footer_index == 18:
+                        # Possible 'NodeJoinAckAssociationResponse' message
+                        if seq_id == b"FFFD":
+                            self._message = NodeJoinAckAssociationResponse()
                     elif footer_index < 28:
                         self.stick.logger.debug(
                             "Received message %s to small, skip parsing",
@@ -152,6 +165,8 @@ class PlugwiseParser(object):
                             self._message = CirclePowerUsageResponse()
                         elif message_id == b"0019":
                             self._message = CirclePlusScanResponse()
+                        elif message_id == b"001D":
+                            self._message = NodeRemoveResponse()
                         elif message_id == b"0024":
                             self._message = NodeInfoResponse()
                         elif message_id == b"0027":
@@ -166,13 +181,16 @@ class PlugwiseParser(object):
                             self._message = SEDAwakeResponse()
                         elif message_id == b"0056":
                             self._message = NodeSwitchGroupResponse()
+                        elif message_id == b"0060":
+                            self._message = NodeFeatureSetResponse()
                         elif message_id == b"0099":
                             self._message = CircleSwitchResponse()
                         else:
                             # Lookup expected message based on request
                             if message_id != b"0000":
                                 self.stick.logger.debug(
-                                    "Message id %s", str(message_id),
+                                    "Message id %s",
+                                    str(message_id),
                                 )
                             if seq_id in self.stick.expected_responses:
                                 self._message = self.stick.expected_responses[seq_id][0]
@@ -188,7 +206,8 @@ class PlugwiseParser(object):
                                     self.stick.expected_responses.keys(),
                                 )
                                 self.stick.logger.debug(
-                                    "Message %s", self._buffer[: footer_index + 2],
+                                    "Message %s",
+                                    self._buffer[: footer_index + 2],
                                 )
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):
