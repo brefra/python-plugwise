@@ -45,12 +45,14 @@ from plugwise.messages.requests import (
     CirclePlusRealTimeClockSetRequest,
     CirclePowerUsageRequest,
     CircleSwitchRequest,
-    NodeJoinAcceptRequest,
+    NodeAllowJoiningRequest,
+    NodeAddRequest,
     NodeClockGetRequest,
     NodeClockSetRequest,
     NodeInfoRequest,
     NodePingRequest,
     NodeRequest,
+    NodeRemoveRequest,
     StickInitRequest,
 )
 from plugwise.messages.responses import (
@@ -64,6 +66,7 @@ from plugwise.messages.responses import (
     NodeClockResponse,
     NodeInfoResponse,
     NodePingResponse,
+    NodeRemoveResponse,
     NodeResponse,
     StickInitResponse,
 )
@@ -381,6 +384,26 @@ class stick(object):
                 "Plugwise stick not properly initialized, Circle+ MAC is missing."
             )
 
+    def node_join(self, mac, callback=None) -> bool:
+        """Add known mac node to the Plugwise network by adding it in Circle+ memory"""
+
+        def add_node(self):
+            # Register Node
+            self.send(NodeAddRequest(mac, True), callback)
+
+        if validate_mac(mac) == True:
+            # First enable joining for given MAC
+            self.send(NodeAllowJoiningRequest(mac, True), add_node)
+            return True
+        return False
+
+    def node_unjoin(self, mac, callback=None) -> bool:
+        """Remove node from the Plugwise network by deleting it from the Circle+ memory"""
+        if validate_mac(mac) == True:
+            self.send(NodeRemoveRequest(self.circle_plus_mac, mac), callback)
+            return True
+        return False
+
     def _append_node(self, mac, address, node_type):
         """ Add Plugwise node to be controlled """
         self.logger.debug(
@@ -612,6 +635,7 @@ class stick(object):
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
         elif isinstance(message, SEDAwakeResponse):
+            # Message from SED node that is not part of a plugwise network yet and wants to join
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
             else:
@@ -622,22 +646,54 @@ class stick(object):
                 self.discover_node(mac)
                 self.message_processed(seq_id)
         elif isinstance(message, NodeJoinAvailableResponse):
-            # New node that is not part of a plugwise network yet and wants to join
+            # Message from node that is not part of a plugwise network yet and wants to join
+            self.logger.debug(
+                "Received network join request from node with mac %s",
+                mac,
+            )
             if not self._plugwise_nodes.get(mac):
                 if self._accept_join_requests:
                     # Send accept join request
-                    self.send(NodeJoinAcceptRequest(mac, True))
-                    # TODO: Circle+ registration ??
+                    self.logger.info(
+                        "Accepting network join request for node with mac %s",
+                        mac,
+                    )
+                    self.send(NodeAddRequest(mac, True))
+                    self.discover_node(mac, self._discover_after_scan)
                 else:
                     self.do_callback(CB_JOIN_REQUEST, mac)
             else:
-                self.logger.info(
+                self.logger.debug(
                     "Received node available message for node %s which is already joined.",
+                    mac,
+                )
+        elif isinstance(message, NodeRemoveResponse):
+            # Conformation message a node is is removed from the Plugwise network
+            if message.status.value == 1:
+                if self._plugwise_nodes.get(mac):
+                    self._plugwise_nodes[mac] = None
+                    self.logger.info(
+                        "Node with mac %s has been unjoined from Plugwise network",
+                        mac,
+                    )
+                else:
+                    self.logger.debug(
+                        "Unknown node with mac %s has been unjoined from Plugwise network",
+                        mac,
+                    )
+            else:
+                self.logger.warning(
+                    "Node with mac %s failed to unjoin from Plugwise network ",
                     mac,
                 )
         else:
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
+            else:
+                self.logger.debug(
+                    "Skip message because node is not discovered yet.",
+                    mac,
+                )
 
     def message_processed(self, seq_id, ack_response=None):
         """ Execute callback of received messages """
