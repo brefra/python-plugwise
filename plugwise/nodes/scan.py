@@ -13,7 +13,11 @@ from plugwise.constants import (
 from plugwise.node import PlugwiseSED
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import NodeSwitchGroupResponse
-from plugwise.messages.requests import NodeSwitchGroupRequest, SEDSleepConfigRequest, ScanLightCalibrateRequest
+from plugwise.messages.requests import (
+    NodeSwitchGroupRequest,
+    NodeSleepConfigRequest,
+    ScanLightCalibrateRequest,
+)
 
 
 class PlugwiseScan(PlugwiseSED):
@@ -73,7 +77,9 @@ class PlugwiseScan(PlugwiseSED):
 
     def ConfigureSleep(self, awake_duration=SCAN_AWAKE_DURATION, sleep_duration=SED_SLEEP_DURATION, wake_up_interval=SED_AWAKE_INTERVAL, callback=None):
         """Queue sleep configuration config"""
-        message = SEDSleepConfigRequest(self.mac, awake_duration, sleep_duration, wake_up_interval)
+        message = NodeSleepConfigRequest(
+            self.mac, awake_duration, sleep_duration, wake_up_interval
+        )
         self._send_request(message, callback)
 
     def CalibrateLight(self, callback=None):

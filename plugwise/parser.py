@@ -13,22 +13,25 @@ from plugwise.constants import (
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
-    CircleCalibrationResponse,
-    CirclePlusRealTimeClockResponse,
-    CirclePowerBufferResponse,
-    CirclePowerUsageResponse,
-    CirclePlusScanResponse,
-    CircleSwitchResponse,
-    NodeClockResponse,
-    NodeFeatureSetResponse,
-    NodeInfoResponse,
-    NodeJoinAvailableResponse,
-    NodeJoinAckAssociationResponse,
-    NodePingResponse,
-    NodeSwitchGroupResponse,
-    NodeRemoveResponse,
-    SEDAwakeResponse,
-    StickInitResponse,
+    CircleCalibrationResponse,      # 0027
+    CirclePlusConnectResponse,      # 0005
+    CirclePlusQueryEndResponse,     # 0003
+    CirclePlusQueryResponse,        # 0002
+    CirclePlusRealTimeClockResponse,# 003A
+    CirclePlusScanResponse,         # 0019
+    CirclePowerBufferResponse,      # 0049
+    CirclePowerUsageResponse,       # 0013
+    CircleSwitchRelayResponse,      # 0099
+    NodeClockResponse,              # 003F
+    NodeFeatureSetResponse,         # 0060
+    NodeInfoResponse,               # 0024
+    NodeJoinAvailableResponse,      # 0006
+    NodeJoinAckAssociationResponse, # 0061
+    NodePingResponse,               # 000E
+    NodeSwitchGroupResponse,        # 0056
+    NodeRemoveResponse,             # 001D
+    NodeAwakeResponse,              # 004F
+    StickInitResponse,              # 0011
 )
 from plugwise.util import inc_seq_id
 
@@ -104,7 +107,9 @@ class PlugwiseParser(object):
                         "Valid message footer found at index %s", str(footer_index)
                     )
                     seq_id = self._buffer[8:12]
-                    if footer_index == 20:
+                    if seq_id == b"FFFD":
+                        self._message = NodeJoinAckAssociationResponse()
+                    elif footer_index == 20:
                         # Acknowledge message
                         ack_id = int(self._buffer[12:16], 16)
                         self.stick.last_ack_seq_id = seq_id
@@ -123,7 +128,7 @@ class PlugwiseParser(object):
                             self.stick.message_processed(seq_id, ack_id)
                         elif ack_id == ACK_SLEEP_SET:
                             self.stick.logger.debug(
-                                "Success acknowledge on SEDSleepConfigRequest message request with sequence id %s",
+                                "Success acknowledge on NodeSleepConfigRequest message request with sequence id %s",
                                 str(seq_id),
                             )
                             self.stick.message_processed(seq_id, ack_id)
@@ -143,10 +148,6 @@ class PlugwiseParser(object):
                             self.stick.logger.debug(
                                 "Acknowledge message type %s received", str(ack_id)
                             )
-                    elif footer_index == 18:
-                        # Possible 'NodeJoinAckAssociationResponse' message
-                        if seq_id == b"FFFD":
-                            self._message = NodeJoinAckAssociationResponse()
                     elif footer_index < 28:
                         self.stick.logger.debug(
                             "Received message %s to small, skip parsing",
@@ -155,7 +156,13 @@ class PlugwiseParser(object):
                     else:
                         # Footer and Header available, check for known message id's
                         message_id = self._buffer[4:8]
-                        if message_id == b"0006":
+                        if message_id == b"0002":
+                            self._message = CirclePlusQueryResponse()
+                        elif message_id == b"0003":
+                            self._message = CirclePlusQueryEndResponse()
+                        elif message_id == b"0005":
+                            self._message = CirclePlusConnectResponse()
+                        elif message_id == b"0006":
                             self._message = NodeJoinAvailableResponse()
                         elif message_id == b"000E":
                             self._message = NodePingResponse()
@@ -178,13 +185,13 @@ class PlugwiseParser(object):
                         elif message_id == b"0049":
                             self._message = CirclePowerBufferResponse()
                         elif message_id == b"004F":
-                            self._message = SEDAwakeResponse()
+                            self._message = NodeAwakeResponse()
                         elif message_id == b"0056":
                             self._message = NodeSwitchGroupResponse()
                         elif message_id == b"0060":
                             self._message = NodeFeatureSetResponse()
                         elif message_id == b"0099":
-                            self._message = CircleSwitchResponse()
+                            self._message = CircleSwitchRelayResponse()
                         else:
                             # Lookup expected message based on request
                             if message_id != b"0000":

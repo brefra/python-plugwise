@@ -30,14 +30,14 @@ from plugwise.messages.requests import (
     CircleCalibrationRequest,
     CirclePowerBufferRequest,
     CirclePowerUsageRequest,
-    CircleSwitchRequest,
+    CircleSwitchRelayRequest,
 )
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
     CirclePowerBufferResponse,
     CirclePowerUsageResponse,
     CirclePlusScanResponse,
-    CircleSwitchResponse,
+    CircleSwitchRelayResponse,
 )
 from plugwise.util import Int
 
@@ -94,7 +94,7 @@ class PlugwiseCircle(PlugwiseNode):
         """Request to switch relay state and request state info
         """
         self.stick.send(
-            CircleSwitchRequest(self.mac, state), callback,
+            CircleSwitchRelayRequest(self.mac, state), callback,
         )
 
     def update_power_usage(self, callback=None):
@@ -123,10 +123,10 @@ class PlugwiseCircle(PlugwiseNode):
                     self.get_mac(),
                 )
                 self._request_calibration()
-        elif isinstance(message, CircleSwitchResponse):
+        elif isinstance(message, CircleSwitchRelayResponse):
             self._response_switch(message)
             self.stick.logger.debug(
-                "Switch update for %s, last update %s",
+                "Relay update for %s, last update %s",
                 self.get_mac(),
                 str(self.last_update),
             )

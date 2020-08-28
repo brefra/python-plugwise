@@ -11,11 +11,11 @@ from plugwise.constants import (
 )
 from plugwise.node import PlugwiseNode
 from plugwise.message import PlugwiseMessage
-from plugwise.messages.responses import SEDAwakeResponse
+from plugwise.messages.responses import NodeAwakeResponse
 from plugwise.messages.requests import (
     NodeInfoRequest,
     NodePingRequest,
-    SEDSleepConfigRequest,
+    NodeSleepConfigRequest,
 )
 
 
@@ -31,7 +31,7 @@ class PlugwiseSED(PlugwiseNode):
         """
         Process received message
         """
-        if isinstance(message, SEDAwakeResponse):
+        if isinstance(message, NodeAwakeResponse):
             self._process_awake_response(message)
             self.stick.message_processed(message.seq_id)
         else:
@@ -95,7 +95,7 @@ class PlugwiseSED(PlugwiseNode):
         callback=None,
     ):
         """Reconfigure the awake duration and interval settings at next awake of SED"""
-        message = SEDSleepConfigRequest(
+        message = NodeSleepConfigRequest(
             self.mac, awake_duration, sleep_duration, wake_up_interval
         )
         self._send_request(message, callback)

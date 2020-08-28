@@ -44,7 +44,7 @@ from plugwise.messages.requests import (
     CirclePlusRealTimeClockGetRequest,
     CirclePlusRealTimeClockSetRequest,
     CirclePowerUsageRequest,
-    CircleSwitchRequest,
+    CircleSwitchRelayRequest,
     NodeAllowJoiningRequest,
     NodeAddRequest,
     NodeClockGetRequest,
@@ -60,9 +60,9 @@ from plugwise.messages.responses import (
     CircleCalibrationResponse,
     CirclePlusRealTimeClockResponse,
     CirclePowerUsageResponse,
-    CircleSwitchResponse,
+    CircleSwitchRelayResponse,
     NodeJoinAvailableResponse,
-    SEDAwakeResponse,
+    NodeAwakeResponse,
     NodeClockResponse,
     NodeInfoResponse,
     NodePingResponse,
@@ -454,8 +454,8 @@ class stick(object):
             response_message = NodeInfoResponse()
         elif isinstance(request, NodePingRequest):
             response_message = NodePingResponse()
-        elif isinstance(request, CircleSwitchRequest):
-            response_message = CircleSwitchResponse()
+        elif isinstance(request, CircleSwitchRelayRequest):
+            response_message = CircleSwitchRelayResponse()
         elif isinstance(request, CircleCalibrationRequest):
             response_message = CircleCalibrationResponse()
         elif isinstance(request, CirclePlusScanRequest):
@@ -634,7 +634,7 @@ class stick(object):
                             self._append_node(mac, self._nodes_to_discover[mac_to_discover], message.node_type.value)
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
-        elif isinstance(message, SEDAwakeResponse):
+        elif isinstance(message, NodeAwakeResponse):
             # Message from SED node that is not part of a plugwise network yet and wants to join
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
