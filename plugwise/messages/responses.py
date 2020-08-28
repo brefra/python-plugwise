@@ -1,7 +1,7 @@
 """
 Use of this source code is governed by the MIT license found in the LICENSE file.
 
-All (known) response messages to be received from plugwise plugs
+All known response messages to be received from plugwise devices
 """
 from datetime import datetime
 import struct

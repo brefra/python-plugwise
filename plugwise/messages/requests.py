@@ -1,7 +1,7 @@
 """
 Use of this source code is governed by the MIT license found in the LICENSE file.
 
-All (known) request messages to be send to plugwise plugs
+All known request messages to be send to plugwise devices
 """
 from plugwise.constants import (
     MESSAGE_FOOTER,
@@ -290,13 +290,13 @@ class NodeSleepConfigRequest(NodeRequest):
     def __init__(self, mac, wake_up_duration: int, sleep: int, wake_up_interval: int):
         super().__init__(mac)
 
-        # Interval to awake (to report its availability ??
+        # Interval in minutes a SED will get awake 
         wake_up_interval_val = Int(wake_up_interval, length=4)
-        # Duration the node keeps awake (for receiving (n)acks ??)
+        # Duration in seconds the SED will be awake for receiving (n)acks
         wake_up_duration_val = Int(wake_up_duration, length=2)
-        # Duration the node keeps sleeping
+        # Duration in seconds the node keeps sleeping
         sleep_val = Int(sleep, length=4)
-        # TODO: Unkown parameter
+        # TODO: Unknown parameter
         unknown_value = Int(0, length=6)
         self.args += [
             wake_up_duration_val,
@@ -344,7 +344,7 @@ class ScanConfigRequest(NodeRequest):
     """
     Configure a Scan node
 
-    Response message: ???
+    Response message: [Acknowledge message]
     """
 
     ID = b"0101"
