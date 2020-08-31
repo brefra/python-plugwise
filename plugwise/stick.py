@@ -624,13 +624,13 @@ class stick(object):
     def new_message(self, message):
         """ Received message from Plugwise Zigbee network """
         assert isinstance(message, NodeResponse)
+        mac = message.mac.decode("ascii")
         self.logger.debug(
-            "New %s message with seq id %s for %s",
+            "New %s message with seq id %s received from %s",
             message.__class__.__name__,
             str(message.seq_id),
-            message.mac.decode("ascii"),
+            mac,
         )
-        mac = message.mac.decode("ascii")
         if isinstance(message, StickInitResponse):
             self._mac_stick = message.mac
             if message.network_is_online.value == 1:
