@@ -140,7 +140,7 @@ class CirclePowerUsageRequest(NodeRequest):
     ID = b"0012"
 
 
-class NodeClockSetRequest(NodeRequest):
+class CircleClockSetRequest(NodeRequest):
     """
     Set internal clock of node
 
@@ -254,11 +254,11 @@ class CirclePlusRealTimeClockGetRequest(NodeRequest):
     ID = b"0029"
 
 
-class NodeClockGetRequest(NodeRequest):
+class CircleClockGetRequest(NodeRequest):
     """
     Request current internal clock of node
 
-    Response message: NodeClockResponse
+    Response message: CircleClockResponse
     """
 
     ID = b"003E"

@@ -22,7 +22,7 @@ from plugwise.messages.responses import (
     CirclePowerBufferResponse,      # 0049
     CirclePowerUsageResponse,       # 0013
     CircleSwitchRelayResponse,      # 0099
-    NodeClockResponse,              # 003F
+    CircleClockResponse,              # 003F
     NodeFeatureSetResponse,         # 0060
     NodeInfoResponse,               # 0024
     NodeJoinAvailableResponse,      # 0006
@@ -122,7 +122,7 @@ class PlugwiseParser(object):
                             ack_id == ACK_CLOCK_SET or ack_id == ACK_REAL_TIME_CLOCK_SET
                         ):
                             self.stick.logger.debug(
-                                "Success acknowledge on NodeClockSetRequest or CirclePlusRealTimeClockSetRequest message request with sequence id %s",
+                                "Success acknowledge on CircleClockSetRequest or CirclePlusRealTimeClockSetRequest message request with sequence id %s",
                                 str(seq_id),
                             )
                             self.stick.message_processed(seq_id, ack_id)
@@ -181,7 +181,7 @@ class PlugwiseParser(object):
                         elif message_id == b"003A":
                             self._message = CirclePlusRealTimeClockResponse()
                         elif message_id == b"003F":
-                            self._message = NodeClockResponse()
+                            self._message = CircleClockResponse()
                         elif message_id == b"0049":
                             self._message = CirclePowerBufferResponse()
                         elif message_id == b"004F":

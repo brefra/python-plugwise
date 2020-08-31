@@ -325,11 +325,11 @@ class CirclePlusRealTimeClockResponse(NodeResponse):
         self.params += [self.time, self.day_of_week, self.date]
 
 
-class NodeClockResponse(NodeResponse):
+class CircleClockResponse(NodeResponse):
     """
     Returns the current internal clock of Node
 
-    Response to: NodeClockGetRequest
+    Response to: CircleClockGetRequest
     """
 
     ID = b"003F"

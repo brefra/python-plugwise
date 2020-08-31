@@ -6,6 +6,7 @@ Plugwise Circle node object
 import logging
 from datetime import date, datetime, timedelta
 from plugwise.constants import (
+    MAX_TIME_DRIFT,
     SENSOR_AVAILABLE,
     SENSOR_PING,
     SENSOR_POWER_USE,
@@ -28,12 +29,15 @@ from plugwise.node import PlugwiseNode
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
     CircleCalibrationRequest,
+    CircleClockGetRequest,
+    CircleClockSetRequest,
     CirclePowerBufferRequest,
     CirclePowerUsageRequest,
     CircleSwitchRelayRequest,
 )
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
+    CircleClockResponse,
     CirclePowerBufferResponse,
     CirclePowerUsageResponse,
     CirclePlusScanResponse,
@@ -77,6 +81,8 @@ class PlugwiseCircle(PlugwiseNode):
         self.power_consumption_prev_hour = None
         self.power_consumption_today = None
         self.power_consumption_yesterday = None
+        self._clock_offset = None
+        self.get_clock(self.sync_clock)
         self._request_calibration()
 
     def get_node_type(self) -> str:
@@ -144,6 +150,9 @@ class PlugwiseCircle(PlugwiseNode):
                     self.get_mac(),
                 )
                 self._request_calibration()
+        elif isinstance(message, CircleClockResponse):
+            self._response_clock(message)
+            self.stick.message_processed(message.seq_id)
         else:
             self._circle_plus_message(message)
 
@@ -389,3 +398,51 @@ class PlugwiseCircle(PlugwiseNode):
         if self.power_consumption_yesterday != yesterday_power:
             self.power_consumption_yesterday = yesterday_power
             self.do_callback(SENSOR_POWER_CONSUMPTION_YESTERDAY["id"])
+
+    def _response_clock(self, message):
+        dt = datetime(
+            datetime.now().year,
+            datetime.now().month,
+            datetime.now().day,
+            message.time.value.hour,
+            message.time.value.minute,
+            message.time.value.second,
+        )
+        clock_offset = message.timestamp.replace(microsecond=0) - (
+            dt + self.stick.timezone_delta
+        )
+        if clock_offset.days == -1:
+            self._clock_offset = clock_offset.seconds - 86400
+        else:
+            self._clock_offset = clock_offset.seconds
+        self.stick.logger.debug(
+            "Clock of node %s has drifted %s sec",
+            self.get_mac(),
+            str(self._clock_offset),
+        )
+
+    def get_clock(self, callback=None):
+        """ get current datetime of internal clock of Circle """
+        self.stick.send(
+            CircleClockGetRequest(self.mac), callback,
+        )
+
+    def set_clock(self, callback=None):
+        """ set internal clock of CirclePlus """
+        self.stick.send(
+            CircleClockSetRequest(self.mac, datetime.utcnow()), callback,
+        )
+
+    def sync_clock(self, max_drift=0):
+        """ Resync clock of node if time has drifted more than MAX_TIME_DRIFT
+        """
+        if self._clock_offset != None:
+            if max_drift == 0:
+                max_drift = MAX_TIME_DRIFT
+            if (self._clock_offset > max_drift) or (self._clock_offset < -(max_drift)):
+                self.stick.logger.info(
+                    "Reset clock of node %s because time has drifted %s sec",
+                    self.get_mac(),
+                    str(self._clock_offset),
+                )
+                self.set_clock()

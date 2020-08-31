@@ -47,8 +47,8 @@ from plugwise.messages.requests import (
     CircleSwitchRelayRequest,
     NodeAllowJoiningRequest,
     NodeAddRequest,
-    NodeClockGetRequest,
-    NodeClockSetRequest,
+    CircleClockGetRequest,
+    CircleClockSetRequest,
     NodeInfoRequest,
     NodePingRequest,
     NodeRequest,
@@ -462,8 +462,8 @@ class stick(object):
             response_message = CirclePlusScanResponse()
         elif isinstance(request, CirclePlusRealTimeClockGetRequest):
             response_message = CirclePlusRealTimeClockResponse()
-        elif isinstance(request, NodeClockGetRequest):
-            response_message = NodeClockResponse()
+        elif isinstance(request, CircleClockGetRequest):
+            response_message = CircleClockResponse()
         elif isinstance(request, StickInitRequest):
             response_message = StickInitResponse()
         else:
@@ -549,7 +549,7 @@ class stick(object):
                         self._cb_stick_initialized()
                     del self.expected_responses[seq_id]
                 elif isinstance(
-                    self.expected_responses[seq_id][1], NodeClockSetRequest
+                    self.expected_responses[seq_id][1], CircleClockSetRequest
                 ):
                     del self.expected_responses[seq_id]
                 elif isinstance(
