@@ -63,7 +63,7 @@ from plugwise.messages.responses import (
     CircleSwitchRelayResponse,
     NodeJoinAvailableResponse,
     NodeAwakeResponse,
-    NodeClockResponse,
+    CircleClockResponse,
     NodeInfoResponse,
     NodePingResponse,
     NodeRemoveResponse,
