@@ -52,7 +52,7 @@ MAX_TIME_DRIFT = 30
 WATCHDOG_DEAMON = 60
 
 # Automatically accept new join requests
-ACCEPT_JOIN_REQUESTS = True
+ACCEPT_JOIN_REQUESTS = False
 
 # Node types
 NODE_TYPE_STICK = 0
