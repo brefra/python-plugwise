@@ -380,7 +380,13 @@ class CirclePowerBufferResponse(NodeResponse):
 class NodeAwakeResponse(NodeResponse):
     """
     A sleeping end device (SED: Scan, Sense, Switch) sends
-    this message to announce that is awake
+    this message to announce that is awake. Awake types:
+    - 0 : The SED joins the network for maintenance
+    - 1 : The SED joins a network for the first time
+    - 2 : The SED joins a network it has already joined, e.g. after reinserting a battery
+    - 3 : When a SED switches a device group or when reporting values such as temperature/humidity
+    - 4 : TODO: Unknown
+    - 5 : A human pressed the button on a SED to wake it up
 
     Response to: <nothing>
     """
@@ -429,7 +435,7 @@ class NodeFeatureSetResponse(NodeResponse):
         self.params += [self.features]
 
 
-class NodeJoinAckAssociationResponse(NodeResponse):
+class NodeJoinAckResponse(NodeResponse):
     """
     Notification mesage when node (re)joined existing network again.
     Sent when a SED (re)joins the network e.g. when you reinsert the battery of a Scan

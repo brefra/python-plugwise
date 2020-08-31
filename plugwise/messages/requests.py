@@ -74,15 +74,15 @@ class NodeAddRequest(NodeRequest):
 
 class NodeAllowJoiningRequest(NodeRequest):
     """
-    Send a flag which enables or disables joining nodes request
+    Enable or disable receiving joining request of unjoined nodes
 
     Response message: ???
     """
 
     ID = b"0008"
 
-    def __init__(self, mac, accept: bool):
-        super().__init__(mac)
+    def __init__(self, accept: bool):
+        super().__init__('')
         # TODO: Make sure that '01' means enable, and '00' disable joining
         val = 1 if accept == True else 0
         self.args.append(Int(val, length=2))

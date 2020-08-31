@@ -61,6 +61,7 @@ from plugwise.messages.responses import (
     CirclePlusRealTimeClockResponse,
     CirclePowerUsageResponse,
     CircleSwitchRelayResponse,
+    NodeJoinAckResponse,
     NodeJoinAvailableResponse,
     NodeAwakeResponse,
     CircleClockResponse,
@@ -384,16 +385,15 @@ class stick(object):
                 "Plugwise stick not properly initialized, Circle+ MAC is missing."
             )
 
+    def allow_join_requests(self, enable: bool):
+        """Enable or disable Plugwise network"""
+        self.logger.debug("stick.py - allow_join_request %s", str(enable))
+        self.send(NodeAllowJoiningRequest(enable))
+
     def node_join(self, mac, callback=None) -> bool:
-        """Add known mac node to the Plugwise network by adding it in Circle+ memory"""
-
-        def add_node(self):
-            # Register Node
-            self.send(NodeAddRequest(mac, True), callback)
-
+        """Accept node to join Plugwise network by adding it in Circle+ memory"""
         if validate_mac(mac) == True:
-            # First enable joining for given MAC
-            self.send(NodeAllowJoiningRequest(mac, True), add_node)
+            self.send(NodeAddRequest(bytes(mac, "ascii"), True), callback)
             return True
         return False
 
@@ -483,7 +483,11 @@ class stick(object):
                 # first message, so use a fake seq_id
                 seq_id = b"0000"
             self.expected_responses[seq_id] = request_set
-            if not isinstance(request_set[1], StickInitRequest):
+            if (
+                not isinstance(request_set[1], StickInitRequest)
+                and not isinstance(request_set[1], NodeAllowJoiningRequest)
+                and not isinstance(request_set[1], NodeAddRequest)
+            ):
                 mac = request_set[1].mac.decode("ascii")
                 self.logger.debug(
                     "send %s to %s using seq_id %s",
@@ -502,7 +506,9 @@ class stick(object):
                     )
             else:
                 self.logger.debug(
-                    "send StickInitRequest using seq_id %s", str(seq_id),
+                    "send %s using seq_id %s",
+                    request_set[1].__class__.__name__,
+                    str(seq_id),
                 )
             self.expected_responses[seq_id][4] = datetime.now()
             self.connection.send(request_set[1])
@@ -547,6 +553,14 @@ class stick(object):
                 if isinstance(self.expected_responses[seq_id][1], StickInitRequest):
                     if self._cb_stick_initialized:
                         self._cb_stick_initialized()
+                    del self.expected_responses[seq_id]
+                elif isinstance(
+                    self.expected_responses[seq_id][1], NodeAllowJoiningRequest
+                ):
+                    del self.expected_responses[seq_id]
+                elif isinstance(
+                    self.expected_responses[seq_id][1], NodeAddRequest
+                ):
                     del self.expected_responses[seq_id]
                 elif isinstance(
                     self.expected_responses[seq_id][1], CircleClockSetRequest
@@ -635,7 +649,7 @@ class stick(object):
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
         elif isinstance(message, NodeAwakeResponse):
-            # Message from SED node that is not part of a plugwise network yet and wants to join
+            # Message from SED node that it is currently awake. If node is not discovered yet do discovery first.
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
             else:
@@ -644,7 +658,6 @@ class stick(object):
                     mac,
                 )
                 self.discover_node(mac)
-                self.message_processed(seq_id)
         elif isinstance(message, NodeJoinAvailableResponse):
             # Message from node that is not part of a plugwise network yet and wants to join
             self.logger.debug(
@@ -661,12 +674,23 @@ class stick(object):
                     self.send(NodeAddRequest(mac, True))
                     self.discover_node(mac, self._discover_after_scan)
                 else:
+                    self.logger.debug(
+                        "New node with mac %s requesting to join Plugwise network, do callback",
+                        mac,
+                    )
                     self.do_callback(CB_JOIN_REQUEST, mac)
             else:
                 self.logger.debug(
                     "Received node available message for node %s which is already joined.",
                     mac,
                 )
+        elif isinstance(message, NodeJoinAckResponse):
+            # Notification mesage when node (re)joined existing network again.
+            # Received when a SED (re)joins the network e.g. when you reinsert the battery of a Scan
+            self.logger.info(
+                "Node with mac %s has accepted or (re)joined this Plugwise network",
+                mac,
+            )
         elif isinstance(message, NodeRemoveResponse):
             # Conformation message a node is is removed from the Plugwise network
             if message.status.value == 1:
@@ -691,9 +715,11 @@ class stick(object):
                 self._plugwise_nodes[mac].on_message(message)
             else:
                 self.logger.debug(
-                    "Skip message because node is not discovered yet.",
+                    "Skip %s message because node with mac %s is not discovered yet.",
+                    message.__class__.__name__,
                     mac,
                 )
+                self.discover_node(mac)
 
     def message_processed(self, seq_id, ack_response=None):
         """ Execute callback of received messages """

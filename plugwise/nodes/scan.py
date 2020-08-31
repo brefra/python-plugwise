@@ -15,7 +15,6 @@ from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import NodeSwitchGroupResponse
 from plugwise.messages.requests import (
     NodeSwitchGroupRequest,
-    NodeSleepConfigRequest,
     ScanLightCalibrateRequest,
 )
 

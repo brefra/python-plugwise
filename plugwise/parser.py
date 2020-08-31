@@ -26,7 +26,7 @@ from plugwise.messages.responses import (
     NodeFeatureSetResponse,         # 0060
     NodeInfoResponse,               # 0024
     NodeJoinAvailableResponse,      # 0006
-    NodeJoinAckAssociationResponse, # 0061
+    NodeJoinAckResponse, # 0061
     NodePingResponse,               # 000E
     NodeSwitchGroupResponse,        # 0056
     NodeRemoveResponse,             # 001D
@@ -108,7 +108,11 @@ class PlugwiseParser(object):
                     )
                     seq_id = self._buffer[8:12]
                     if seq_id == b"FFFD":
-                        self._message = NodeJoinAckAssociationResponse()
+                        self._message = NodeJoinAckResponse()
+                    elif seq_id == b"FFFE":
+                        self._message = NodeSwitchGroupResponse()
+                    elif seq_id == b"FFFF":
+                        self._message = NodeAwakeResponse()
                     elif footer_index == 20:
                         # Acknowledge message
                         ack_id = int(self._buffer[12:16], 16)
@@ -184,10 +188,6 @@ class PlugwiseParser(object):
                             self._message = CircleClockResponse()
                         elif message_id == b"0049":
                             self._message = CirclePowerBufferResponse()
-                        elif message_id == b"004F":
-                            self._message = NodeAwakeResponse()
-                        elif message_id == b"0056":
-                            self._message = NodeSwitchGroupResponse()
                         elif message_id == b"0060":
                             self._message = NodeFeatureSetResponse()
                         elif message_id == b"0099":
@@ -237,9 +237,10 @@ class PlugwiseParser(object):
                                 self.next_message(self._message)
                         else:
                             self.stick.logger.error(
-                                "Skip message, received %s bytes of expected %s bytes",
+                                "Skip message, received %s bytes of expected %s bytes for message %s",
                                 len(self._buffer[: footer_index + 2]),
                                 len(self._message),
+                                self._message.__class__.__name__,
                             )
                         # Parse remaining buffer
                         self.reset_parser(self._buffer[footer_index + 2 :])
