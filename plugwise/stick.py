@@ -284,9 +284,13 @@ class stick(object):
 
     def nodes(self) -> list:
         """ Return list of mac addresses of discovered and supported plugwise nodes """
-        return list(dict(filter(lambda item: item[1] is not None, self._plugwise_nodes.items())).keys())
+        return list(
+            dict(
+                filter(lambda item: item[1] is not None, self._plugwise_nodes.items())
+            ).keys()
+        )
 
-    def node(self, mac : str) -> PlugwiseNode:
+    def node(self, mac: str) -> PlugwiseNode:
         """ Return specific Plugwise node object"""
         return self._plugwise_nodes.get(mac, None)
 
@@ -300,7 +304,8 @@ class stick(object):
                         None,
                     )
                 self.send(
-                    NodeInfoRequest(bytes(mac, "ascii")), callback,
+                    NodeInfoRequest(bytes(mac, "ascii")),
+                    callback,
                 )
                 return True
             else:
@@ -407,7 +412,9 @@ class stick(object):
     def _append_node(self, mac, address, node_type):
         """ Add Plugwise node to be controlled """
         self.logger.debug(
-            "Add new node type (%s) with mac %s", str(node_type), mac,
+            "Add new node type (%s) with mac %s",
+            str(node_type),
+            mac,
         )
         if node_type == NODE_TYPE_CIRCLE:
             if self.print_progress:
@@ -469,7 +476,13 @@ class stick(object):
         else:
             response_message = None
         self._send_message_queue.put(
-            [response_message, request, callback, retry_counter, None,]
+            [
+                response_message,
+                request,
+                callback,
+                retry_counter,
+                None,
+            ]
         )
 
     def _send_message_loop(self):
@@ -645,7 +658,11 @@ class stick(object):
                 else:
                     for mac_to_discover in self._nodes_to_discover:
                         if mac == mac_to_discover:
-                            self._append_node(mac, self._nodes_to_discover[mac_to_discover], message.node_type.value)
+                            self._append_node(
+                                mac,
+                                self._nodes_to_discover[mac_to_discover],
+                                message.node_type.value,
+                            )
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
         elif isinstance(message, NodeAwakeResponse):
@@ -884,7 +901,8 @@ class stick(object):
                     if self._plugwise_nodes[mac]:
                         # Do ping request
                         self.logger.debug(
-                            "Send ping to node %s", mac,
+                            "Send ping to node %s",
+                            mac,
                         )
                         self._plugwise_nodes[mac].ping()
                     # Only power use updates for supported nodes

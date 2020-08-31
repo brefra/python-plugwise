@@ -48,7 +48,7 @@ class NodeSED(PlugwiseNode):
             self.get_mac(),
         )
         # awake_type
-        # 0 : SED available for maintenance, so sent all queued maintenance requests
+        # 0 : SED available for maintenance
         # 1 : SED joins network for first time
         # 2 : SED joins again while it has already joined, e.g. after reinserting a battery
         # 3 : SED is awake to notify state change
