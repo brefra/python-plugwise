@@ -68,7 +68,7 @@ class NodeSED(PlugwiseNode):
                     "Unknown awake message type received for node %s", self.get_mac()
                 )
 
-    def _send_request(self, request_message, callback=None):
+    def _queue_request(self, request_message, callback=None):
         """Queue request to be sent when SED is awake. Last message wins """
         self._SED_requests[NodeInfoRequest.ID] = (
             request_message,
@@ -77,13 +77,13 @@ class NodeSED(PlugwiseNode):
 
     def _request_info(self, callback=None):
         """ Request info from node"""
-        self._send_request(
+        self._queue_request(
             NodeInfoRequest(self.mac), callback,
         )
 
     def ping(self, callback=None):
         """ Ping node"""
-        self._send_request(
+        self._queue_request(
             NodePingRequest(self.mac), callback,
         )
 
@@ -98,4 +98,4 @@ class NodeSED(PlugwiseNode):
         message = NodeSleepConfigRequest(
             self.mac, awake_duration, sleep_duration, wake_up_interval
         )
-        self._send_request(message, callback)
+        self._queue_request(message, callback)
