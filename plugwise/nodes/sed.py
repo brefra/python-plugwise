@@ -89,7 +89,7 @@ class NodeSED(PlugwiseNode):
 
     def Configure_SED(
         self,
-        awake_duration=SCAN_AWAKE_DURATION,
+        awake_duration=SED_AWAKE_DURATION,
         sleep_duration=SED_SLEEP_DURATION,
         wake_up_interval=SED_AWAKE_INTERVAL,
         callback=None,
