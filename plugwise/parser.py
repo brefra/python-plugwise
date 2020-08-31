@@ -221,7 +221,7 @@ class PlugwiseParser(object):
                         if len(self._buffer[: footer_index + 2]) == len(self._message):
                             valid_message = False
                             try:
-                                self._message.unserialize(
+                                self._message.deserialize(
                                     self._buffer[: footer_index + 2]
                                 )
                                 valid_message = True

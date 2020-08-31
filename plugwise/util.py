@@ -52,7 +52,7 @@ class BaseType(object):
     def serialize(self):
         return bytes(self.value, "utf-8")
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         self.value = val
 
     def __len__(self):
@@ -66,10 +66,10 @@ class CompositeType(BaseType):
     def serialize(self):
         return b"".join(a.serialize() for a in self.contents)
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         for p in self.contents:
             myval = val[: len(p)]
-            p.unserialize(myval)
+            p.deserialize(myval)
             val = val[len(myval) :]
         return val
 
@@ -90,7 +90,7 @@ class Int(BaseType):
         fmt = "%%0%dX" % self.length
         return bytes(fmt % self.value, "utf-8")
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         self.value = int(val, 16)
         mask = 1 << (self.length*4 - 1)
         self.value = -(self.value & mask) + (self.value & ~mask)
@@ -99,16 +99,16 @@ class UnixTimestamp(Int):
     def __init__(self, value, length=8):
         Int.__init__(self, value, length=length)
 
-    def unserialize(self, val):
-        Int.unserialize(self, val)
+    def deserialize(self, val):
+        Int.deserialize(self, val)
         self.value = datetime.datetime.fromtimestamp(self.value)
 
 
 class Year2k(Int):
     """year value that is offset from the year 2000"""
 
-    def unserialize(self, val):
-        Int.unserialize(self, val)
+    def deserialize(self, val):
+        Int.deserialize(self, val)
         self.value += PLUGWISE_EPOCH
 
 
@@ -126,8 +126,8 @@ class DateTime(CompositeType):
         self.minutes = Int(minutes, 4)
         self.contents += [self.year, self.month, self.minutes]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         minutes = self.minutes.value
         hours = minutes // 60
         days = hours // 24
@@ -154,8 +154,8 @@ class Time(CompositeType):
         self.second = Int(second, 2)
         self.contents += [self.hour, self.minute, self.second]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         self.value = datetime.time(
             self.hour.value, self.minute.value, self.second.value
         )
@@ -170,7 +170,7 @@ class IntDec(BaseType):
         fmt = "%%0%dd" % self.length
         return bytes(fmt % self.value, "utf-8")
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         self.value = val.decode("utf-8")
 
 
@@ -184,8 +184,8 @@ class RealClockTime(CompositeType):
         self.second = IntDec(second, 2)
         self.contents += [self.second, self.minute, self.hour]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         self.value = datetime.time(
             int(self.hour.value),
             int(self.minute.value),
@@ -203,8 +203,8 @@ class RealClockDate(CompositeType):
         self.year = IntDec(year - PLUGWISE_EPOCH, 2)
         self.contents += [self.day, self.month, self.year]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         self.value = datetime.date(
             int(self.year.value) + PLUGWISE_EPOCH,
             int(self.month.value),
@@ -217,7 +217,7 @@ class Float(BaseType):
         self.value = value
         self.length = length
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         hexval = binascii.unhexlify(val)
         self.value = struct.unpack("!f", hexval)[0]
 
@@ -227,6 +227,6 @@ class LogAddr(Int):
     def serialize(self):
         return bytes("%08X" % ((self.value * 32) + LOGADDR_OFFSET), "utf-8")
 
-    def unserialize(self, val):
-        Int.unserialize(self, val)
+    def deserialize(self, val):
+        Int.deserialize(self, val)
         self.value = (self.value - LOGADDR_OFFSET) // 32
