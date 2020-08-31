@@ -19,7 +19,7 @@ from plugwise.messages.requests import (
 )
 
 
-class PlugwiseSED(PlugwiseNode):
+class NodeSED(PlugwiseNode):
     """provides base class for SED based nodes like Scan, Sense & Switch 
     """
 

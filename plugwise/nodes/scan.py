@@ -10,7 +10,7 @@ from plugwise.constants import (
     SENSOR_AVAILABLE,
     SENSOR_MOTION,
 )
-from plugwise.node import PlugwiseSED
+from plugwise.nodes.sed import NodeSED
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import NodeSwitchGroupResponse
 from plugwise.messages.requests import (
@@ -19,9 +19,8 @@ from plugwise.messages.requests import (
 )
 
 
-class PlugwiseScan(PlugwiseSED):
-    """provides interface to the Plugwise Scan nodes
-    """
+class PlugwiseScan(NodeSED):
+    """provides interface to the Plugwise Scan nodes"""
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
