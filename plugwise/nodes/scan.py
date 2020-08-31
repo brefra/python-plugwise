@@ -4,7 +4,7 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 Plugwise Scan node object
 """
 from plugwise.constants import (
-    HA_BINARY_SENSOR_MOTION,
+    HA_BINARY_SENSOR,
     SCAN_MOTION_RESET,
     SCAN_SENSITIVITY,
     SENSOR_AVAILABLE,
@@ -24,7 +24,7 @@ class PlugwiseScan(NodeSED):
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
-        self.categories = (HA_BINARY_SENSOR_MOTION)
+        self.categories = (HA_BINARY_SENSOR)
         self.sensors = (
             SENSOR_AVAILABLE["id"],
             SENSOR_MOTION["id"],
