@@ -69,7 +69,7 @@ class NodeResponse(PlugwiseMessage):
         return 34 + arglen
 
 
-class CirclePlusQueryResponse(PlugwiseResponse):
+class CirclePlusQueryResponse(NodeResponse):
     """
     TODO:
 
