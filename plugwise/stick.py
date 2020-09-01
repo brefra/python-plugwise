@@ -78,7 +78,7 @@ from plugwise.nodes.circle_plus import PlugwiseCirclePlus
 from plugwise.nodes.scan import PlugwiseScan
 from plugwise.nodes.stealth import PlugwiseStealth
 from plugwise.util import inc_seq_id, validate_mac
-from queue import Queue
+import queue
 
 
 class stick(object):
@@ -166,7 +166,7 @@ class stick(object):
         self._receive_timeout_thread.daemon = True
         self._receive_timeout_thread.start()
         # send deamon
-        self._send_message_queue = Queue()
+        self._send_message_queue = queue.Queue()
         self._run_send_message_thread = True
         self._send_message_thread = threading.Thread(
             None, self._send_message_loop, "send_messages_thread", (), {}
@@ -487,77 +487,87 @@ class stick(object):
 
     def _send_message_loop(self):
         """ deamon to send messages in queue """
+        _send_message_loop_check = 0
         while self._run_send_message_thread:
-            request_set = self._send_message_queue.get(block=True)
-            if self.last_ack_seq_id:
-                # Calc new seq_id based last received ack messsage
-                seq_id = inc_seq_id(self.last_ack_seq_id)
+            try:
+                request_set = self._send_message_queue.get(block=True, timeout=1)
+            except queue.Empty:
+                if _send_message_loop_check > 10:
+                    _send_message_loop_check = 0
+                else:
+                    _send_message_loop_check += 1
+                #pass
             else:
-                # first message, so use a fake seq_id
-                seq_id = b"0000"
-            self.expected_responses[seq_id] = request_set
-            if (
-                not isinstance(request_set[1], StickInitRequest)
-                and not isinstance(request_set[1], NodeAllowJoiningRequest)
-                and not isinstance(request_set[1], NodeAddRequest)
-            ):
-                mac = request_set[1].mac.decode("ascii")
-                self.logger.debug(
-                    "send %s to %s using seq_id %s",
-                    request_set[1].__class__.__name__,
-                    mac,
-                    str(seq_id),
-                )
-                if self._plugwise_nodes.get(mac):
-                    self._plugwise_nodes[mac].last_request = datetime.now()
-                if self.expected_responses[seq_id][3] > 0:
+                if self.last_ack_seq_id:
+                    # Calc new seq_id based last received ack messsage
+                    seq_id = inc_seq_id(self.last_ack_seq_id)
+                else:
+                    # first message, so use a fake seq_id
+                    seq_id = b"0000"
+                self.expected_responses[seq_id] = request_set
+                if (
+                    not isinstance(request_set[1], StickInitRequest)
+                    and not isinstance(request_set[1], NodeAllowJoiningRequest)
+                    and not isinstance(request_set[1], NodeAddRequest)
+                ):
+                    mac = request_set[1].mac.decode("ascii")
                     self.logger.debug(
-                        "Retry %s for message %s to %s",
-                        str(self.expected_responses[seq_id][3]),
-                        str(self.expected_responses[seq_id][1].__class__.__name__),
-                        self.expected_responses[seq_id][1].mac.decode("ascii"),
+                        "send %s to %s using seq_id %s",
+                        request_set[1].__class__.__name__,
+                        mac,
+                        str(seq_id),
                     )
-            else:
-                self.logger.debug(
-                    "send %s using seq_id %s",
-                    request_set[1].__class__.__name__,
-                    str(seq_id),
-                )
-            self.expected_responses[seq_id][4] = datetime.now()
-            self.connection.send(request_set[1])
-            time.sleep(SLEEP_TIME)
-            timeout_counter = 0
-            # Wait max 1 second for acknowledge response
-            while (
-                self.last_ack_seq_id != seq_id
-                and timeout_counter <= 10
-                and seq_id != b"0000"
-                and self.last_ack_seq_id != None
-            ):
-                time.sleep(0.1)
-                timeout_counter += 1
-            if timeout_counter > 10 and self._run_send_message_thread:
-                if seq_id in self.expected_responses:
-                    if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                        self.logger.info(
-                            "Resend %s for %s because stick did not acknowledge request (%s)",
+                    if self._plugwise_nodes.get(mac):
+                        self._plugwise_nodes[mac].last_request = datetime.now()
+                    if self.expected_responses[seq_id][3] > 0:
+                        self.logger.debug(
+                            "Retry %s for message %s to %s",
+                            str(self.expected_responses[seq_id][3]),
                             str(self.expected_responses[seq_id][1].__class__.__name__),
                             self.expected_responses[seq_id][1].mac.decode("ascii"),
-                            str(seq_id),
                         )
-                        self.send(
-                            self.expected_responses[seq_id][1],
-                            self.expected_responses[seq_id][2],
-                            self.expected_responses[seq_id][3] + 1,
-                        )
-                    else:
-                        self.logger.info(
-                            "Drop %s request for mac %s because max (%s) retries reached",
-                            self.expected_responses[seq_id][1].__class__.__name__,
-                            self.expected_responses[seq_id][1].mac.decode("ascii"),
-                            str(MESSAGE_RETRY),
-                        )
-                    del self.expected_responses[seq_id]
+                else:
+                    mac = ""
+                    self.logger.debug(
+                        "send %s using seq_id %s",
+                        request_set[1].__class__.__name__,
+                        str(seq_id),
+                    )
+                self.expected_responses[seq_id][4] = datetime.now()
+                self.connection.send(request_set[1])
+                time.sleep(SLEEP_TIME)
+                timeout_counter = 0
+                # Wait max 1 second for acknowledge response
+                while (
+                    self.last_ack_seq_id != seq_id
+                    and timeout_counter <= 10
+                    and seq_id != b"0000"
+                    and self.last_ack_seq_id != None
+                ):
+                    time.sleep(0.1)
+                    timeout_counter += 1
+                if timeout_counter > 10 and self._run_send_message_thread:
+                    if seq_id in self.expected_responses:
+                        if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                            self.logger.info(
+                                "Resend %s for %s because stick did not acknowledge request (%s)",
+                                str(self.expected_responses[seq_id][1].__class__.__name__),
+                                mac,
+                                str(seq_id),
+                            )
+                            self.send(
+                                self.expected_responses[seq_id][1],
+                                self.expected_responses[seq_id][2],
+                                self.expected_responses[seq_id][3] + 1,
+                            )
+                        else:
+                            self.logger.info(
+                                "Drop %s request for mac %s because max (%s) retries reached",
+                                self.expected_responses[seq_id][1].__class__.__name__,
+                                mac,
+                                str(MESSAGE_RETRY),
+                            )
+                        del self.expected_responses[seq_id]
 
     def _receive_timeout_loop(self):
         """ deamon to time out receive messages """
@@ -619,7 +629,10 @@ class stick(object):
                                     str(MESSAGE_RETRY),
                                 )
                             del self.expected_responses[seq_id]
-            time.sleep(MESSAGE_TIME_OUT)
+            receive_timeout_checker = 0
+            while receive_timeout_checker < MESSAGE_TIME_OUT and self._run_receive_timeout_thread:
+                time.sleep(1)
+                receive_timeout_checker += 1
 
     def new_message(self, message):
         """ Received message from Plugwise Zigbee network """
@@ -885,7 +898,10 @@ class stick(object):
                     self._circle_plus_retries += 1
                     circle_plus_retry_counter = 0
                 circle_plus_retry_counter += 1
-            time.sleep(WATCHDOG_DEAMON)
+            watchdog_loop_checker = 0
+            while watchdog_loop_checker < WATCHDOG_DEAMON and self._run_watchdog:
+                time.sleep(1)
+                watchdog_loop_checker += 1
 
     def _update_loop(self):
         """
@@ -993,7 +1009,12 @@ class stick(object):
                             if self._plugwise_nodes[mac].get_available():
                                 self._plugwise_nodes[mac].sync_clock()
                 if self._auto_update_timer:
-                    time.sleep(self._auto_update_timer)
+                    update_loop_checker = 0
+                    while update_loop_checker < self._auto_update_timer and self._run_update_thread:
+                        time.sleep(1)
+                        update_loop_checker += 1
+            print("_update_loop")
+
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             self.logger.error(
