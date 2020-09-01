@@ -12,6 +12,7 @@ from plugwise.constants import (
     SENSOR_PING,
     SWITCH_RELAY,
 )
+from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
     NodeInfoResponse,
     NodePingResponse,
