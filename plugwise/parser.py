@@ -22,11 +22,11 @@ from plugwise.messages.responses import (
     CirclePowerBufferResponse,      # 0049
     CirclePowerUsageResponse,       # 0013
     CircleSwitchRelayResponse,      # 0099
-    CircleClockResponse,              # 003F
+    CircleClockResponse,            # 003F
     NodeFeatureSetResponse,         # 0060
     NodeInfoResponse,               # 0024
     NodeJoinAvailableResponse,      # 0006
-    NodeJoinAckResponse, # 0061
+    NodeJoinAckResponse,            # 0061
     NodePingResponse,               # 000E
     NodeSwitchGroupResponse,        # 0056
     NodeRemoveResponse,             # 001D
@@ -110,9 +110,9 @@ class PlugwiseParser(object):
                     if seq_id == b"FFFD":
                         self._message = NodeJoinAckResponse()
                     elif seq_id == b"FFFE":
-                        self._message = NodeSwitchGroupResponse()
-                    elif seq_id == b"FFFF":
                         self._message = NodeAwakeResponse()
+                    elif seq_id == b"FFFF":
+                        self._message = NodeSwitchGroupResponse()
                     elif footer_index == 20:
                         # Acknowledge message
                         ack_id = int(self._buffer[12:16], 16)
