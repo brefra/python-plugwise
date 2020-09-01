@@ -43,8 +43,8 @@ class NodeSED(PlugwiseNode):
     def _process_awake_response(self, message):
         """" Process awake message"""
         self.stick.logger.debug(
-            "Awake message type %s received from %s",
-            str(message.awake_type),
+            "Awake message type '%s' received from %s",
+            str(message.awake_type.value),
             self.get_mac(),
         )
         # awake_type
@@ -54,23 +54,23 @@ class NodeSED(PlugwiseNode):
         # 3 : SED is awake to notify state change
         # 5 : SED is awake due to button press
         if (
-            message.awake_type == 0
-            or message.awake_type == 1
-            or message.awake_type == 2
-            or message.awake_type == 5
+            message.awake_type.value == 0
+            or message.awake_type.value == 1
+            or message.awake_type.value == 2
+            or message.awake_type.value == 5
         ):
-            for (request, callback) in self._maintenance_requests:
+            for (request, callback) in self._SED_requests:
                 self.stick.send(request, callback)
-            self._maintenance_requests = []
+            self._SED_requests = {}
         else:
-            if message.awake_type != 3:
+            if message.awake_type.value != 3:
                 self.stick.logger.info(
                     "Unknown awake message type received for node %s", self.get_mac()
                 )
 
     def _queue_request(self, request_message, callback=None):
         """Queue request to be sent when SED is awake. Last message wins """
-        self._SED_requests[NodeInfoRequest.ID] = (
+        self._SED_requests[request_message.ID] = (
             request_message,
             callback,
         )
