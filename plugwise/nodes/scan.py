@@ -46,30 +46,33 @@ class PlugwiseScan(NodeSED):
         """
         if isinstance(message, NodeSwitchGroupResponse):
             self.stick.logger.debug(
-                "Switch group request %s received from %s for group id %s",
-                str(message.power_state),
+                "Switch group request %s received from %s for group %s",
+                str(message.power_state.value),
                 self.get_mac(),
-                str(message.group),
+                str(message.group.value),
             )
             self._process_switch_group(message)
             self.stick.message_processed(message.seq_id)
 
     def _process_switch_group(self, message):
         """Switch group request from Scan"""
-        if message.power_state == 0:
+        if message.power_state.value == 0:
             # turn off => clear motion
             if self._motion:
+                print("_motion=False")
                 self._motion = False
                 self.do_callback(SENSOR_MOTION["id"])
-        elif message.power_state == 1:
+        elif message.power_state.value == 1:
             # turn on => motion
             if not self._motion:
+                print("_motion=True")
                 self._motion = True
                 self.do_callback(SENSOR_MOTION["id"])
         else:
+            print("_motion = " + str(message.power_state.value))
             self.stick.logger.debug(
                 "Unknown power_state (%s) received from %s",
-                str(message.power_state),
+                str(message.power_state.value),
                 self.get_mac(),
             )
 
