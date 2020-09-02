@@ -305,10 +305,17 @@ class stick(object):
                         None,
                         None,
                     )
-                self.send(
-                    NodeInfoRequest(bytes(mac, "ascii")),
-                    callback,
-                )
+                    self.send(
+                        NodeInfoRequest(bytes(mac, "ascii")),
+                        callback,
+                    )
+                else:
+                    (firstrequest, lastrequest) = self._nodes_not_discovered[mac]
+                    if not (firstrequest and lastrequest):
+                        self.send(
+                            NodeInfoRequest(bytes(mac, "ascii")),
+                            callback,
+                        )
                 return True
             else:
                 return False
