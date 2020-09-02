@@ -13,25 +13,25 @@ from plugwise.constants import (
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
-    CircleCalibrationResponse,      # 0027
-    CirclePlusConnectResponse,      # 0005
-    CirclePlusQueryEndResponse,     # 0003
-    CirclePlusQueryResponse,        # 0002
-    CirclePlusRealTimeClockResponse,# 003A
-    CirclePlusScanResponse,         # 0019
-    CirclePowerBufferResponse,      # 0049
-    CirclePowerUsageResponse,       # 0013
-    CircleSwitchRelayResponse,      # 0099
-    CircleClockResponse,            # 003F
-    NodeFeatureSetResponse,         # 0060
-    NodeInfoResponse,               # 0024
-    NodeJoinAvailableResponse,      # 0006
-    NodeJoinAckResponse,            # 0061
-    NodePingResponse,               # 000E
-    NodeSwitchGroupResponse,        # 0056
-    NodeRemoveResponse,             # 001D
-    NodeAwakeResponse,              # 004F
-    StickInitResponse,              # 0011
+    CircleCalibrationResponse,  # 0027
+    CirclePlusConnectResponse,  # 0005
+    CirclePlusQueryEndResponse,  # 0003
+    CirclePlusQueryResponse,  # 0002
+    CirclePlusRealTimeClockResponse,  # 003A
+    CirclePlusScanResponse,  # 0019
+    CirclePowerBufferResponse,  # 0049
+    CirclePowerUsageResponse,  # 0013
+    CircleSwitchRelayResponse,  # 0099
+    CircleClockResponse,  # 003F
+    NodeFeatureSetResponse,  # 0060
+    NodeInfoResponse,  # 0024
+    NodeJoinAvailableResponse,  # 0006
+    NodeJoinAckResponse,  # 0061
+    NodePingResponse,  # 000E
+    NodeSwitchGroupResponse,  # 0056
+    NodeRemoveResponse,  # 001D
+    NodeAwakeResponse,  # 004F
+    StickInitResponse,  # 0011
 )
 from plugwise.util import inc_seq_id
 

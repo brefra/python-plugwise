@@ -75,7 +75,7 @@ class StickConnection(object):
                 (message, callback) = self._write_queue.get(block=True, timeout=1)
             except queue.Empty:
                 time.sleep(SLEEP_TIME)
-            else:            
+            else:
                 self.stick.logger.debug(
                     "Sending %s to plugwise stick (%s)",
                     message.__class__.__name__,

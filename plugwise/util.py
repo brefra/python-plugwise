@@ -94,8 +94,9 @@ class Int(BaseType):
 
     def deserialize(self, val):
         self.value = int(val, 16)
-        mask = 1 << (self.length*4 - 1)
+        mask = 1 << (self.length * 4 - 1)
         self.value = -(self.value & mask) + (self.value & ~mask)
+
 
 class UnixTimestamp(Int):
     def __init__(self, value, length=8):
@@ -140,9 +141,9 @@ class DateTime(CompositeType):
                 self.year.value, self.month.value, days + 1, hours, minutes
             )
         except ValueError:
-            #debug(
+            # debug(
             #    "encountered value error while attempting to construct datetime object"
-            #)
+            # )
             self.value = None
 
 
@@ -179,7 +180,7 @@ class IntDec(BaseType):
 class RealClockTime(CompositeType):
     """time value as used in the realtime clock info response"""
 
-    def __init__(self, hour=0, minute=0, second=0 ):
+    def __init__(self, hour=0, minute=0, second=0):
         CompositeType.__init__(self)
         self.hour = IntDec(hour, 2)
         self.minute = IntDec(minute, 2)
@@ -225,7 +226,6 @@ class Float(BaseType):
 
 
 class LogAddr(Int):
-
     def serialize(self):
         return bytes("%08X" % ((self.value * 32) + LOGADDR_OFFSET), "utf-8")
 

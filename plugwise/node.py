@@ -31,7 +31,8 @@ class PlugwiseNode(object):
         mac = mac.upper()
         if validate_mac(mac) == False:
             self.stick.logger.debug(
-                "MAC address is in unexpected format: %s", str(mac),
+                "MAC address is in unexpected format: %s",
+                str(mac),
             )
         self.mac = bytes(mac, encoding="ascii")
         self.stick = stick
@@ -76,7 +77,8 @@ class PlugwiseNode(object):
             if self._available == False:
                 self._available = True
                 self.stick.logger.debug(
-                    "Mark node %s available", self.get_mac(),
+                    "Mark node %s available",
+                    self.get_mac(),
                 )
                 self.do_callback(SENSOR_AVAILABLE["id"])
                 if request_info:
@@ -85,7 +87,8 @@ class PlugwiseNode(object):
             if self._available == True:
                 self._available = False
                 self.stick.logger.debug(
-                    "Mark node %s unavailable", self.get_mac(),
+                    "Mark node %s unavailable",
+                    self.get_mac(),
                 )
                 self.do_callback(SENSOR_AVAILABLE["id"])
 
@@ -134,13 +137,15 @@ class PlugwiseNode(object):
     def _request_info(self, callback=None):
         """ Request info from node"""
         self.stick.send(
-            NodeInfoRequest(self.mac), callback,
+            NodeInfoRequest(self.mac),
+            callback,
         )
 
     def ping(self, callback=None):
         """ Ping node"""
         self.stick.send(
-            NodePingRequest(self.mac), callback,
+            NodePingRequest(self.mac),
+            callback,
         )
 
     def on_message(self, message):
@@ -195,7 +200,8 @@ class PlugwiseNode(object):
                     callback(None)
                 except Exception as e:
                     self.stick.logger.error(
-                        "Error while executing all callback : %s", e,
+                        "Error while executing all callback : %s",
+                        e,
                     )
 
     def _process_ping_response(self, message):

@@ -24,7 +24,7 @@ class PlugwiseScan(NodeSED):
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
-        self.categories = (HA_BINARY_SENSOR)
+        self.categories = (HA_BINARY_SENSOR,)
         self.sensors = (
             SENSOR_AVAILABLE["id"],
             SENSOR_MOTION["id"],

@@ -20,8 +20,7 @@ from plugwise.messages.requests import (
 
 
 class NodeSED(PlugwiseNode):
-    """provides base class for SED based nodes like Scan, Sense & Switch 
-    """
+    """provides base class for SED based nodes like Scan, Sense & Switch"""
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
@@ -78,13 +77,15 @@ class NodeSED(PlugwiseNode):
     def _request_info(self, callback=None):
         """ Request info from node"""
         self._queue_request(
-            NodeInfoRequest(self.mac), callback,
+            NodeInfoRequest(self.mac),
+            callback,
         )
 
     def ping(self, callback=None):
         """ Ping node"""
         self._queue_request(
-            NodePingRequest(self.mac), callback,
+            NodePingRequest(self.mac),
+            callback,
         )
 
     def Configure_SED(

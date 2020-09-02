@@ -505,7 +505,6 @@ class stick(object):
                     _send_message_loop_check = 0
                 else:
                     _send_message_loop_check += 1
-                #pass
             else:
                 if self.last_ack_seq_id:
                     # Calc new seq_id based last received ack messsage
@@ -560,7 +559,11 @@ class stick(object):
                         if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
                             self.logger.info(
                                 "Resend %s for %s because stick did not acknowledge request (%s)",
-                                str(self.expected_responses[seq_id][1].__class__.__name__),
+                                str(
+                                    self.expected_responses[seq_id][
+                                        1
+                                    ].__class__.__name__
+                                ),
                                 mac,
                                 str(seq_id),
                             )
@@ -590,9 +593,7 @@ class stick(object):
                     self.expected_responses[seq_id][1], NodeAllowJoiningRequest
                 ):
                     del self.expected_responses[seq_id]
-                elif isinstance(
-                    self.expected_responses[seq_id][1], NodeAddRequest
-                ):
+                elif isinstance(self.expected_responses[seq_id][1], NodeAddRequest):
                     del self.expected_responses[seq_id]
                 elif isinstance(
                     self.expected_responses[seq_id][1], CircleClockSetRequest
@@ -639,7 +640,10 @@ class stick(object):
                                 )
                             del self.expected_responses[seq_id]
             receive_timeout_checker = 0
-            while receive_timeout_checker < MESSAGE_TIME_OUT and self._run_receive_timeout_thread:
+            while (
+                receive_timeout_checker < MESSAGE_TIME_OUT
+                and self._run_receive_timeout_thread
+            ):
                 time.sleep(1)
                 receive_timeout_checker += 1
 
@@ -1019,7 +1023,10 @@ class stick(object):
                                 self._plugwise_nodes[mac].sync_clock()
                 if self._auto_update_timer:
                     update_loop_checker = 0
-                    while update_loop_checker < self._auto_update_timer and self._run_update_thread:
+                    while (
+                        update_loop_checker < self._auto_update_timer
+                        and self._run_update_thread
+                    ):
                         time.sleep(1)
                         update_loop_checker += 1
             print("_update_loop")

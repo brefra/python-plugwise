@@ -23,6 +23,7 @@ class NodeRequest(PlugwiseMessage):
     """
     Base class for request messages to be send from by USB-Stick.
     """
+
     def __init__(self, mac):
         PlugwiseMessage.__init__(self)
         self.args = []
@@ -32,22 +33,23 @@ class NodeRequest(PlugwiseMessage):
 class CirclePlusConnectRequest(NodeRequest):
     """
     Request to connect a Circle+ to the Stick
-    
+
     Response message: CirclePlusConnectResponse
     """
 
-    ID = b'0004'
-    
+    ID = b"0004"
+
     def __init__(self, mac):
         super().__init__(self, mac)
-    
-    #This message has an exceptional format and therefore need to override the serialize method
+
+    # This message has an exceptional format and therefore need to override the serialize method
     def serialize(self):
-        #This command has args: byte: key, byte: networkinfo.index, ulong: networkkey = 0
-        args = b'00000000000000000000'
+        # This command has args: byte: key, byte: networkinfo.index, ulong: networkkey = 0
+        args = b"00000000000000000000"
         msg = self.ID + args + self.mac
         checksum = self.calculate_checksum(msg)
         return MESSAGE_HEADER + msg + checksum + MESSAGE_FOOTER
+
 
 class NodeAddRequest(NodeRequest):
     """
@@ -82,7 +84,7 @@ class NodeAllowJoiningRequest(NodeRequest):
     ID = b"0008"
 
     def __init__(self, accept: bool):
-        super().__init__('')
+        super().__init__("")
         # TODO: Make sure that '01' means enable, and '00' disable joining
         val = 1 if accept == True else 0
         self.args.append(Int(val, length=2))
@@ -290,7 +292,7 @@ class NodeSleepConfigRequest(NodeRequest):
     def __init__(self, mac, wake_up_duration: int, sleep: int, wake_up_interval: int):
         super().__init__(mac)
 
-        # Interval in minutes a SED will get awake 
+        # Interval in minutes a SED will get awake
         wake_up_interval_val = Int(wake_up_interval, length=4)
         # Duration in seconds the SED will be awake for receiving (n)acks
         wake_up_duration_val = Int(wake_up_duration, length=2)

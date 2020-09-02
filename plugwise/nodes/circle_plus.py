@@ -19,8 +19,7 @@ from plugwise.nodes.circle import PlugwiseCircle
 
 
 class PlugwiseCirclePlus(PlugwiseCircle):
-    """provides interface to the Plugwise Circle+ nodes
-    """
+    """provides interface to the Plugwise Circle+ nodes"""
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
@@ -75,8 +74,13 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                 "Linked plugwise node with mac %s found",
                 message.node_mac.value.decode("ascii"),
             )
-            if message.node_mac.value.decode("ascii") not in self._plugwise_nodes.keys():
-                self._plugwise_nodes[message.node_mac.value.decode("ascii")] = message.node_address.value
+            if (
+                message.node_mac.value.decode("ascii")
+                not in self._plugwise_nodes.keys()
+            ):
+                self._plugwise_nodes[
+                    message.node_mac.value.decode("ascii")
+                ] = message.node_address.value
         else:
             if self.stick.print_progress:
                 print(
@@ -99,8 +103,13 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                                     request_not_in_queue = False
                                     break
                         if request_not_in_queue:
-                            self.stick.logger.debug("Resend missing scan request for address %s", str(node_address))
-                            self.stick.send(CirclePlusScanRequest(self.mac, node_address))
+                            self.stick.logger.debug(
+                                "Resend missing scan request for address %s",
+                                str(node_address),
+                            )
+                            self.stick.send(
+                                CirclePlusScanRequest(self.mac, node_address)
+                            )
                     break
                 elif node_address == 63:
                     scan_complete = True
@@ -112,7 +121,8 @@ class PlugwiseCirclePlus(PlugwiseCircle):
     def get_real_time_clock(self, callback=None):
         """ get current datetime of internal clock of CirclePlus """
         self.stick.send(
-            CirclePlusRealTimeClockGetRequest(self.mac), callback,
+            CirclePlusRealTimeClockGetRequest(self.mac),
+            callback,
         )
 
     def _response_realtime_clock(self, message):
@@ -140,12 +150,12 @@ class PlugwiseCirclePlus(PlugwiseCircle):
     def set_real_time_clock(self, callback=None):
         """ set internal clock of CirclePlus """
         self.stick.send(
-            CirclePlusRealTimeClockSetRequest(self.mac, datetime.utcnow()), callback,
+            CirclePlusRealTimeClockSetRequest(self.mac, datetime.utcnow()),
+            callback,
         )
 
     def sync_realtime_clock(self, max_drift=0):
-        """ Sync real time clock of node if time has drifted more than max drifted
-        """
+        """Sync real time clock of node if time has drifted more than max drifted"""
         if self._realtime_clock_offset != None:
             if max_drift == 0:
                 max_drift = MAX_TIME_DRIFT
