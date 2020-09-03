@@ -78,6 +78,11 @@ SCAN_MOTION_RESET_TIMER = 5             # Time in minutes the motion sensor shou
 SCAN_SENSITIVITY = SCAN_MOTION_MEDIUM   # Default sensitivity of the motion sensors
 SCAN_LIGHT_DETECTION = False            # Light override 
 
+# Sense calculations
+SENSE_HUMIDITY_MULTIPLIER = 125
+SENSE_HUMIDITY_OFFSET = 6
+SENSE_TEMPERATURE_MULTIPLIER = 175.72
+SENSE_TEMPERATURE_OFFSET = 46.85
 
 # Callback types
 CB_NEW_NODE = "NEW_NODE"
@@ -88,6 +93,7 @@ TIME_MILLISECONDS = "ms"
 POWER_WATT = "W"
 ENERGY_KILO_WATT_HOUR = "kWh"
 ENERGY_WATT_HOUR = "Wh"
+CELSIUS = "C"
 
 # Sensors
 SENSOR_AVAILABLE = {
@@ -95,6 +101,12 @@ SENSOR_AVAILABLE = {
     "name": "Available",
     "state": "get_available",
     "unit": "state",
+}
+SENSOR_HUMIDITY = {
+    "id": "humidity",
+    "name": "Humidity",
+    "state": "get_humidity",
+    "unit": "%"
 }
 SENSOR_MOTION = {
     "id": "motion",
@@ -156,7 +168,17 @@ SENSOR_POWER_PRODUCTION_PREVIOUS_HOUR = {
     "state": "get_power_production_previous_hour",
     "unit": ENERGY_KILO_WATT_HOUR, 
 }
+SENSOR_SWITCH = {
+    "id": "switch",
+    "name": "switch",
+    "state": "get_switch_state",
     "unit": "state"
+}
+SENSOR_TEMPERATURE = {
+    "id": "temperature",
+    "name": "Temperature",
+    "state": "get_temperature",
+    "unit": CELSIUS
 }
 
 # TODO: Need to validate RSSI sensors

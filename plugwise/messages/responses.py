@@ -492,3 +492,19 @@ class CircleSwitchRelayResponse(NodeResponse):
 
     def __len__(self):
         return 38
+
+
+class SenseReportResponse(NodeResponse):
+    """
+    Returns the the current temperature and humidity of a Sense node
+
+    Response to: <nothing>
+    """
+
+    ID = b"0105"
+
+    def __init__(self):
+        super().__init__()
+        self.humidity = Int(0, length=4)
+        self.temperature = Int(0, length=4)
+        self.params += [self.humidity, self.temperature]
