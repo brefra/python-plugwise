@@ -23,7 +23,7 @@ from plugwise.messages.responses import (
     CirclePowerUsageResponse,  # 0013
     CircleSwitchRelayResponse,  # 0099
     CircleClockResponse,  # 003F
-    NodeFeatureSetResponse,  # 0060
+    NodeFeaturesResponse,  # 0060
     NodeInfoResponse,  # 0024
     NodeJoinAvailableResponse,  # 0006
     NodeJoinAckResponse,  # 0061
@@ -189,7 +189,7 @@ class PlugwiseParser(object):
                         elif message_id == b"0049":
                             self._message = CirclePowerBufferResponse()
                         elif message_id == b"0060":
-                            self._message = NodeFeatureSetResponse()
+                            self._message = NodeFeaturesResponse()
                         elif message_id == b"0099":
                             self._message = CircleSwitchRelayResponse()
                         else:

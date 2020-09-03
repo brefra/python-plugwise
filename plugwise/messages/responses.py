@@ -420,11 +420,11 @@ class NodeSwitchGroupResponse(NodeResponse):
         ]
 
 
-class NodeFeatureSetResponse(NodeResponse):
+class NodeFeaturesResponse(NodeResponse):
     """
     Returns supported features of node
 
-    Response to: NodeFeatureSetRequest
+    Response to: NodeFeaturesRequest
     """
 
     ID = b"0060"

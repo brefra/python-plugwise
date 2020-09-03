@@ -14,10 +14,12 @@ from plugwise.constants import (
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
+    NodeFeaturesResponse,
     NodeInfoResponse,
     NodePingResponse,
 )
 from plugwise.messages.requests import (
+    NodeFeaturesRequest,
     NodeInfoRequest,
     NodePingRequest,
 )
@@ -54,6 +56,7 @@ class PlugwiseNode(object):
         self._last_log_address = None
         self._last_log_collected = False
         self._last_info_message = None
+        self._features = None
 
     def get_categories(self) -> tuple:
         """ Return Home Assistant catagories supported by plugwise node """
@@ -141,6 +144,13 @@ class PlugwiseNode(object):
             callback,
         )
 
+    def _request_features(self, callback=None):
+        """ Request supported features for this node"""
+        self.stick.send(
+            NodeFeaturesRequest(self.mac),
+            callback,
+        )
+
     def ping(self, callback=None):
         """ Ping node"""
         self.stick.send(
@@ -167,6 +177,9 @@ class PlugwiseNode(object):
                 self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeInfoResponse):
                 self._process_info_response(message)
+                self.stick.message_processed(message.seq_id)
+            elif isinstance(message, NodeFeaturesResponse):
+                self._process_features_response(message)
                 self.stick.message_processed(message.seq_id)
             else:
                 self.set_available(True)
@@ -240,3 +253,8 @@ class PlugwiseNode(object):
         self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
         self.stick.logger.debug("Hardware version = %s", str(self._hardware_version))
         self.stick.logger.debug("Firmware version = %s", str(self._firmware_version))
+
+    def _process_features_response(self, message):
+        """ Process features message """
+        self.stick.logger.debug("Node %s supports features %s", self.get_mac(), str(message.features.value))
+        self._features = message.features.value

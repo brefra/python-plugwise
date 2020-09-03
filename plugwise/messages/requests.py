@@ -332,11 +332,11 @@ class PlugwiseClearGroupMacRequest(NodeRequest):
         self.args.append(Int(taskId, length=2))
 
 
-class NodeFeatureSetRequest(NodeRequest):
+class NodeFeaturesRequest(NodeRequest):
     """
     Request feature set node supports
 
-    Response message: NodeFeatureSetResponse
+    Response message: NodeFeaturesResponse
     """
 
     ID = b"005F"
