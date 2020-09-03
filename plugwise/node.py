@@ -232,7 +232,7 @@ class PlugwiseNode(object):
 
     def _process_info_response(self, message):
         """ Process info response message"""
-        self.stick.logger.debug("Response info message for plug %s", self.get_mac())
+        self.stick.logger.debug("Response info message for node %s", self.get_mac())
         self.set_available(True)
         if message.relay_state.serialize() == b"01":
             if not self._relay_state:

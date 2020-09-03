@@ -51,6 +51,7 @@ class NodeSED(PlugwiseNode):
         # 1 : SED joins network for first time
         # 2 : SED joins again while it has already joined, e.g. after reinserting a battery
         # 3 : SED is awake to notify state change
+        # 4 : <unknown>
         # 5 : SED is awake due to button press
         if (
             message.awake_type.value == 0
@@ -62,9 +63,15 @@ class NodeSED(PlugwiseNode):
                 self.stick.send(request, callback)
             self._SED_requests = {}
         else:
-            if message.awake_type.value != 3:
+            if message.awake_type.value == 3:
+                self.stick.logger.debug(
+                    "Node %d awake for state change", self.get_mac()
+                )
+            else:
                 self.stick.logger.info(
-                    "Unknown awake message type received for node %s", self.get_mac()
+                    "Unknown awake message type (%s) received for node %s",
+                    str(message.awake_type.value),
+                    self.get_mac(),
                 )
 
     def _queue_request(self, request_message, callback=None):
