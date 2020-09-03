@@ -68,10 +68,16 @@ SED_AWAKE_DURATION = 10         # Time in seconds the SED keep itself awake to r
 SED_SLEEP_DURATION = 10         # Time in seconds the SED sleeps
 SED_AWAKE_INTERVAL = 3600       # Interval in seconds the SED node is sending an awake message
 
+# Scan motion Sensitivity levels
+SCAN_MOTION_HIGH = 20   # b'14'
+SCAN_MOTION_MEDIUM = 30 # b'1E'
+SCAN_MOTION_OFF = 255   # b'FF'
+
 # Defaults for Scan Devices
-SCAN_MOTION_RESET = 5           # Seconds
-SCAN_SENSITIVITY = 30           # Medium (h'1E)
-SCAN_LIGHT_DETECTION = False    #
+SCAN_MOTION_RESET_TIMER = 5             # Time in minutes the motion sensor should not sense motion to report "no motion" state
+SCAN_SENSITIVITY = SCAN_MOTION_MEDIUM   # Default sensitivity of the motion sensors
+SCAN_LIGHT_DETECTION = False            # Light override 
+
 
 # Callback types
 CB_NEW_NODE = "NEW_NODE"
@@ -89,6 +95,12 @@ SENSOR_AVAILABLE = {
     "name": "Available",
     "state": "get_available",
     "unit": "state",
+}
+SENSOR_MOTION = {
+    "id": "motion",
+    "name": "Motion",
+    "state": "get_motion",
+    "unit": "state"
 }
 SENSOR_PING = {
     "id": "ping",
@@ -144,10 +156,6 @@ SENSOR_POWER_PRODUCTION_PREVIOUS_HOUR = {
     "state": "get_power_production_previous_hour",
     "unit": ENERGY_KILO_WATT_HOUR, 
 }
-SENSOR_MOTION = {
-    "id": "motion",
-    "name": "Motion",
-    "state": "get_motion",
     "unit": "state"
 }
 

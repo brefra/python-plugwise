@@ -5,7 +5,11 @@ Plugwise Scan node object
 """
 from plugwise.constants import (
     HA_BINARY_SENSOR,
-    SCAN_MOTION_RESET,
+    SCAN_LIGHT_DETECTION,
+    SCAN_MOTION_HIGH,
+    SCAN_MOTION_MEDIUM,
+    SCAN_MOTION_OFF,
+    SCAN_MOTION_RESET_TIMER,
     SCAN_SENSITIVITY,
     SENSOR_AVAILABLE,
     SENSOR_MOTION,
@@ -14,7 +18,7 @@ from plugwise.nodes.sed import NodeSED
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import NodeSwitchGroupResponse
 from plugwise.messages.requests import (
-    NodeSwitchGroupRequest,
+    ScanConfigRequest,
     ScanLightCalibrateRequest,
 )
 
@@ -29,16 +33,18 @@ class PlugwiseScan(NodeSED):
             SENSOR_AVAILABLE["id"],
             SENSOR_MOTION["id"],
         )
-        self._motion = False
-        self._light = False
+        self._motion_state = False
+        self._motion_reset_timer = None
+        self._light_detection = None
+        self._sensitivity = None
 
     def get_node_type(self) -> str:
         """Return node type"""
         return "Scan"
 
-    def get_motion(self):
+    def get_motion(self) -> bool:
         """ Return motion state"""
-        return self._motion
+        return self._motion_state
 
     def _on_SED_message(self, message):
         """
@@ -60,13 +66,13 @@ class PlugwiseScan(NodeSED):
             # turn off => clear motion
             if self._motion:
                 print("_motion=False")
-                self._motion = False
+                self._motion_state = False
                 self.do_callback(SENSOR_MOTION["id"])
         elif message.power_state.value == 1:
             # turn on => motion
             if not self._motion:
                 print("_motion=True")
-                self._motion = True
+                self._motion_state = True
                 self.do_callback(SENSOR_MOTION["id"])
         else:
             print("_motion = " + str(message.power_state.value))
@@ -76,15 +82,23 @@ class PlugwiseScan(NodeSED):
                 self.get_mac(),
             )
 
-    def ConfigureSleep(self, awake_duration=SCAN_AWAKE_DURATION, sleep_duration=SED_SLEEP_DURATION, wake_up_interval=SED_AWAKE_INTERVAL, callback=None):
-        """Queue sleep configuration config"""
-        message = NodeSleepConfigRequest(
-            self.mac, awake_duration, sleep_duration, wake_up_interval
-        )
-        self._send_request(message, callback)
-
     def CalibrateLight(self, callback=None):
-        """Queue request to calibration light sensitivity
-        """
+        """Queue request to calibration light sensitivity"""
         self._send_request(ScanLightCalibrateRequest(self.mac), callback)
+
+    def ConfigureMotion(
+        self,
+        motion_reset_timer=SCAN_MOTION_RESET_TIMER,
+        sensitivity=SCAN_SENSITIVITY,
+        light_detection=SCAN_LIGHT_DETECTION,
+        callback=None,
+    ):
+        """Queue request to set motion reporting settings"""
+        self._motion_reset_timer = motion_reset_timer
+        self._light_detection = light_detection
+        self._sensitivity = sensitivity
+        self._send_request(
+            ScanConfigRequest(self.mac, motion_reset, sensitivity, light_detection),
+            callback,
+        )
 

@@ -346,6 +346,10 @@ class ScanConfigRequest(NodeRequest):
     """
     Configure a Scan node
 
+    reset_timer : Delay in minutes when signal is send when no motion is detected
+    sensitivity : Sensitivity of Motion sensor (High, Medium, Off)
+    light       : Daylight override to only report motion when lightlevel is below calibrated level
+
     Response message: [Acknowledge message]
     """
 
@@ -353,6 +357,7 @@ class ScanConfigRequest(NodeRequest):
 
     def __init__(self, mac, reset_timer: int, sensitivity: int, light: bool):
         super().__init__(mac)
+
         reset_timer_value = Int(reset_timer, length=2)
         # Sensitivity: HIGH(0x14),  MEDIUM(0x1E),  OFF(0xFF)
         sensitivity_value = Int(sensitivity, length=2)
