@@ -308,17 +308,7 @@ class NodeSleepConfigRequest(NodeRequest):
         ]
 
 
-class NodeSwitchGroupRequest(NodeRequest):
-    """
-    TODO:
-
-    Response message: ????
-    """
-
-    ID = b"0055"
-
-
-class PlugwiseClearGroupMacRequest(NodeRequest):
+class NodeClearGroupMacRequest(NodeRequest):
     """
     TODO:
 
