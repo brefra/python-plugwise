@@ -59,11 +59,14 @@ class NodeSED(PlugwiseNode):
             or message.awake_type.value == 2
             or message.awake_type.value == 5
         ):
+            for request in self._SED_requests:
+                (request_message, callback) = self._SED_requests[request]
+                self.stick.send(request_message, callback)
             self._SED_requests = {}
         else:
             if message.awake_type.value == 3:
                 self.stick.logger.debug(
-                    "Node %d awake for state change", self.get_mac()
+                    "Node %s awake for state change", self.get_mac()
                 )
             else:
                 self.stick.logger.info(
