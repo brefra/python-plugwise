@@ -397,10 +397,17 @@ class stick(object):
                 "Plugwise stick not properly initialized, Circle+ MAC is missing."
             )
 
-    def allow_join_requests(self, enable: bool):
-        """Enable or disable Plugwise network"""
-        self.logger.debug("stick.py - allow_join_request %s", str(enable))
+    def allow_join_requests(self, enable: bool, accept: bool):
+        """
+        Enable or disable Plugwise network
+        Automatically accept new join request
+        """
+        self.logger.error("stick.py - allow_join_request %s", str(enable))
         self.send(NodeAllowJoiningRequest(enable))
+        if enable:
+            self._accept_join_requests = accept
+        else:
+            self._accept_join_requests = False
 
     def node_join(self, mac, callback=None) -> bool:
         """Accept node to join Plugwise network by adding it in Circle+ memory"""
@@ -703,7 +710,7 @@ class stick(object):
                 self.discover_node(mac)
         elif isinstance(message, NodeJoinAvailableResponse):
             # Message from node that is not part of a plugwise network yet and wants to join
-            self.logger.debug(
+            self.logger.info(
                 "Received network join request from node with mac %s",
                 mac,
             )
