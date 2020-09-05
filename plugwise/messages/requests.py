@@ -284,6 +284,11 @@ class NodeSleepConfigRequest(NodeRequest):
     """
     Configure timers for SED nodes to minimize battery usage
 
+    wake_up_duration  : Duration in seconds the SED will be awake for receiving (n)acks
+    wake_up_interval  : Interval in minutes a SED will get awake
+    sleep             : Duration in seconds the node keeps sleeping
+    unknown           : TODO: unknown 4th parameter of 6 characters/digits
+
     Response message: Ack message with: ACK_SLEEP_SET
     """
 
@@ -292,13 +297,9 @@ class NodeSleepConfigRequest(NodeRequest):
     def __init__(self, mac, wake_up_duration: int, sleep: int, wake_up_interval: int):
         super().__init__(mac)
 
-        # Interval in minutes a SED will get awake
         wake_up_interval_val = Int(wake_up_interval, length=4)
-        # Duration in seconds the SED will be awake for receiving (n)acks
         wake_up_duration_val = Int(wake_up_duration, length=2)
-        # Duration in seconds the node keeps sleeping
         sleep_val = Int(sleep, length=4)
-        # TODO: Unknown parameter
         unknown_value = Int(0, length=6)
         self.args += [
             wake_up_duration_val,

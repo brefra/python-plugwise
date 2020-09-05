@@ -111,6 +111,9 @@ class PlugwiseParser(object):
                         self._message = NodeJoinAckResponse()
                     elif seq_id == b"FFFE":
                         self._message = NodeAwakeResponse()
+                        self.stick.logger.error(
+                            "NodeAwakeResponse() message: %s", str(self._buffer[: footer_index + 2])
+                        ) 
                     elif seq_id == b"FFFF":
                         self._message = NodeSwitchGroupResponse()
                     elif footer_index == 20:

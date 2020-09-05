@@ -59,8 +59,6 @@ class NodeSED(PlugwiseNode):
             or message.awake_type.value == 2
             or message.awake_type.value == 5
         ):
-            for (request, callback) in self._SED_requests:
-                self.stick.send(request, callback)
             self._SED_requests = {}
         else:
             if message.awake_type.value == 3:

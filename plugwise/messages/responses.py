@@ -148,9 +148,9 @@ class CirclePlusConnectResponse(NodeResponse):
 
 class NodeJoinAvailableResponse(NodeResponse):
     """
-    Message from unjoined node to notify it's available to join a plugwise network
+    Message from an unjoined node to notify it is available to join a plugwise network
 
-    Response to : TODO: ???
+    Response to : <nothing>
     """
 
     ID = b"0006"

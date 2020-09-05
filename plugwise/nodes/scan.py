@@ -52,13 +52,19 @@ class PlugwiseScan(NodeSED):
         """
         if isinstance(message, NodeSwitchGroupResponse):
             self.stick.logger.debug(
-                "Switch group request %s received from %s for group %s",
+                "Switch group %s to state %s received from %s",
+                str(message.group.value),
                 str(message.power_state.value),
                 self.get_mac(),
-                str(message.group.value),
             )
             self._process_switch_group(message)
             self.stick.message_processed(message.seq_id)
+        else:
+            self.stick.logger.info(
+                "Unsupported message %s received from %s",
+                message.__class__.__name__,
+                self.get_mac(),
+            )
 
     def _process_switch_group(self, message):
         """Switch group request from Scan"""
