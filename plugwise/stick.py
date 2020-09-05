@@ -88,8 +88,6 @@ class stick(object):
 
     def __init__(self, port, callback=None, print_progress=False):
         self.logger = logging.getLogger("python-plugwise")
-        self.logger.setLevel(logging.DEBUG)
-        ch = logging.FileHandler("plugwise-debug.log")
         self._mac_stick = None
         self.port = port
         self.network_online = False
@@ -177,7 +175,7 @@ class stick(object):
         self._send_message_thread.start()
         # update deamon
         self._run_update_thread = False
-        self._auto_update_timer = None
+        self._auto_update_timer = 0
         self._update_thread = threading.Thread(
             None, self._update_loop, "update_thread", (), {}
         )
@@ -240,7 +238,7 @@ class stick(object):
         """ Disconnect from stick and raise error if it fails"""
         self._run_watchdog = False
         self._run_update_thread = False
-        self._auto_update_timer = None
+        self._auto_update_timer = 0
         self._run_send_message_thread = False
         self._run_receive_timeout_thread = False
         self.connection.disconnect()
@@ -580,6 +578,7 @@ class stick(object):
                                 str(MESSAGE_RETRY),
                             )
                         del self.expected_responses[seq_id]
+        self.logger.debug("Send message loop stopped")
 
     def _receive_timeout_loop(self):
         """ deamon to time out receive messages """
@@ -646,6 +645,7 @@ class stick(object):
             ):
                 time.sleep(1)
                 receive_timeout_checker += 1
+        self.logger.debug("Receive timeout loop stopped")
 
     def new_message(self, message):
         """ Received message from Plugwise Zigbee network """
@@ -915,6 +915,7 @@ class stick(object):
             while watchdog_loop_checker < WATCHDOG_DEAMON and self._run_watchdog:
                 time.sleep(1)
                 watchdog_loop_checker += 1
+        self.logger.debug("watchdog loop stopped")
 
     def _update_loop(self):
         """
@@ -1021,7 +1022,7 @@ class stick(object):
                         if self._plugwise_nodes[mac]:
                             if self._plugwise_nodes[mac].get_available():
                                 self._plugwise_nodes[mac].sync_clock()
-                if self._auto_update_timer:
+                if self._auto_update_timer and self._run_update_thread:
                     update_loop_checker = 0
                     while (
                         update_loop_checker < self._auto_update_timer
@@ -1029,13 +1030,13 @@ class stick(object):
                     ):
                         time.sleep(1)
                         update_loop_checker += 1
-            print("_update_loop")
 
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             self.logger.error(
                 "Error at line %s of _update_loop : %s", exc_tb.tb_lineno, e
             )
+        self.logger.debug("Update loop stopped")
 
     def auto_update(self, timer=None):
         """
@@ -1043,7 +1044,7 @@ class stick(object):
         """
         if timer == 0:
             self._run_update_thread = False
-            self._auto_update_timer = None
+            self._auto_update_timer = 0
         else:
             self._auto_update_timer = 5
             if timer == None:

@@ -51,6 +51,8 @@ class StickConnection(object):
             if data:
                 self.stick.feed_parser(data)
             time.sleep(0.01)
+        self.stick.logger.debug("Reader deamon stopped")
+
 
     def _read_data(self):
         """Placeholder to receive message from the connection"""
@@ -85,6 +87,8 @@ class StickConnection(object):
                 time.sleep(SLEEP_TIME)
                 if callback:
                     callback()
+        self.stick.logger.debug("Writer deamon stopped")
+
 
     def _write_data(self, data):
         """Placeholder to write message to the connection"""
