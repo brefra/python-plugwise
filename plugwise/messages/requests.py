@@ -333,7 +333,7 @@ class NodeFeaturesRequest(NodeRequest):
     ID = b"005F"
 
 
-class ScanConfigRequest(NodeRequest):
+class ScanConfigureRequest(NodeRequest):
     """
     Configure a Scan node
 

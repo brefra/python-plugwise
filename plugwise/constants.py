@@ -76,7 +76,7 @@ SCAN_MOTION_OFF = 255   # b'FF'
 # Defaults for Scan Devices
 SCAN_MOTION_RESET_TIMER = 5             # Time in minutes the motion sensor should not sense motion to report "no motion" state
 SCAN_SENSITIVITY = SCAN_MOTION_MEDIUM   # Default sensitivity of the motion sensors
-SCAN_LIGHT_DETECTION = False            # Light override 
+SCAN_DAYLIGHT_MODE = False            # Light override 
 
 # Sense calculations
 SENSE_HUMIDITY_MULTIPLIER = 125

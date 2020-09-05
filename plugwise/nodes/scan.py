@@ -5,7 +5,7 @@ Plugwise Scan node object
 """
 from plugwise.constants import (
     HA_BINARY_SENSOR,
-    SCAN_LIGHT_DETECTION,
+    SCAN_DAYLIGHT_MODE,
     SCAN_MOTION_HIGH,
     SCAN_MOTION_MEDIUM,
     SCAN_MOTION_OFF,
@@ -18,7 +18,7 @@ from plugwise.nodes.sed import NodeSED
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import NodeSwitchGroupResponse
 from plugwise.messages.requests import (
-    ScanConfigRequest,
+    ScanConfigureRequest,
     ScanLightCalibrateRequest,
 )
 
@@ -35,7 +35,7 @@ class PlugwiseScan(NodeSED):
         )
         self._motion_state = False
         self._motion_reset_timer = None
-        self._light_detection = None
+        self._daylight_mode = None
         self._sensitivity = None
 
     def get_node_type(self) -> str:
@@ -70,19 +70,16 @@ class PlugwiseScan(NodeSED):
         """Switch group request from Scan"""
         if message.power_state.value == 0:
             # turn off => clear motion
-            if self._motion:
-                print("_motion=False")
+            if self._motion_state:
                 self._motion_state = False
                 self.do_callback(SENSOR_MOTION["id"])
         elif message.power_state.value == 1:
             # turn on => motion
-            if not self._motion:
-                print("_motion=True")
+            if not self._motion_state:
                 self._motion_state = True
                 self.do_callback(SENSOR_MOTION["id"])
         else:
-            print("_motion = " + str(message.power_state.value))
-            self.stick.logger.debug(
+            self.stick.logger.warning(
                 "Unknown power_state (%s) received from %s",
                 str(message.power_state.value),
                 self.get_mac(),
@@ -90,21 +87,21 @@ class PlugwiseScan(NodeSED):
 
     def CalibrateLight(self, callback=None):
         """Queue request to calibration light sensitivity"""
-        self._send_request(ScanLightCalibrateRequest(self.mac), callback)
+        self._queue_request(ScanLightCalibrateRequest(self.mac), callback)
 
-    def ConfigureMotion(
+    def Configure_scan(
         self,
         motion_reset_timer=SCAN_MOTION_RESET_TIMER,
         sensitivity=SCAN_SENSITIVITY,
-        light_detection=SCAN_LIGHT_DETECTION,
+        daylight_mode=SCAN_DAYLIGHT_MODE,
         callback=None,
     ):
         """Queue request to set motion reporting settings"""
         self._motion_reset_timer = motion_reset_timer
-        self._light_detection = light_detection
+        self._daylight_mode = daylight_mode
         self._sensitivity = sensitivity
-        self._send_request(
-            ScanConfigRequest(self.mac, motion_reset, sensitivity, light_detection),
+        self._queue_request(
+            ScanConfigureRequest(self.mac, motion_reset_timer, sensitivity, daylight_mode),
             callback,
         )
 
