@@ -6,9 +6,9 @@ Plugwise Scan node object
 from plugwise.constants import (
     HA_BINARY_SENSOR,
     SCAN_DAYLIGHT_MODE,
-    SCAN_MOTION_HIGH,
-    SCAN_MOTION_MEDIUM,
-    SCAN_MOTION_OFF,
+    SCAN_SENSITIVITY_HIGH,
+    SCAN_SENSITIVITY_MEDIUM,
+    SCAN_SENSITIVITY_OFF,
     SCAN_MOTION_RESET_TIMER,
     SCAN_SENSITIVITY,
     SENSOR_AVAILABLE,
@@ -92,16 +92,22 @@ class PlugwiseScan(NodeSED):
     def Configure_scan(
         self,
         motion_reset_timer=SCAN_MOTION_RESET_TIMER,
-        sensitivity=SCAN_SENSITIVITY,
+        sensitivity_level=SCAN_SENSITIVITY_MEDIUM,
         daylight_mode=SCAN_DAYLIGHT_MODE,
         callback=None,
     ):
         """Queue request to set motion reporting settings"""
         self._motion_reset_timer = motion_reset_timer
         self._daylight_mode = daylight_mode
-        self._sensitivity = sensitivity
+        if sensitivity_level == SCAN_SENSITIVITY_HIGH:
+            sensitivity_value = 20   # b'14'
+        elif sensitivity_level == SCAN_SENSITIVITY_MEDIUM:
+            sensitivity_value = 30 # b'1E'
+        elif sensitivity_level == SCAN_SENSITIVITY_OFF:
+            sensitivity_value = 255   # b'FF'
+        self._sensitivity = sensitivity_level
         self._queue_request(
-            ScanConfigureRequest(self.mac, motion_reset_timer, sensitivity, daylight_mode),
+            ScanConfigureRequest(self.mac, motion_reset_timer, sensitivity_value, daylight_mode),
             callback,
         )
 

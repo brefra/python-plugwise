@@ -69,13 +69,14 @@ SED_SLEEP_DURATION = 10         # Time in seconds the SED sleeps
 SED_AWAKE_INTERVAL = 3600       # Interval in seconds the SED node is sending an awake message
 
 # Scan motion Sensitivity levels
-SCAN_MOTION_HIGH = 20   # b'14'
-SCAN_MOTION_MEDIUM = 30 # b'1E'
-SCAN_MOTION_OFF = 255   # b'FF'
+
+SCAN_SENSITIVITY_HIGH = "high"
+SCAN_SENSITIVITY_MEDIUM = "medium"
+SCAN_SENSITIVITY_OFF = "medium"
 
 # Defaults for Scan Devices
 SCAN_MOTION_RESET_TIMER = 5             # Time in minutes the motion sensor should not sense motion to report "no motion" state
-SCAN_SENSITIVITY = SCAN_MOTION_MEDIUM   # Default sensitivity of the motion sensors
+SCAN_SENSITIVITY = SCAN_SENSITIVITY_MEDIUM   # Default sensitivity of the motion sensors
 SCAN_DAYLIGHT_MODE = False            # Light override 
 
 # Sense calculations
