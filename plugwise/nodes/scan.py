@@ -5,6 +5,7 @@ Plugwise Scan node object
 """
 from plugwise.constants import (
     HA_BINARY_SENSOR,
+    HA_SENSOR,
     SCAN_DAYLIGHT_MODE,
     SCAN_SENSITIVITY_HIGH,
     SCAN_SENSITIVITY_MEDIUM,
@@ -12,6 +13,9 @@ from plugwise.constants import (
     SCAN_MOTION_RESET_TIMER,
     SCAN_SENSITIVITY,
     SENSOR_AVAILABLE,
+    SENSOR_PING,
+    SENSOR_RSSI_IN,
+    SENSOR_RSSI_OUT,
     SENSOR_MOTION,
 )
 from plugwise.nodes.sed import NodeSED
@@ -28,10 +32,13 @@ class PlugwiseScan(NodeSED):
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
-        self.categories = (HA_BINARY_SENSOR,)
+        self.categories = (HA_SENSOR, HA_BINARY_SENSOR)
         self.sensors = (
             SENSOR_AVAILABLE["id"],
+            SENSOR_PING["id"],
             SENSOR_MOTION["id"],
+            SENSOR_RSSI_IN["id"],
+            SENSOR_RSSI_OUT["id"],
         )
         self._motion_state = False
         self._motion_reset_timer = None
