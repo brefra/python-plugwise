@@ -194,11 +194,14 @@ class PlugwiseNode(object):
     def _on_message(self, message):
         pass
 
-    def subscribe_callback(self, callback, sensor):
+    def subscribe_callback(self, callback, sensor) -> bool:
         """ Subscribe callback to execute when state change happens """
-        if sensor not in self._callbacks:
-            self._callbacks[sensor] = []
-        self._callbacks[sensor].append(callback)
+        if sensor in self.sensors:
+            if sensor not in self._callbacks:
+                self._callbacks[sensor] = []
+            self._callbacks[sensor].append(callback)
+            return True
+        return False
 
     def unsubscribe_callback(self, callback, sensor):
         """ Unsubscribe callback to execute when state change happens """
