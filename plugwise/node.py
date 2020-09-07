@@ -36,7 +36,7 @@ class PlugwiseNode(object):
                 "MAC address is in unexpected format: %s",
                 str(mac),
             )
-        self.mac = bytes(mac, encoding="ascii")
+        self.mac = bytes(mac, encoding="utf-8")
         self.stick = stick
         self.categories = ()
         self.sensors = ()
@@ -97,7 +97,7 @@ class PlugwiseNode(object):
 
     def get_mac(self) -> str:
         """Return mac address"""
-        return self.mac.decode("ascii")
+        return self.mac.decode("utf-8")
 
     def get_name(self) -> str:
         """Return unique name"""
@@ -187,7 +187,7 @@ class PlugwiseNode(object):
         else:
             self.stick.logger.debug(
                 "Skip message, mac of node (%s) != mac at message (%s)",
-                message.mac.decode("ascii"),
+                message.mac.decode("utf-8"),
                 self.get_mac(),
             )
 

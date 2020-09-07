@@ -68,18 +68,18 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                     "Scan at address "
                     + str(message.node_address.value)
                     + " => node found with mac "
-                    + message.node_mac.value.decode("ascii")
+                    + message.node_mac.value.decode("utf-8")
                 )
             self.stick.logger.debug(
                 "Linked plugwise node with mac %s found",
-                message.node_mac.value.decode("ascii"),
+                message.node_mac.value.decode("utf-8"),
             )
             if (
-                message.node_mac.value.decode("ascii")
+                message.node_mac.value.decode("utf-8")
                 not in self._plugwise_nodes.keys()
             ):
                 self._plugwise_nodes[
-                    message.node_mac.value.decode("ascii")
+                    message.node_mac.value.decode("utf-8")
                 ] = message.node_address.value
         else:
             if self.stick.print_progress:
