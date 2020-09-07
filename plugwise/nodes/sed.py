@@ -61,6 +61,11 @@ class NodeSED(PlugwiseNode):
         ):
             for request in self._SED_requests:
                 (request_message, callback) = self._SED_requests[request]
+                self.stick.logger.info(
+                    "Send queued %s message to SED node %s",
+                    request_message.__class__.__name__,
+                    self.get_mac(),
+                )
                 self.stick.send(request_message, callback)
             self._SED_requests = {}
         else:

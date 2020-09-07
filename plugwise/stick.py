@@ -402,7 +402,6 @@ class stick(object):
         Enable or disable Plugwise network
         Automatically accept new join request
         """
-        self.logger.error("stick.py - allow_join_request %s", str(enable))
         self.send(NodeAllowJoiningRequest(enable))
         if enable:
             self._accept_join_requests = accept
@@ -764,8 +763,8 @@ class stick(object):
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
             else:
-                self.logger.debug(
-                    "Skip %s message because node with mac %s is not discovered yet.",
+                self.logger.info(
+                    "Queue %s message because node with mac %s is not discovered yet.",
                     message.__class__.__name__,
                     mac,
                 )
