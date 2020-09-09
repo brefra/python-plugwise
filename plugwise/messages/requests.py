@@ -30,6 +30,16 @@ class NodeRequest(PlugwiseMessage):
         self.mac = mac
 
 
+class NodeNetworkInfoRequest(NodeRequest):
+    """
+    TODO: PublicNetworkInfoRequest
+
+    No arguments
+    """
+
+    ID = b"0001"
+
+
 class CirclePlusConnectRequest(NodeRequest):
     """
     Request to connect a Circle+ to the Stick
@@ -120,6 +130,16 @@ class StickInitRequest(NodeRequest):
         """message for that initializes the Stick"""
         # init is the only request message that doesn't send MAC address
         super().__init__("")
+
+
+class NodeImagePrepareRequest(NodeRequest):
+    """
+        TODO: PWEswImagePrepareRequestV1_0
+    s
+        Response message: TODO:
+    """
+
+    ID = b"000B"
 
 
 class NodePingRequest(NodeRequest):
@@ -266,6 +286,70 @@ class CircleClockGetRequest(NodeRequest):
     ID = b"003E"
 
 
+class CircleEnableScheduleRequest(NodeRequest):
+    """
+    Request to switch Schedule on or off
+
+    Response message: TODO:
+    """
+
+    ID = b"0040"
+
+    def __init__(self, mac, on):
+        super().__init__(mac)
+        val = 1 if on == True else 0
+        self.args.append(Int(val, length=2))
+        # the second parameter is always 0x01
+        self.args.append(Int(1, length=2))
+
+
+class NodeAddToGroupRequest(NodeRequest):
+    """
+    Add node to group
+
+    Response message: TODO:
+    """
+
+    ID = b"0045"
+
+    def __init__(self, mac, group_mac, task_id, port_mask):
+        super().__init__(mac)
+        group_mac_val = String(group_mac, length=16)
+        task_id_val = String(task_id, length=16)
+        port_mask_val = String(port_mask, length=16)
+        self.args += [group_mac_val, task_id_val, port_mask_val]
+
+
+class NodeRemoveFromGroupRequest(NodeRequest):
+    """
+    Remove node from group
+
+    Response message: TODO:
+    """
+
+    ID = b"0046"
+
+    def __init__(self, mac, group_mac):
+        super().__init__(mac)
+        group_mac_val = String(group_mac, length=16)
+        self.args += [group_mac_val]
+
+
+class NodeBroadcastGroupSwitchRequest(NodeRequest):
+    """
+    Broadcast to group to switch
+
+    Response message: TODO:
+    """
+
+    ID = b"0047"
+
+    def __init__(self, group_mac, switch_state : bool):
+        super().__init__(group_mac)
+        val = 1 if switch_state == True else 0
+        self.args.append(Int(val, length=2))
+
+
 class CirclePowerBufferRequest(NodeRequest):
     """
     Request power usage storaged a given memory address
@@ -286,10 +370,11 @@ class NodeSleepConfigRequest(NodeRequest):
 
     wake_up_duration  : Duration in seconds the SED will be awake for receiving (n)acks
     wake_up_interval  : Interval in minutes a SED will get awake
-    sleep             : Duration in seconds the node keeps sleeping
-    unknown           : TODO: unknown 4th parameter of 6 characters/digits
+    sleep             : Duration in minutes the node keeps sleeping
+    getClockNow       : TODO: ?
+    unknown           : TODO: minutes
 
-    Response message: Ack message with: ACK_SLEEP_SET
+    Response message: Ack message with ACK_SLEEP_SET
     """
 
     ID = b"0050"
@@ -297,16 +382,45 @@ class NodeSleepConfigRequest(NodeRequest):
     def __init__(self, mac, wake_up_duration: int, sleep: int, wake_up_interval: int):
         super().__init__(mac)
 
-        wake_up_interval_val = Int(wake_up_interval, length=4)
         wake_up_duration_val = Int(wake_up_duration, length=2)
+        wake_up_interval_val = Int(wake_up_interval, length=4)
         sleep_val = Int(sleep, length=4)
-        unknown_value = Int(0, length=6)
+        getClockNow = Int(0, length=2)
+        unknown_value = Int(0, length=4)
         self.args += [
             wake_up_duration_val,
             sleep_val,
             wake_up_interval_val,
+            getClockNow,
             unknown_value,
         ]
+
+
+class NodeSelfRemoveRequest(NodeRequest):
+    """
+    <command number="0051" vnumber="1.0" implementation="Plugwise.IO.Commands.V20.PWSelfRemovalRequestV1_0">
+      <arguments>
+        <argument name="macId" length="16"/>
+      </arguments>
+    </command>
+
+    """
+
+    ID = b"0051"
+
+
+class NodeMeasureIntervalRequest(NodeRequest):
+    """
+    <command number="0057" vnumber="1.0" implementation="Plugwise.IO.Commands.V20.PWSetMeasurementIntervalRequestV1_0">
+      <arguments>
+        <argument name="macId" length="16"/>
+        <argument name="ConsumptionInterval" length="4"/>
+        <argument name="ProductionInterval" length="4"/>
+      </arguments>
+    </command>
+    """
+
+    ID = b"0057"
 
 
 class NodeClearGroupMacRequest(NodeRequest):
@@ -321,6 +435,20 @@ class NodeClearGroupMacRequest(NodeRequest):
     def __init__(self, mac, taskId):
         super().__init__(mac)
         self.args.append(Int(taskId, length=2))
+
+
+class CircleSetScheduleValueRequest(NodeRequest):
+    """
+    Send chunk of On/Off/StandbyKiller Schedule to Circle(+)
+
+    Response message: TODO:
+    """
+
+    ID = b"0059"
+
+    def __init__(self, mac, val):
+        super().__init__(mac)
+        self.args.append(SInt(val, length=4))
 
 
 class NodeFeaturesRequest(NodeRequest):
@@ -369,3 +497,34 @@ class ScanLightCalibrateRequest(NodeRequest):
     """
 
     ID = b"0102"
+
+
+class SenseReportIntervalRequest(NodeRequest):
+    """
+    Sets the Sense temperature and humidity measurement report interval in minutes.
+    Based on this interval, periodically a 'SenseReportResponse' message is sent by the Sense node
+
+    Response message: [Acknowledge message]
+    """
+
+    ID = b"0102"
+
+    def __init__(self, mac, interval):
+        super().__init__(mac)
+        self.args.append(Int(interval, length=2))
+
+
+class CircleInitialRelaisStateRequest(NodeRequest):
+    """
+    Get or set initial Relais state
+
+    Response message: CircleInitialRelaisStateResponse
+    """
+
+    ID = b"0138"
+
+    def __init__(self, mac, configure: bool, relais_state: bool):
+        super().__init__(mac)
+        set_or_get = Int(1 if configure == True else 0, length=2)
+        relais = Int(1 if relais_state == True else 0, length=2)
+        self.args += [set_or_get, relais]
