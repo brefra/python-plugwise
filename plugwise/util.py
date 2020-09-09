@@ -46,6 +46,22 @@ def inc_seq_id(seq_id, value=1):
     return temp_str.encode()
 
 
+def uint_to_int(val, octals):
+    """compute the 2's compliment of int value val for negative values"""
+    bits = octals << 2
+    if (val & (1 << (bits - 1))) != 0:
+        val = val - (1 << bits)
+    return val
+
+
+def int_to_uint(val, octals):
+    """compute the 2's compliment of int value val for negative values"""
+    bits = octals << 2
+    if val < 0:
+        val = val + (1 << bits)
+    return val
+
+
 class BaseType(object):
     def __init__(self, value, length):
         self.value = value
@@ -96,6 +112,26 @@ class Int(BaseType):
         self.value = int(val, 16)
         mask = 1 << (self.length * 4 - 1)
         self.value = -(self.value & mask) + (self.value & ~mask)
+
+
+class SInt(BaseType):
+    def __init__(self, value, length=2):
+        self.value = value
+        self.length = length
+
+    def negative(self, val, octals):
+        """compute the 2's compliment of int value val for negative values"""
+        bits = octals << 2
+        if (val & (1 << (bits - 1))) != 0:
+            val = val - (1 << bits)
+        return val
+
+    def serialize(self):
+        fmt = "%%0%dX" % self.length
+        return fmt % int_to_uint(self.value, self.length)
+
+    def deserialize(self, val):
+        self.value = self.negative(int(val, 16), self.length)
 
 
 class UnixTimestamp(Int):
