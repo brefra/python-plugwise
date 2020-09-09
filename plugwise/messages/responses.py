@@ -110,6 +110,8 @@ class CirclePlusQueryResponse(NodeResponse):
 class CirclePlusQueryEndResponse(NodeResponse):
     """
     TODO:
+        PWAckReplyV1_0
+        <argument name="code" length="2"/>
 
     Response to : ???
     """
@@ -184,6 +186,10 @@ class StickInitResponse(NodeResponse):
 class NodePingResponse(NodeResponse):
     """
     Ping response from node
+
+    - incomingLastHopRssiTarget
+    - lastHopRssiSource
+    - timediffInMs
 
     Response to : NodePingRequest
     """
@@ -423,6 +429,7 @@ class NodeSwitchGroupResponse(NodeResponse):
 class NodeFeaturesResponse(NodeResponse):
     """
     Returns supported features of node
+    TODO: FeatureBitmask
 
     Response to: NodeFeaturesRequest
     """
@@ -464,7 +471,7 @@ class CircleSwitchRelayResponse(NodeResponse):
         self.unknown = None
         self.relay_state = None
 
-    # overule deserialize because of different message format (relay before mac)
+    # custom deserialize because of different message format (relay before mac)
     def deserialize(self, response):
         if len(response) != len(self):
             raise ProtocolError(
@@ -496,7 +503,8 @@ class CircleSwitchRelayResponse(NodeResponse):
 
 class SenseReportResponse(NodeResponse):
     """
-    Returns the the current temperature and humidity of a Sense node
+    Returns the current temperature and humidity of a Sense node.
+    The interval this report is sent is configured by the 'SenseReportIntervalRequest' request
 
     Response to: <nothing>
     """
@@ -508,3 +516,19 @@ class SenseReportResponse(NodeResponse):
         self.humidity = Int(0, length=4)
         self.temperature = Int(0, length=4)
         self.params += [self.humidity, self.temperature]
+
+
+class CircleInitialRelaisStateResponse(NodeResponse):
+    """
+    Returns the initial relais state.
+
+    Response to: CircleInitialRelaisStateRequest
+    """
+
+    ID = b"0139"
+
+    def __init__(self):
+        super().__init__()
+        set_or_get = Int(0, length=2)
+        relais = Int(0, length=2)
+        self.params += [set_or_get, relais]
