@@ -4,6 +4,7 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 Plugwise Sense node object
 """
 from plugwise.constants import (
+    HA_BINARY_SENSOR,
     HA_SENSOR,
     SENSE_HUMIDITY_MULTIPLIER,
     SENSE_HUMIDITY_OFFSET,
@@ -23,7 +24,7 @@ class PlugwiseSense(NodeSED):
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
-        self.categories = (HA_SENSOR,)
+        self.categories = (HA_SENSOR, HA_BINARY_SENSOR)
         self.sensors = (
             SENSOR_AVAILABLE["id"],
             SENSOR_TEMPERATURE["id"],

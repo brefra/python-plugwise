@@ -4,7 +4,8 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 Plugwise switch node object
 """
 from plugwise.constants import (
-    HA_BINARY_SENSOR_SWITCH,
+    HA_BINARY_SENSOR,
+    HA_SENSOR,
     SENSOR_SWITCH,
 )
 from plugwise.nodes.sed import NodeSED
@@ -17,7 +18,7 @@ class PlugwiseSwitch(NodeSED):
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
-        self.categories = (HA_BINARY_SENSOR_SWITCH)
+        self.categories = (HA_SENSOR, HA_BINARY_SENSOR)
         self._switch_state = False
 
     def get_node_type(self) -> str:
