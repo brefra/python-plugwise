@@ -606,8 +606,6 @@ class stick(object):
         while self._run_receive_timeout_thread:
             for seq_id in list(self.expected_responses.keys()):
                 if isinstance(self.expected_responses[seq_id][1], StickInitRequest):
-                    if self._cb_stick_initialized:
-                        self._cb_stick_initialized()
                     del self.expected_responses[seq_id]
                 elif isinstance(
                     self.expected_responses[seq_id][1], NodeAllowJoiningRequest
