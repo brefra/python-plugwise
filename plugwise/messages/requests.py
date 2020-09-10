@@ -344,7 +344,7 @@ class NodeBroadcastGroupSwitchRequest(NodeRequest):
 
     ID = b"0047"
 
-    def __init__(self, group_mac, switch_state : bool):
+    def __init__(self, group_mac, switch_state: bool):
         super().__init__(group_mac)
         val = 1 if switch_state == True else 0
         self.args.append(Int(val, length=2))
@@ -368,31 +368,40 @@ class NodeSleepConfigRequest(NodeRequest):
     """
     Configure timers for SED nodes to minimize battery usage
 
-    wake_up_duration  : Duration in seconds the SED will be awake for receiving (n)acks
-    wake_up_interval  : Interval in minutes a SED will get awake
-    sleep             : Duration in minutes the node keeps sleeping
-    getClockNow       : TODO: ?
-    unknown           : TODO: minutes
+    stay_active             : Duration in seconds the SED will be awake for receiving (n)acks
+    sleep_for               : Duration in minutes a SED will sleep
+    maintenance_interval    : Interval in minutes the node keeps sleeping
+    clock_sync              : Enable/disable clock sync
+    clock_interval          : Duration in minutes the node synchronize its clock
 
     Response message: Ack message with ACK_SLEEP_SET
     """
 
     ID = b"0050"
 
-    def __init__(self, mac, wake_up_duration: int, sleep: int, wake_up_interval: int):
+    def __init__(
+        self,
+        mac,
+        stay_active: int,
+        maintenance_interval: int,
+        sleep_for: int,
+        sync_clock: bool,
+        clock_interval: int,
+    ):
         super().__init__(mac)
 
-        wake_up_duration_val = Int(wake_up_duration, length=2)
-        wake_up_interval_val = Int(wake_up_interval, length=4)
-        sleep_val = Int(sleep, length=4)
-        getClockNow = Int(0, length=2)
-        unknown_value = Int(0, length=4)
+        stay_active_val = Int(stay_active, length=2)
+        sleep_for_val = Int(sleep_for, length=4)
+        maintenance_interval_val = Int(maintenance_interval, length=4)
+        val = 1 if sync_clock == True else 0
+        clock_sync_val = Int(val, length=2)
+        clock_interval_val = Int(clock_interval, length=4)
         self.args += [
-            wake_up_duration_val,
-            sleep_val,
-            wake_up_interval_val,
-            getClockNow,
-            unknown_value,
+            stay_active_val,
+            maintenance_interval_val,
+            sleep_for_val,
+            clock_sync_val,
+            clock_interval_val,
         ]
 
 
@@ -411,16 +420,17 @@ class NodeSelfRemoveRequest(NodeRequest):
 
 class NodeMeasureIntervalRequest(NodeRequest):
     """
-    <command number="0057" vnumber="1.0" implementation="Plugwise.IO.Commands.V20.PWSetMeasurementIntervalRequestV1_0">
-      <arguments>
-        <argument name="macId" length="16"/>
-        <argument name="ConsumptionInterval" length="4"/>
-        <argument name="ProductionInterval" length="4"/>
-      </arguments>
-    </command>
+    Configure the logging interval of power measurement in minutes
+
+    Response message: TODO:
     """
 
     ID = b"0057"
+
+    def __init__(self, mac, usage, production):
+        super().__init__(mac)
+        self.args.append(Int(usage, length=4))
+        self.args.append(Int(production, length=4))
 
 
 class NodeClearGroupMacRequest(NodeRequest):
