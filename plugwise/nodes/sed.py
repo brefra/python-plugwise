@@ -5,9 +5,11 @@ Plugwise SED (Sleeping Endpoint Device) base object
 """
 
 from plugwise.constants import (
-    SED_AWAKE_DURATION,
-    SED_SLEEP_DURATION,
-    SED_AWAKE_INTERVAL,
+    SED_CLOCK_INTERVAL,
+    SED_CLOCK_SYNC,
+    SED_MAINTENANCE_INTERVAL,
+    SED_SLEEP_FOR,
+    SED_STAY_ACTIVE,
 )
 from plugwise.node import PlugwiseNode
 from plugwise.message import PlugwiseMessage
@@ -25,6 +27,8 @@ class NodeSED(PlugwiseNode):
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
         self._SED_requests = {}
+        self._maintenance_interval = SED_MAINTENANCE_INTERVAL
+        self._new_maintenance_interval = None
 
     def _on_message(self, message):
         """
@@ -101,15 +105,31 @@ class NodeSED(PlugwiseNode):
             callback,
         )
 
+    def _wake_up_interval_accepted(self):
+        """ Callback after wake up interval is received and accepted by SED """
+        self._wake_up_interval = self._new_maintenance_interval
+
     def Configure_SED(
         self,
-        awake_duration=SED_AWAKE_DURATION,
-        sleep_duration=SED_SLEEP_DURATION,
-        wake_up_interval=SED_AWAKE_INTERVAL,
-        callback=None,
+        stay_active=SED_STAY_ACTIVE,
+        sleep_for=SED_SLEEP_FOR,
+        maintenance_interval=SED_MAINTENANCE_INTERVAL,
+        clock_sync=SED_CLOCK_SYNC,
+        clock_interval=SED_CLOCK_INTERVAL,
     ):
-        """Reconfigure the awake duration and interval settings at next awake of SED"""
+        """Reconfigure the sleep/awake settings for a SED send at next awake of SED"""
         message = NodeSleepConfigRequest(
-            self.mac, awake_duration, sleep_duration, wake_up_interval
+            self.mac,
+            stay_active,
+            maintenance_interval,
+            sleep_for,
+            clock_sync,
+            clock_interval,
         )
-        self._queue_request(message, callback)
+        self._queue_request(message, self._wake_up_interval_accepted)
+        self._new_maintenance_interval = maintenance_interval
+        self.stick.logger.info(
+            "Queue %s message to be send at next awake of SED node %s",
+            message.__class__.__name__,
+            self.get_mac(),
+        )
