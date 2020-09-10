@@ -182,8 +182,8 @@ class PlugwiseNode(object):
                 self._process_features_response(message)
                 self.stick.message_processed(message.seq_id)
             else:
-                self.set_available(True)
                 self._on_message(message)
+                self.set_available(True)
         else:
             self.stick.logger.debug(
                 "Skip message, mac of node (%s) != mac at message (%s)",

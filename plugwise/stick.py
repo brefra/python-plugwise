@@ -75,8 +75,11 @@ from plugwise.parser import PlugwiseParser
 from plugwise.node import PlugwiseNode
 from plugwise.nodes.circle import PlugwiseCircle
 from plugwise.nodes.circle_plus import PlugwiseCirclePlus
+from plugwise.nodes.sed import NodeSED
 from plugwise.nodes.scan import PlugwiseScan
+from plugwise.nodes.sense import PlugwiseSense
 from plugwise.nodes.stealth import PlugwiseStealth
+from plugwise.nodes.switch import PlugwiseSwitch
 from plugwise.util import inc_seq_id, validate_mac
 import queue
 
@@ -100,6 +103,7 @@ class stick(object):
         self._nodes_registered = 0
         self._nodes_to_discover = {}
         self._nodes_not_discovered = {}
+        self._messages_for_undiscovered_nodes = []
         self._accept_join_requests = ACCEPT_JOIN_REQUESTS
         self._stick_initialized = False
         self._stick_callbacks = {}
@@ -294,10 +298,10 @@ class stick(object):
         """ Return specific Plugwise node object"""
         return self._plugwise_nodes.get(mac, None)
 
-    def discover_node(self, mac: str, callback=None) -> bool:
+    def discover_node(self, mac: str, callback=None, force_discover=False) -> bool:
         """ Discovery of plugwise node """
         if validate_mac(mac) == True:
-            if mac not in self._plugwise_nodes.keys():
+            if not self._plugwise_nodes.get(mac):
                 if mac not in self._nodes_not_discovered.keys():
                     self._nodes_not_discovered[mac] = (
                         None,
@@ -310,6 +314,11 @@ class stick(object):
                 else:
                     (firstrequest, lastrequest) = self._nodes_not_discovered[mac]
                     if not (firstrequest and lastrequest):
+                        self.send(
+                            NodeInfoRequest(bytes(mac, "utf-8")),
+                            callback,
+                        )
+                    elif force_discover:
                         self.send(
                             NodeInfoRequest(bytes(mac, "utf-8")),
                             callback,
@@ -408,17 +417,17 @@ class stick(object):
         else:
             self._accept_join_requests = False
 
-    def node_join(self, mac, callback=None) -> bool:
+    def node_join(self, mac: str, callback=None) -> bool:
         """Accept node to join Plugwise network by adding it in Circle+ memory"""
         if validate_mac(mac) == True:
-            self.send(NodeAddRequest(bytes(mac, "ascii"), True), callback)
+            self.send(NodeAddRequest(bytes(mac, "utf-8"), True), callback)
             return True
         return False
 
-    def node_unjoin(self, mac, callback=None) -> bool:
+    def node_unjoin(self, mac: str, callback=None) -> bool:
         """Remove node from the Plugwise network by deleting it from the Circle+ memory"""
         if validate_mac(mac) == True:
-            self.send(NodeRemoveRequest(self.circle_plus_mac, mac), callback)
+            self.send(NodeRemoveRequest(bytes(self.circle_plus_mac, "utf-8"), mac), callback)
             return True
         return False
 
@@ -448,6 +457,12 @@ class stick(object):
         else:
             self.logger.warning("Unsupported node type '%s'", str(node_type))
             self._plugwise_nodes[mac] = None
+
+        # process previous missed messages
+        msg_to_process = self._messages_for_undiscovered_nodes[:]
+        self._messages_for_undiscovered_nodes = []
+        for msg in msg_to_process:
+            self.new_message(msg)
 
     def _remove_node(self, mac):
         """
@@ -706,7 +721,7 @@ class stick(object):
                     "Received awake message from unknown node with mac %s, discover node now",
                     mac,
                 )
-                self.discover_node(mac)
+                self.discover_node(mac, self._discover_after_scan, True)
         elif isinstance(message, NodeJoinAvailableResponse):
             # Message from node that is not part of a plugwise network yet and wants to join
             self.logger.info(
@@ -720,7 +735,7 @@ class stick(object):
                         "Accepting network join request for node with mac %s",
                         mac,
                     )
-                    self.send(NodeAddRequest(mac, True))
+                    self.send(NodeAddRequest(bytes(mac, "utf-8"), True))
                     self.discover_node(mac, self._discover_after_scan)
                 else:
                     self.logger.debug(
@@ -740,24 +755,27 @@ class stick(object):
                 "Node with mac %s has accepted or (re)joined this Plugwise network",
                 mac,
             )
+            if not self._plugwise_nodes.get(mac):
+                self.discover_node(mac, self._discover_after_scan, True)
         elif isinstance(message, NodeRemoveResponse):
             # Conformation message a node is is removed from the Plugwise network
+            unjoined_mac = message.node_mac_id.value
             if message.status.value == 1:
-                if self._plugwise_nodes.get(mac):
-                    self._plugwise_nodes[mac] = None
+                if self._plugwise_nodes.get(unjoined_mac):
+                    del self._plugwise_nodes[unjoined_mac]
                     self.logger.info(
                         "Node with mac %s has been unjoined from Plugwise network",
-                        mac,
+                        unjoined_mac,
                     )
                 else:
                     self.logger.debug(
                         "Unknown node with mac %s has been unjoined from Plugwise network",
-                        mac,
+                        unjoined_mac,
                     )
             else:
                 self.logger.warning(
                     "Node with mac %s failed to unjoin from Plugwise network ",
-                    mac,
+                    unjoined_mac,
                 )
         else:
             if self._plugwise_nodes.get(mac):
@@ -768,6 +786,7 @@ class stick(object):
                     message.__class__.__name__,
                     mac,
                 )
+                self._messages_for_undiscovered_nodes.append(message)
                 self.discover_node(mac)
 
     def message_processed(self, seq_id, ack_response=None):
