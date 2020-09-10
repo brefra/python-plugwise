@@ -10,6 +10,9 @@ from plugwise.constants import (
     SED_MAINTENANCE_INTERVAL,
     SED_SLEEP_FOR,
     SED_STAY_ACTIVE,
+    SENSOR_PING,
+    SENSOR_RSSI_IN,
+    SENSOR_RSSI_OUT,
 )
 from plugwise.node import PlugwiseNode
 from plugwise.message import PlugwiseMessage
@@ -100,10 +103,20 @@ class NodeSED(PlugwiseNode):
 
     def ping(self, callback=None):
         """ Ping node"""
-        self._queue_request(
-            NodePingRequest(self.mac),
-            callback,
-        )
+        if (
+            self._callbacks.get(SENSOR_PING["id"])
+            or self._callbacks.get(SENSOR_RSSI_IN["id"])
+            or self._callbacks.get(SENSOR_RSSI_OUT["id"])
+        ):
+            self._queue_request(
+                NodePingRequest(self.mac),
+                callback,
+            )
+        else:
+            self.stick.logger.debug(
+                "Drop ping request for SED %s because no callback is registered",
+                self.get_mac(),
+            )
 
     def _wake_up_interval_accepted(self):
         """ Callback after wake up interval is received and accepted by SED """
