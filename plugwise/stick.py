@@ -1032,7 +1032,13 @@ class stick(object):
                                     mac,
                                 )
                                 self._plugwise_nodes[mac].update_power_usage()
-                self._auto_update_first_run = False
+                        self._auto_update_first_run = False
+
+                        # Sync internal clock of all available Circle and Circle+ nodes once a day
+                        if datetime.now().day != day_of_month:
+                            day_of_month = datetime.now().day
+                            if self._plugwise_nodes[mac].get_available():
+                                self._plugwise_nodes[mac].sync_clock()
 
                 # Try to rediscover node(s) which where not available at initial scan
                 # Do this the first hour at every update, there after only once an hour
@@ -1059,13 +1065,6 @@ class stick(object):
                             datetime.now(),
                             datetime.now(),
                         )
-                # Sync internal clock of all available nodes once a day
-                if datetime.now().day != day_of_month:
-                    day_of_month = datetime.now().day
-                    for mac in self._plugwise_nodes:
-                        if self._plugwise_nodes[mac]:
-                            if self._plugwise_nodes[mac].get_available():
-                                self._plugwise_nodes[mac].sync_clock()
                 if self._auto_update_timer and self._run_update_thread:
                     update_loop_checker = 0
                     while (
