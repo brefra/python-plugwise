@@ -422,6 +422,8 @@ class stick(object):
         if validate_mac(mac) == True:
             self.send(NodeAddRequest(bytes(mac, "utf-8"), True), callback)
             return True
+        else:
+            self.logger.warning("Invalid mac '%s' address, unable to join node manually.", mac)
         return False
 
     def node_unjoin(self, mac: str, callback=None) -> bool:
@@ -429,6 +431,8 @@ class stick(object):
         if validate_mac(mac) == True:
             self.send(NodeRemoveRequest(bytes(self.circle_plus_mac, "utf-8"), mac), callback)
             return True
+        else:
+            self.logger.warning("Invalid mac '%s' address, unable to unjoin node manually.", mac)
         return False
 
     def _append_node(self, mac, address, node_type):
