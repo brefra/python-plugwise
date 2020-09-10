@@ -429,7 +429,9 @@ class stick(object):
     def node_unjoin(self, mac: str, callback=None) -> bool:
         """Remove node from the Plugwise network by deleting it from the Circle+ memory"""
         if validate_mac(mac) == True:
-            self.send(NodeRemoveRequest(bytes(self.circle_plus_mac, "utf-8"), mac), callback)
+            self.send(
+                NodeRemoveRequest(bytes(self.circle_plus_mac, "utf-8"), mac), callback
+            )
             return True
         else:
             self.logger.warning("Invalid mac '%s' address, unable to unjoin node manually.", mac)
@@ -964,22 +966,27 @@ class stick(object):
                         self._plugwise_nodes[mac].ping()
 
                         # Check availability state of SED's
-                        if (
-                            isinstance(self._plugwise_nodes[mac], NodeSED)
-                        ):
-                            if (self._plugwise_nodes[mac].get_available()):
+                        if isinstance(self._plugwise_nodes[mac], NodeSED):
+                            if self._plugwise_nodes[mac].get_available():
                                 if self._plugwise_nodes[mac].last_update > (
                                     datetime.now()
                                     - timedelta(
                                         minutes=(
-                                            self._plugwise_nodes[mac]._maintenance_interval * 2
+                                            self._plugwise_nodes[
+                                                mac
+                                            ]._maintenance_interval
+                                            * 2
                                         )
                                     )
                                 ):
                                     self.logger.info(
                                         "No messages received within expected maintenance up interval %s from node %s, mark as unavailable",
                                         mac,
-                                        str(self._plugwise_nodes[mac]._maintenance_interval),
+                                        str(
+                                            self._plugwise_nodes[
+                                                mac
+                                            ]._maintenance_interval
+                                        ),
                                     )
                                     self._plugwise_nodes[mac].set_available(False)
 
