@@ -958,6 +958,27 @@ class stick(object):
                             mac,
                         )
                         self._plugwise_nodes[mac].ping()
+
+                        # Check availability state of SED's
+                        if (
+                            isinstance(self._plugwise_nodes[mac], NodeSED)
+                        ):
+                            if (self._plugwise_nodes[mac].get_available()):
+                                if self._plugwise_nodes[mac].last_update > (
+                                    datetime.now()
+                                    - timedelta(
+                                        minutes=(
+                                            self._plugwise_nodes[mac]._maintenance_interval * 2
+                                        )
+                                    )
+                                ):
+                                    self.logger.info(
+                                        "No messages received within expected maintenance up interval %s from node %s, mark as unavailable",
+                                        mac,
+                                        str(self._plugwise_nodes[mac]._maintenance_interval),
+                                    )
+                                    self._plugwise_nodes[mac].set_available(False)
+
                     # Only power use updates for supported nodes
                     if isinstance(
                         self._plugwise_nodes[mac], PlugwiseCircle
