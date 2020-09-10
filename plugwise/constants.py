@@ -74,16 +74,16 @@ SED_MAINTENANCE_INTERVAL = 3600 # 24 hours, Interval in minutes the SED will get
 SED_CLOCK_SYNC = True           # Enable or disable synchronizing clock
 SED_CLOCK_INTERVAL = 25200      # 7 days, duration in minutes the node synchronize its clock
 
-# Scan motion Sensitivity levels
 
+# Scan motion Sensitivity levels
 SCAN_SENSITIVITY_HIGH = "high"
 SCAN_SENSITIVITY_MEDIUM = "medium"
 SCAN_SENSITIVITY_OFF = "medium"
 
 # Defaults for Scan Devices
-SCAN_MOTION_RESET_TIMER = 5             # Time in minutes the motion sensor should not sense motion to report "no motion" state
-SCAN_SENSITIVITY = SCAN_SENSITIVITY_MEDIUM   # Default sensitivity of the motion sensors
-SCAN_DAYLIGHT_MODE = False            # Light override 
+SCAN_MOTION_RESET_TIMER = 5                 # Time in minutes the motion sensor should not sense motion to report "no motion" state
+SCAN_SENSITIVITY = SCAN_SENSITIVITY_MEDIUM  # Default sensitivity of the motion sensors
+SCAN_DAYLIGHT_MODE = False                  # Light override 
 
 # Sense calculations
 SENSE_HUMIDITY_MULTIPLIER = 125
@@ -100,7 +100,7 @@ TIME_MILLISECONDS = "ms"
 POWER_WATT = "W"
 ENERGY_KILO_WATT_HOUR = "kWh"
 ENERGY_WATT_HOUR = "Wh"
-CELSIUS = "C"
+CELSIUS = "°C"
 
 # Sensors
 SENSOR_AVAILABLE = {
@@ -179,13 +179,13 @@ SENSOR_SWITCH = {
     "id": "switch",
     "name": "switch",
     "state": "get_switch_state",
-    "unit": "state"
+    "unit": "state",
 }
 SENSOR_TEMPERATURE = {
     "id": "temperature",
     "name": "Temperature",
     "state": "get_temperature",
-    "unit": CELSIUS
+    "unit": CELSIUS,
 }
 
 # TODO: Need to validate RSSI sensors
