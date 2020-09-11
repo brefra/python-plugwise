@@ -70,7 +70,7 @@ NODE_TYPE_STEALTH = 9       #AME_STEALTH_ZE
 # Defaults for SED's (Sleeping End Devices)
 SED_STAY_ACTIVE = 10            # Time in seconds the SED keep itself awake to receive and respond to other messages
 SED_SLEEP_FOR = 60              # Time in minutes the SED will sleep
-SED_MAINTENANCE_INTERVAL = 3600 # 24 hours, Interval in minutes the SED will get awake and notify it's available for maintenance purposes
+SED_MAINTENANCE_INTERVAL = 1440 # 24 hours, Interval in minutes the SED will get awake and notify it's available for maintenance purposes
 SED_CLOCK_SYNC = True           # Enable or disable synchronizing clock
 SED_CLOCK_INTERVAL = 25200      # 7 days, duration in minutes the node synchronize its clock
 
