@@ -968,14 +968,14 @@ class stick(object):
                         # Check availability state of SED's
                         if isinstance(self._plugwise_nodes[mac], NodeSED):
                             if self._plugwise_nodes[mac].get_available():
-                                if self._plugwise_nodes[mac].last_update > (
+                                if self._plugwise_nodes[mac].last_update < (
                                     datetime.now()
                                     - timedelta(
                                         minutes=(
                                             self._plugwise_nodes[
                                                 mac
                                             ]._maintenance_interval
-                                            * 2
+                                            + 1
                                         )
                                     )
                                 ):
