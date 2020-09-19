@@ -11,13 +11,20 @@ import threading
 from datetime import datetime, timedelta
 from plugwise.constants import (
     ACCEPT_JOIN_REQUESTS,
+    ACK_CLOCK_SET,
     ACK_ERROR,
+    ACK_ON,
+    ACK_OFF,
+    ACK_SLEEP_SET,
+    ACK_SUCCESS,
+    ACK_REAL_TIME_CLOCK_SET,
     ACK_TIMEOUT,
     CB_JOIN_REQUEST,
     CB_NEW_NODE,
     MAX_TIME_DRIFT,
     MESSAGE_TIME_OUT,
     MESSAGE_RETRY,
+    NACK_ON_OFF,
     NODE_TYPE_STICK,
     NODE_TYPE_CIRCLE_PLUS,
     NODE_TYPE_CIRCLE,
@@ -39,6 +46,8 @@ from plugwise.exceptions import (
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
+    CircleClockGetRequest,
+    CircleClockSetRequest,
     CirclePlusScanRequest,
     CircleCalibrationRequest,
     CirclePlusRealTimeClockGetRequest,
@@ -47,8 +56,6 @@ from plugwise.messages.requests import (
     CircleSwitchRelayRequest,
     NodeAllowJoiningRequest,
     NodeAddRequest,
-    CircleClockGetRequest,
-    CircleClockSetRequest,
     NodeInfoRequest,
     NodePingRequest,
     NodeRequest,
@@ -56,16 +63,17 @@ from plugwise.messages.requests import (
     StickInitRequest,
 )
 from plugwise.messages.responses import (
-    CirclePlusScanResponse,
     CircleCalibrationResponse,
+    CircleClockResponse,
     CirclePlusRealTimeClockResponse,
+    CirclePlusScanResponse,
     CirclePowerUsageResponse,
-    CircleSwitchRelayResponse,
+    NodeAckSmallResponse,
+    NodeAckLargeResponse,
+    NodeAwakeResponse,
+    NodeInfoResponse,
     NodeJoinAckResponse,
     NodeJoinAvailableResponse,
-    NodeAwakeResponse,
-    CircleClockResponse,
-    NodeInfoResponse,
     NodePingResponse,
     NodeRemoveResponse,
     NodeResponse,
@@ -496,7 +504,7 @@ class stick(object):
         elif isinstance(request, NodePingRequest):
             response_message = NodePingResponse()
         elif isinstance(request, CircleSwitchRelayRequest):
-            response_message = CircleSwitchRelayResponse()
+            response_message = NodeAckLargeResponse()
         elif isinstance(request, CircleCalibrationRequest):
             response_message = CircleCalibrationResponse()
         elif isinstance(request, CirclePlusScanRequest):
@@ -675,14 +683,81 @@ class stick(object):
     def new_message(self, message):
         """ Received message from Plugwise Zigbee network """
         assert isinstance(message, NodeResponse)
-        mac = message.mac.decode("utf-8")
-        self.logger.debug(
-            "New %s message with seq id %s received from %s",
-            message.__class__.__name__,
-            str(message.seq_id),
-            mac,
-        )
-        if isinstance(message, StickInitResponse):
+        if not isinstance(message, NodeAckSmallResponse):
+            mac = message.mac.decode("utf-8")
+            self.logger.debug(
+                "New %s message with seq id %s received from %s",
+                message.__class__.__name__,
+                str(message.seq_id),
+                mac,
+            )
+        else:
+            self.logger.debug(
+                "New %s message with seq id %s received",
+                message.__class__.__name__,
+                str(message.seq_id),
+            )
+        if isinstance(message, NodeAckSmallResponse):
+            self.last_ack_seq_id = message.seq_id
+            if message.ack_id == ACK_SUCCESS:
+                self.logger.debug(
+                    "Success acknowledge message received for request with sequence id %s",
+                    str(message.seq_id),
+                )
+            elif message.ack_id == ACK_CLOCK_SET:
+                self.logger.debug(
+                    "Success acknowledge message received for CircleClockSetRequest with sequence id %s",
+                    str(message.seq_id),
+                )
+                self.message_processed(message.seq_id, message.ack_id)
+            elif message.ack_id == ACK_REAL_TIME_CLOCK_SET:
+                self.logger.debug(
+                    "Success acknowledge message received for CirclePlusRealTimeClockSetRequest with sequence id %s",
+                    str(message.seq_id),
+                )
+                self.stick.message_processed(message.seq_id, message.ack_id)
+            elif message.ack_id == ACK_SLEEP_SET:
+                self.logger.debug(
+                    "Success acknowledge message received for NodeSleepConfigRequest with sequence id %s",
+                    str(message.seq_id),
+                )
+                self.stick.message_processed(message.seq_id, message.ack_id)
+            elif message.ack_id == ACK_TIMEOUT:
+                # Timeout, no last ack
+                self.logger.debug(
+                    "Timeout response received for request with sequence id %s",
+                    str(message.seq_id),
+                )
+                self.message_processed(message.seq_id, message.ack_id)
+            elif message.ack_id == ACK_ERROR:
+                # Error, no last ack
+                self.logger.info(
+                    "Error response received for request with sequence id %s",
+                    str(message.seq_id),
+                )
+                self.message_processed(message.seq_id, message.ack_id)
+            else:
+                self.logger.info(
+                    "Unmanaged NodeAckSmallResponse message received with sequence id %s", str(message.ack_id)
+                )
+        elif isinstance(message, NodeAckLargeResponse):
+            self.last_ack_seq_id = message.seq_id
+            if self._plugwise_nodes.get(mac):
+                if message.ack_id == ACK_ON or message.ack_id == ACK_OFF:
+                    self._plugwise_nodes[mac].on_message(message)
+                elif message.ack_id == NACK_ON_OFF:
+                    self.logger.debug(
+                        "No acknowledge message received for CircleSwitchRelayRequest with sequence id %s",
+                        str(message.seq_id),
+                    )
+                    self.message_processed(message.seq_id, message.ack_id)
+                else:
+                    self.logger.info(
+                        "Unmanaged NodeAckLargeResponse '%s' message received for %s with sequence id %s",
+                        str(message.ack_id),
+                        mac,
+                    )
+        elif isinstance(message, StickInitResponse):
             self._mac_stick = message.mac
             if message.network_is_online.value == 1:
                 self.network_online = True
@@ -793,7 +868,7 @@ class stick(object):
                 self._messages_for_undiscovered_nodes.append(message)
                 self.discover_node(mac)
 
-    def message_processed(self, seq_id, ack_response=None):
+    def message_processed(self, seq_id, ack_response=None, mac=None):
         """ Execute callback of received messages """
         if seq_id in self.expected_responses:
             # excute callback at response of message
@@ -840,7 +915,7 @@ class stick(object):
                                     str(MESSAGE_RETRY + 1),
                                 )
                                 self._plugwise_nodes[mac].set_available(False)
-                elif ack_response == ACK_ERROR:
+                elif ack_response == ACK_ERROR or ack_response == NACK_ON_OFF:
                     mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
                         self.logger.debug(

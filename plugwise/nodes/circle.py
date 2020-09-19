@@ -6,6 +6,8 @@ Plugwise Circle node object
 import logging
 from datetime import date, datetime, timedelta
 from plugwise.constants import (
+    ACK_OFF,
+    ACK_ON,
     MAX_TIME_DRIFT,
     SENSOR_AVAILABLE,
     SENSOR_PING,
@@ -41,7 +43,7 @@ from plugwise.messages.responses import (
     CirclePowerBufferResponse,
     CirclePowerUsageResponse,
     CirclePlusScanResponse,
-    CircleSwitchRelayResponse,
+    NodeAckLargeResponse,
 )
 from plugwise.util import Int
 
@@ -128,14 +130,9 @@ class PlugwiseCircle(PlugwiseNode):
                     self.get_mac(),
                 )
                 self._request_calibration()
-        elif isinstance(message, CircleSwitchRelayResponse):
+        elif isinstance(message, NodeAckLargeResponse):
             self._response_switch(message)
-            self.stick.logger.debug(
-                "Relay update for %s, last update %s",
-                self.get_mac(),
-                str(self.last_update),
-            )
-            self.stick.message_processed(message.seq_id)
+            self.stick.message_processed(message.seq_id, message.ack_id)
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
             self.stick.message_processed(message.seq_id)
@@ -220,14 +217,28 @@ class PlugwiseCircle(PlugwiseNode):
 
     def _response_switch(self, message):
         """Process switch response message"""
-        if message.relay_state == b"D8":
+        if message.ack_id == ACK_ON:
+            self.stick.logger.debug(
+                "Acknowledge message received for %s, relay is switched on",
+                self.get_mac(),
+            )
             if not self._relay_state:
                 self._relay_state = True
                 self.do_callback(SWITCH_RELAY["id"])
-        else:
+        elif message.ack_id == ACK_OFF:
+            self.stick.logger.debug(
+                "Acknowledge message received for %s, relay is switched off",
+                self.get_mac(),
+            )
             if self._relay_state:
                 self._relay_state = False
                 self.do_callback(SWITCH_RELAY["id"])
+        else:
+            self.stick.logger.error(
+                "Unknown ack message id %s received for %s",
+                str(message.ack_id),
+                self.get_mac(),
+            )
 
     def _response_power_usage(self, message):
         # Sometimes the circle returns -1 for some of the pulse counters

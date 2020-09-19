@@ -4,6 +4,8 @@ import logging
 from plugwise.constants import (
     ACK_CLOCK_SET,
     ACK_ERROR,
+    ACK_ON,
+    ACK_OFF,
     ACK_REAL_TIME_CLOCK_SET,
     ACK_SUCCESS,
     ACK_SLEEP_SET,
@@ -21,8 +23,9 @@ from plugwise.messages.responses import (
     CirclePlusScanResponse,  # 0019
     CirclePowerBufferResponse,  # 0049
     CirclePowerUsageResponse,  # 0013
-    CircleSwitchRelayResponse,  # 0099
     CircleClockResponse,  # 003F
+    NodeAckSmallResponse,  # 0000
+    NodeAckLargeResponse,  # 0000
     NodeFeaturesResponse,  # 0060
     NodeInfoResponse,  # 0024
     NodeJoinAvailableResponse,  # 0006
@@ -113,54 +116,24 @@ class PlugwiseParser(object):
                         self._message = NodeAwakeResponse()
                     elif seq_id == b"FFFF":
                         self._message = NodeSwitchGroupResponse()
-                    elif footer_index == 20:
-                        # Acknowledge message
-                        ack_id = int(self._buffer[12:16], 16)
-                        self.stick.last_ack_seq_id = seq_id
-                        if ack_id == ACK_SUCCESS:
-                            self.stick.logger.debug(
-                                "Success acknowledge on message request with sequence id %s",
-                                str(seq_id),
-                            )
-                        elif (
-                            ack_id == ACK_CLOCK_SET or ack_id == ACK_REAL_TIME_CLOCK_SET
-                        ):
-                            self.stick.logger.debug(
-                                "Success acknowledge on CircleClockSetRequest or CirclePlusRealTimeClockSetRequest message request with sequence id %s",
-                                str(seq_id),
-                            )
-                            self.stick.message_processed(seq_id, ack_id)
-                        elif ack_id == ACK_SLEEP_SET:
-                            self.stick.logger.debug(
-                                "Success acknowledge on NodeSleepConfigRequest message request with sequence id %s",
-                                str(seq_id),
-                            )
-                            self.stick.message_processed(seq_id, ack_id)
-                        elif ack_id == ACK_TIMEOUT:
-                            self.stick.logger.debug(
-                                "Timeout acknowledge on message request with sequence id %s",
-                                str(seq_id),
-                            )
-                            self.stick.message_processed(seq_id, ack_id)
-                        elif ack_id == ACK_ERROR:
-                            self.stick.logger.info(
-                                "Error acknowledge on message request with sequence id %s",
-                                str(seq_id),
-                            )
-                            self.stick.message_processed(seq_id, ack_id)
-                        else:
-                            self.stick.logger.debug(
-                                "Acknowledge message type %s received", str(ack_id)
-                            )
-                    elif footer_index < 28:
-                        self.stick.logger.debug(
-                            "Received message %s to small, skip parsing",
-                            self._buffer[: footer_index + 2],
-                        )
+
                     else:
                         # Footer and Header available, check for known message id's
                         message_id = self._buffer[4:8]
-                        if message_id == b"0002":
+                        if message_id == b"0000":
+                            if footer_index == 20:
+                                # Short acknowledge message without MAC
+                                self._message = NodeAckSmallResponse()
+                            elif footer_index == 36:
+                                # Large ack message with a MAC
+                                self._message = NodeAckLargeResponse()
+                            else:
+                                self.stick.logger.error(
+                                    "Skip unknown ACK message size of %s : %s",
+                                    str(footer_index + 2),
+                                    str(self._buffer[: footer_index + 2]),
+                                )
+                        elif message_id == b"0002":
                             self._message = CirclePlusQueryResponse()
                         elif message_id == b"0003":
                             self._message = CirclePlusQueryEndResponse()
@@ -190,10 +163,20 @@ class PlugwiseParser(object):
                             self._message = CirclePowerBufferResponse()
                         elif message_id == b"0060":
                             self._message = NodeFeaturesResponse()
-                        elif message_id == b"0099":
-                            self._message = CircleSwitchRelayResponse()
+
+                        elif footer_index < 28:
+                            self.stick.logger.error(
+                                "Received message %s to small, skip parsing",
+                                self._buffer[: footer_index + 2],
+                            )
+
                         else:
                             # Lookup expected message based on request
+                            self.stick.logger.error(
+                                "Unknown message, id=%s, data=%s",
+                                str(message_id),
+                                str(self._buffer[: footer_index + 2]),
+                            )
                             if message_id != b"0000":
                                 self.stick.logger.debug(
                                     "Message id %s",
@@ -214,7 +197,7 @@ class PlugwiseParser(object):
                                 )
                                 self.stick.logger.debug(
                                     "Message %s",
-                                    self._buffer[: footer_index + 2],
+                                    str(self._buffer[: footer_index + 2]),
                                 )
                     # Decode message
                     if isinstance(self._message, PlugwiseMessage):

@@ -4,10 +4,11 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 All known response messages to be received from plugwise devices
 """
 from datetime import datetime
-import struct
 from plugwise.constants import (
     MESSAGE_FOOTER,
     MESSAGE_HEADER,
+    MESSAGE_LARGE,
+    MESSAGE_SMALL,
 )
 from plugwise.exceptions import ProtocolError
 from plugwise.message import PlugwiseMessage
@@ -29,44 +30,82 @@ class NodeResponse(PlugwiseMessage):
     Base class for response messages received by USB-Stick.
     """
 
-    def __init__(self):
+    def __init__(self, format_size=None):
         super().__init__()
+        self.format_size = format_size
         self.params = []
         self.mac = None
         self.timestamp = datetime.now()
         self.seq_id = None
+        self.msg_id = None
+        self.ack_id = None
+        if self.format_size == MESSAGE_SMALL:
+            self.len_correction = -12
+        elif self.format_size == MESSAGE_LARGE:
+            self.len_correction = 4
+        else:
+            self.len_correction = 0
 
     def deserialize(self, response):
         if len(response) != len(self):
             raise ProtocolError(
-                "message doesn't have expected length. expected %d bytes got %d"
+                "message doesn't have expected length, expected %d bytes got %d"
                 % (len(self), len(response))
             )
-        header, function_code, self.seq_id, self.mac = struct.unpack(
-            "4s4s4s16s", response[:28]
-        )
+        if response[:4] != MESSAGE_HEADER:
+            raise ProtocolError("Invalid message header")
+        self.msg_id = response[4:8]
+        self.seq_id = response[8:12]
+        response = response[12:]
+        if self.format_size == MESSAGE_SMALL or self.format_size == MESSAGE_LARGE:
+            self.ack_id = response[:4]
+            response = response[4:]
+        if self.format_size != MESSAGE_SMALL:
+            self.mac = response[:16]
+            response = response[16:]
 
-        # FIXME: check function code match
-        if header != MESSAGE_HEADER:
-            raise ProtocolError("broken header!")
-        # FIXME: avoid magic numbers
-        response = response[28:]
         response = self._parse_params(response)
         crc = response[:4]
 
         if response[4:] != MESSAGE_FOOTER:
-            raise ProtocolError("broken footer!")
+            raise ProtocolError("Invalid message footer")
 
     def _parse_params(self, response):
         for p in self.params:
-            myval = response[: len(p)]
-            p.deserialize(myval)
-            response = response[len(myval) :]
+            my_val = response[: len(p)]
+            p.deserialize(my_val)
+            response = response[len(my_val) :]
         return response
 
     def __len__(self):
         arglen = sum(len(x) for x in self.params)
-        return 34 + arglen
+        return 34 + arglen + self.len_correction
+
+
+class NodeAckSmallResponse(NodeResponse):
+    """
+    Acknowledge message without source MAC
+
+    Response to: Any message
+    """
+
+    ID = b"0000"
+
+    def __init__(self):
+        super().__init__(MESSAGE_SMALL)
+
+
+class NodeAckLargeResponse(NodeResponse):
+    """
+    Acknowledge message with source MAC
+
+    Response to: Any message
+    """
+
+    ID = b"0000"
+
+    def __init__(self):
+        super().__init__(MESSAGE_LARGE)
 
 
 class CirclePlusQueryResponse(NodeResponse):
@@ -161,6 +200,14 @@ class NodeJoinAvailableResponse(NodeResponse):
 class StickInitResponse(NodeResponse):
     """
     Returns the configuration and status of the USB-Stick
+
+    Optional:
+    - circle_plus_mac
+    - network_id
+
+    <argument name="upYesNo" length="2"/>
+    <argument name="extendedPanId" length="16" optional="1"/>
+    <argument name="panId" length="4" optional="1"/>
 
     Response to: StickInitRequest
     """
@@ -455,50 +502,6 @@ class NodeJoinAckResponse(NodeResponse):
     def __init__(self):
         super().__init__()
         # sequence number is always FFFD
-
-
-class CircleSwitchRelayResponse(NodeResponse):
-    """
-    Returns the relay state of node
-
-    Response to: CircleSwitchRelayRequest
-    """
-
-    ID = b"0099"
-
-    def __init__(self):
-        super().__init__()
-        self.unknown = None
-        self.relay_state = None
-
-    # custom deserialize because of different message format (relay before mac)
-    def deserialize(self, response):
-        if len(response) != len(self):
-            raise ProtocolError(
-                "message doesn't have expected length. expected %d bytes got %d"
-                % (len(self), len(response))
-            )
-        (
-            header,
-            function_code,
-            self.seq_id,
-            self.unknown,
-            self.relay_state,
-            self.mac,
-        ) = struct.unpack("4s4s4s2s2s16s", response[:32])
-
-        # FIXME: check function code match
-        if header != MESSAGE_HEADER:
-            raise ProtocolError("broken header!")
-        # FIXME: avoid magic numbers
-        response = response[32:]
-        crc = response[:4]
-
-        if response[4:] != MESSAGE_FOOTER:
-            raise ProtocolError("broken footer!")
-
-    def __len__(self):
-        return 38
 
 
 class SenseReportResponse(NodeResponse):

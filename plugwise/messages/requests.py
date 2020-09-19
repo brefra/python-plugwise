@@ -187,7 +187,7 @@ class CircleSwitchRelayRequest(NodeRequest):
     """
     switches relay on/off
 
-    Response message: CircleSwitchRelayResponse
+    Response message: NodeAckLargeResponse
     """
 
     ID = b"0017"
