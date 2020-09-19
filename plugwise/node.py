@@ -259,5 +259,5 @@ class PlugwiseNode(object):
 
     def _process_features_response(self, message):
         """ Process features message """
-        self.stick.logger.debug("Node %s supports features %s", self.get_mac(), str(message.features.value))
+        self.stick.logger.info("Node %s supports features %s", self.get_mac(), str(message.features.value))
         self._features = message.features.value

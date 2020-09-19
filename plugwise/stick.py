@@ -431,7 +431,9 @@ class stick(object):
             self.send(NodeAddRequest(bytes(mac, "utf-8"), True), callback)
             return True
         else:
-            self.logger.warning("Invalid mac '%s' address, unable to join node manually.", mac)
+            self.logger.warning(
+                "Invalid mac '%s' address, unable to join node manually.", mac
+            )
         return False
 
     def node_unjoin(self, mac: str, callback=None) -> bool:
@@ -442,7 +444,9 @@ class stick(object):
             )
             return True
         else:
-            self.logger.warning("Invalid mac '%s' address, unable to unjoin node manually.", mac)
+            self.logger.warning(
+                "Invalid mac '%s' address, unable to unjoin node manually.", mac
+            )
         return False
 
     def _append_node(self, mac, address, node_type):
@@ -590,7 +594,7 @@ class stick(object):
                 if timeout_counter > 10 and self._run_send_message_thread:
                     if seq_id in self.expected_responses:
                         if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                            self.logger.info(
+                            self.logger.debug(
                                 "Resend %s for %s because stick did not acknowledge request (%s)",
                                 str(
                                     self.expected_responses[seq_id][
@@ -793,11 +797,16 @@ class stick(object):
                 self._plugwise_nodes[mac].on_message(message)
         elif isinstance(message, NodeAwakeResponse):
             # Message from SED node that it is currently awake. If node is not discovered yet do discovery first.
+            self.logger.info(
+                "Received awake message '%s' from node %s",
+                str(message.awake_type.value),
+                mac,
+            )
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
             else:
-                self.logger.debug(
-                    "Received awake message from unknown node with mac %s, discover node now",
+                self.logger.info(
+                    "Received awake message from unknown node with mac %s, force to do discovery now",
                     mac,
                 )
                 self.discover_node(mac, self._discover_after_scan, True)
@@ -1055,12 +1064,24 @@ class stick(object):
                                     )
                                 ):
                                     self.logger.info(
-                                        "No messages received within expected maintenance up interval %s from node %s, mark as unavailable",
-                                        mac,
+                                        "No messages received within (%s minutes) of expected maintenance interval from node %s, mark as unavailable [%s > %s]",
                                         str(
                                             self._plugwise_nodes[
                                                 mac
                                             ]._maintenance_interval
+                                        ),
+                                        mac,
+                                        str(self._plugwise_nodes[mac].last_update),
+                                        str(
+                                            datetime.now()
+                                            - timedelta(
+                                                minutes=(
+                                                    self._plugwise_nodes[
+                                                        mac
+                                                    ]._maintenance_interval
+                                                    + 1
+                                                )
+                                            )
                                         ),
                                     )
                                     self._plugwise_nodes[mac].set_available(False)
