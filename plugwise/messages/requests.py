@@ -368,9 +368,9 @@ class NodeSleepConfigRequest(NodeRequest):
     """
     Configure timers for SED nodes to minimize battery usage
 
-    stay_active             : Duration in seconds the SED will be awake for receiving (n)acks
-    sleep_for               : Duration in minutes a SED will sleep
-    maintenance_interval    : Interval in minutes the node keeps sleeping
+    stay_active             : Duration in seconds the SED will be awake for receiving commands
+    sleep_for               : Duration in minutes the SED will be in sleeping mode and not able to respond any command
+    maintenance_interval    : Interval in minutes the node will wake up and able to receive commands
     clock_sync              : Enable/disable clock sync
     clock_interval          : Duration in minutes the node synchronize its clock
 

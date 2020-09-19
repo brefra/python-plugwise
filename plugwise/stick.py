@@ -528,7 +528,7 @@ class stick(object):
         )
 
     def _send_message_loop(self):
-        """ deamon to send messages in queue """
+        """ deamon to send messages waiting in queue """
         _send_message_loop_check = 0
         while self._run_send_message_thread:
             try:

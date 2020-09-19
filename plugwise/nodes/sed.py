@@ -2,6 +2,11 @@
 Use of this source code is governed by the MIT license found in the LICENSE file.
 
 Plugwise SED (Sleeping Endpoint Device) base object
+
+TODO: 
+- Expose awake state as sensor
+- Set available state after 2 missed awake messages
+
 """
 
 from plugwise.constants import (
