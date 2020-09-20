@@ -461,22 +461,38 @@ class stick(object):
             str(node_type),
             mac,
         )
-        if node_type == NODE_TYPE_CIRCLE:
-            if self.print_progress:
-                print("Circle node found using mac " + mac)
-            self._plugwise_nodes[mac] = PlugwiseCircle(mac, address, self)
-        elif node_type == NODE_TYPE_CIRCLE_PLUS:
+        if node_type == NODE_TYPE_CIRCLE_PLUS:
             if self.print_progress:
                 print("Circle+ node found using mac " + mac)
             self._plugwise_nodes[mac] = PlugwiseCirclePlus(mac, address, self)
-        elif node_type == NODE_TYPE_STEALTH:
+        elif node_type == NODE_TYPE_CIRCLE:
             if self.print_progress:
-                print("Stealth node found using mac " + mac)
-            self._plugwise_nodes[mac] = PlugwiseStealth(mac, address, self)
+                print("Circle node found using mac " + mac)
+            self._plugwise_nodes[mac] = PlugwiseCircle(mac, address, self)
+        elif node_type == NODE_TYPE_SWITCH:
+            if self.print_progress:
+                print("Unsupported switch node found using mac " + mac)
+            self._plugwise_nodes[mac] = None
+        elif node_type == NODE_TYPE_SENSE:
+            if self.print_progress:
+                print("Unsupported sense node found using mac " + mac)
+            self._plugwise_nodes[mac] = None
         elif node_type == NODE_TYPE_SCAN:
             if self.print_progress:
                 print("Scan node found using mac " + mac)
             self._plugwise_nodes[mac] = PlugwiseScan(mac, address, self)
+        elif node_type == NODE_TYPE_CELSIUS_SED:
+            if self.print_progress:
+                print("Unsupported Celsius SED node found using mac " + mac)
+            self._plugwise_nodes[mac] = None
+        elif node_type == NODE_TYPE_CELSIUS_NR:
+            if self.print_progress:
+                print("Unsupported Celsius NR found using mac " + mac)
+            self._plugwise_nodes[mac] = None
+        elif node_type == NODE_TYPE_STEALTH:
+            if self.print_progress:
+                print("Stealth node found using mac " + mac)
+            self._plugwise_nodes[mac] = PlugwiseStealth(mac, address, self)
         else:
             self.logger.warning("Unsupported node type '%s'", str(node_type))
             self._plugwise_nodes[mac] = None
