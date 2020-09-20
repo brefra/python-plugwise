@@ -4,8 +4,10 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 Plugwise Scan node object
 """
 from plugwise.constants import (
+    ACK_SCAN_PARAMETERS_SET,
     HA_BINARY_SENSOR,
     HA_SENSOR,
+    NACK_SCAN_PARAMETERS_SET,
     SCAN_DAYLIGHT_MODE,
     SCAN_SENSITIVITY_HIGH,
     SCAN_SENSITIVITY_MEDIUM,
@@ -20,7 +22,7 @@ from plugwise.constants import (
 )
 from plugwise.nodes.sed import NodeSED
 from plugwise.message import PlugwiseMessage
-from plugwise.messages.responses import NodeSwitchGroupResponse
+from plugwise.messages.responses import NodeAckResponse, NodeSwitchGroupResponse
 from plugwise.messages.requests import (
     ScanConfigureRequest,
     ScanLightCalibrateRequest,
@@ -45,6 +47,7 @@ class PlugwiseScan(NodeSED):
         self._daylight_mode = None
         self._sensitivity = None
 
+
     def get_node_type(self) -> str:
         """Return node type"""
         return "Scan"
@@ -66,10 +69,29 @@ class PlugwiseScan(NodeSED):
             )
             self._process_switch_group(message)
             self.stick.message_processed(message.seq_id)
+        elif isinstance(message, NodeAckResponse):
+            self._process_ack_message(message)
         else:
             self.stick.logger.info(
                 "Unsupported message %s received from %s",
                 message.__class__.__name__,
+                self.get_mac(),
+            )
+
+    def _process_ack_message(self, message):
+        """Process acknowledge message"""
+        if message.ack_id == ACK_SCAN_PARAMETERS_SET:
+            self.stick.message_processed(message.seq_id)
+        elif message.ack_id == NACK_SCAN_PARAMETERS_SET:
+            self.stick.logger.warning(
+                "Scan device %s did not accept the requested scan settings",
+                self.get_mac(),
+            )
+            self.stick.message_processed(message.seq_id, NACK_SCAN_PARAMETERS_SET)
+        else:
+            self.stick.logger.info(
+                "Unsupported ack message %s received for %s",
+                str(message.ack_id),
                 self.get_mac(),
             )
 
@@ -117,4 +139,10 @@ class PlugwiseScan(NodeSED):
             ScanConfigureRequest(self.mac, motion_reset_timer, sensitivity_value, daylight_mode),
             callback,
         )
+
+    def SetMotionAction(self, callback=None):
+        """Queue Configure Scan to signal motion"""
+        # TODO:
+
+        # self._queue_request(NodeSwitchGroupRequest(self.mac), callback)
 

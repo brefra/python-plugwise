@@ -2,14 +2,6 @@
 
 import logging
 from plugwise.constants import (
-    ACK_CLOCK_SET,
-    ACK_ERROR,
-    ACK_ON,
-    ACK_OFF,
-    ACK_REAL_TIME_CLOCK_SET,
-    ACK_SUCCESS,
-    ACK_SLEEP_SET,
-    ACK_TIMEOUT,
     MESSAGE_FOOTER,
     MESSAGE_HEADER,
 )
@@ -24,8 +16,9 @@ from plugwise.messages.responses import (
     CirclePowerBufferResponse,  # 0049
     CirclePowerUsageResponse,  # 0013
     CircleClockResponse,  # 003F
-    NodeAckSmallResponse,  # 0000
     NodeAckLargeResponse,  # 0000
+    NodeAckResponse,  # 0100
+    NodeAckSmallResponse,  # 0000
     NodeFeaturesResponse,  # 0060
     NodeInfoResponse,  # 0024
     NodeJoinAvailableResponse,  # 0006
@@ -34,6 +27,7 @@ from plugwise.messages.responses import (
     NodeSwitchGroupResponse,  # 0056
     NodeRemoveResponse,  # 001D
     NodeAwakeResponse,  # 004F
+    SenseReportResponse,  # 0105
     StickInitResponse,  # 0011
 )
 from plugwise.util import inc_seq_id
@@ -164,6 +158,8 @@ class PlugwiseParser(object):
                         elif message_id == b"0060":
                             self._message = NodeFeaturesResponse()
 
+                        elif message_id == b"0100":
+                            self._message = NodeAckResponse()
                         elif footer_index < 28:
                             self.stick.logger.error(
                                 "Received message %s to small, skip parsing",

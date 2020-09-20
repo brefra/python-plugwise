@@ -86,9 +86,10 @@ class NodeAddRequest(NodeRequest):
 
 class NodeAllowJoiningRequest(NodeRequest):
     """
-    Enable or disable receiving joining request of unjoined nodes
+    Enable or disable receiving joining request of unjoined nodes.
+    Circle+ node will respond with an acknowledge message
 
-    Response message: ???
+    Response message: NodeAckLargeResponse
     """
 
     ID = b"0008"

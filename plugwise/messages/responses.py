@@ -504,6 +504,21 @@ class NodeJoinAckResponse(NodeResponse):
         # sequence number is always FFFD
 
 
+class NodeAckResponse(NodeResponse):
+    """
+    Acknowledge message in regular format
+    Sent by nodes supporting plugwise 2.4 protocol version
+
+    Response to: 
+    """
+
+    ID = b"0100"
+
+    def __init__(self):
+        super().__init__()
+        self.ack_id = Int(0, length=2)
+
+
 class SenseReportResponse(NodeResponse):
     """
     Returns the current temperature and humidity of a Sense node.

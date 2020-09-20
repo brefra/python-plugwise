@@ -10,6 +10,7 @@ TODO:
 """
 
 from plugwise.constants import (
+    ACK_SLEEP_SET,
     SED_CLOCK_INTERVAL,
     SED_CLOCK_SYNC,
     SED_MAINTENANCE_INTERVAL,
@@ -21,7 +22,7 @@ from plugwise.constants import (
 )
 from plugwise.node import PlugwiseNode
 from plugwise.message import PlugwiseMessage
-from plugwise.messages.responses import NodeAwakeResponse
+from plugwise.messages.responses import NodeAckResponse, NodeAwakeResponse
 from plugwise.messages.requests import (
     NodeInfoRequest,
     NodePingRequest,
@@ -45,6 +46,12 @@ class NodeSED(PlugwiseNode):
         if isinstance(message, NodeAwakeResponse):
             self._process_awake_response(message)
             self.stick.message_processed(message.seq_id)
+        elif isinstance(message, NodeAckResponse):
+            if message.ack_id == ACK_SLEEP_SET:
+                self._maintenance_interval = self._new_maintenance_interval
+                self.stick.message_processed(message.seq_id)
+            else:
+                self._on_SED_message(message)
         else:
             self._on_SED_message(message)
 
