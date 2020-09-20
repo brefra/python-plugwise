@@ -104,15 +104,15 @@ class PlugwiseParser(object):
                         "Valid message footer found at index %s", str(footer_index)
                     )
                     seq_id = self._buffer[8:12]
+                    # First check for known sequence ID's
                     if seq_id == b"FFFD":
                         self._message = NodeJoinAckResponse()
                     elif seq_id == b"FFFE":
                         self._message = NodeAwakeResponse()
                     elif seq_id == b"FFFF":
                         self._message = NodeSwitchGroupResponse()
-
                     else:
-                        # Footer and Header available, check for known message id's
+                        # No fixed sequence ID, Continue at message ID
                         message_id = self._buffer[4:8]
                         if message_id == b"0000":
                             if footer_index == 20:
@@ -157,7 +157,6 @@ class PlugwiseParser(object):
                             self._message = CirclePowerBufferResponse()
                         elif message_id == b"0060":
                             self._message = NodeFeaturesResponse()
-
                         elif message_id == b"0100":
                             self._message = NodeAckResponse()
                         elif footer_index < 28:
@@ -165,11 +164,10 @@ class PlugwiseParser(object):
                                 "Received message %s to small, skip parsing",
                                 self._buffer[: footer_index + 2],
                             )
-
                         else:
                             # Lookup expected message based on request
-                            self.stick.logger.error(
-                                "Unknown message, id=%s, data=%s",
+                            self.stick.logger.info(
+                                "Unknown message received, id=%s, data=%s",
                                 str(message_id),
                                 str(self._buffer[: footer_index + 2]),
                             )
