@@ -159,6 +159,8 @@ class PlugwiseParser(object):
                             self._message = NodeFeaturesResponse()
                         elif message_id == b"0100":
                             self._message = NodeAckResponse()
+                        elif message_id == b"0105":
+                            self._message = SenseReportResponse()
                         elif footer_index < 28:
                             self.stick.logger.error(
                                 "Received message %s to small, skip parsing",
