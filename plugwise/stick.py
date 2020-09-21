@@ -771,7 +771,11 @@ class stick(object):
                     )
         elif isinstance(message, NodeAckLargeResponse):
             if self._plugwise_nodes.get(mac):
-                if message.ack_id == ACK_ON or message.ack_id == ACK_OFF:
+                if (
+                    message.ack_id == ACK_ON
+                    or message.ack_id == ACK_OFF
+                    or message.ack_id == ACK_SLEEP_SET
+                ):
                     self.last_ack_seq_id = message.seq_id
                     self._plugwise_nodes[mac].on_message(message)
                 elif message.ack_id == ACK_ACCEPT_JOIN_REQUEST:
@@ -817,25 +821,25 @@ class stick(object):
                 mac,
             )
             if self._plugwise_nodes.get(mac):
-                if message.ack_id == ACK_SLEEP_SET:
-                    self.last_ack_seq_id = message.seq_id
-                    self._plugwise_nodes[mac].on_message(message)
+                if self.expected_responses.get(message.seq_id):
+                    self.logger.info(
+                        "Unmanaged NodeAckResponse %s message received from %s for request %s with sequence id %s",
+                        str(message.ack_id),
+                        mac,
+                        str(
+                            self.expected_responses[message.seq_id][
+                                1
+                            ].__class__.__name__
+                        ),
+                        str(message.seq_id),
+                    )
                 else:
-                    if self.expected_responses.get(message.seq_id):
-                        self.logger.info(
-                            "Unmanaged NodeAckResponse %s message received from %s for request %s with sequence id %s",
-                            str(message.ack_id),
-                            mac,
-                            str(self.expected_responses[message.seq_id][1].__class__.__name__),
-                            str(message.seq_id),
-                        )
-                    else:
-                        self.logger.info(
-                            "Unmanaged NodeAckResponse %s message received from %s for unknown request with sequence id %s",
-                            str(message.ack_id),
-                            mac,
-                            str(message.seq_id),
-                        )
+                    self.logger.info(
+                        "Unmanaged NodeAckResponse %s message received from %s for unknown request with sequence id %s",
+                        str(message.ack_id),
+                        mac,
+                        str(message.seq_id),
+                    )
 
         elif isinstance(message, StickInitResponse):
             self._mac_stick = message.mac
