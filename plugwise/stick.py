@@ -760,7 +760,11 @@ class stick(object):
                     self.logger.info(
                         "Unmanaged NodeAckSmallResponse %s message received for request %s with sequence id %s",
                         str(message.ack_id),
-                        str(self.expected_responses[message.seq_id][1].__class__.__name__),
+                        str(
+                            self.expected_responses[message.seq_id][
+                                1
+                            ].__class__.__name__
+                        ),
                         str(message.seq_id),
                     )
                 else:
@@ -797,7 +801,11 @@ class stick(object):
                             "Unmanaged NodeAckLargeResponse %s message received from %s for request %s with sequence id %s",
                             str(message.ack_id),
                             mac,
-                            str(self.expected_responses[message.seq_id][1].__class__.__name__),
+                            str(
+                                self.expected_responses[message.seq_id][
+                                    1
+                                ].__class__.__name__
+                            ),
                             str(message.seq_id),
                         )
                     else:
