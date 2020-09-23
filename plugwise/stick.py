@@ -13,7 +13,7 @@ from plugwise.constants import (
     ACCEPT_JOIN_REQUESTS,
     ACK_CLOCK_SET,
     ACK_ERROR,
-    ACK_ACCEPT_JOIN_REQUEST,
+    ACK_ACCEPT_JOINING_REQUEST,
     ACK_ON,
     ACK_OFF,
     ACK_SLEEP_SET,
@@ -782,8 +782,7 @@ class stick(object):
                 ):
                     self.last_ack_seq_id = message.seq_id
                     self._plugwise_nodes[mac].on_message(message)
-                elif message.ack_id == ACK_ACCEPT_JOIN_REQUEST:
-                    self.last_ack_seq_id = message.seq_id
+                elif message.ack_id == ACK_ACCEPT_JOINING_REQUEST:
                     self.logger.debug(
                         "acknowledge message received for NodeAllowJoiningRequest with sequence id %s",
                         str(message.seq_id),
