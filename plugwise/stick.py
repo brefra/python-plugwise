@@ -710,6 +710,7 @@ class stick(object):
     def new_message(self, message):
         """ Received message from Plugwise Zigbee network """
         assert isinstance(message, NodeResponse)
+        self.last_ack_seq_id = message.seq_id
         if not isinstance(message, NodeAckSmallResponse):
             mac = message.mac.decode("utf-8")
             self.logger.debug(
@@ -725,7 +726,6 @@ class stick(object):
                 str(message.seq_id),
             )
         if isinstance(message, NodeAckSmallResponse):
-            self.last_ack_seq_id = message.seq_id
             if message.ack_id == ACK_SUCCESS:
                 self.logger.debug(
                     "Success acknowledge message received for request with sequence id %s",
@@ -788,7 +788,6 @@ class stick(object):
                     or message.ack_id == ACK_OFF
                     or message.ack_id == ACK_SLEEP_SET
                 ):
-                    self.last_ack_seq_id = message.seq_id
                     self._plugwise_nodes[mac].on_message(message)
                 elif message.ack_id == ACK_ACCEPT_JOINING_REQUEST:
                     self.logger.debug(
