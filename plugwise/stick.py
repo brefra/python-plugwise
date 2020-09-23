@@ -26,6 +26,7 @@ from plugwise.constants import (
     MESSAGE_TIME_OUT,
     MESSAGE_RETRY,
     NACK_ON_OFF,
+    NACK_REAL_TIME_CLOCK_SET,
     NACK_SCAN_PARAMETERS_SET,
     NACK_SLEEP_SET,
     NODE_TYPE_STICK,
@@ -742,6 +743,12 @@ class stick(object):
                     str(message.seq_id),
                 )
                 self.stick.message_processed(message.seq_id, message.ack_id)
+            elif message.ack_id == NACK_REAL_TIME_CLOCK_SET:
+                self.logger.debug(
+                    "No acknowledge to CirclePlusRealTimeClockSetRequest with sequence id %s",
+                    str(message.seq_id),
+                )
+                self.stick.message_processed(message.seq_id, message.ack_id)
             elif message.ack_id == ACK_TIMEOUT:
                 # Timeout, no last ack
                 self.logger.debug(
@@ -1017,6 +1024,7 @@ class stick(object):
                     or ack_response == NACK_ON_OFF
                     or ack_response == NACK_SCAN_PARAMETERS_SET
                     or ack_response == NACK_SLEEP_SET
+                    or ack_response == NACK_REAL_TIME_CLOCK_SET
                 ):
                     mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
