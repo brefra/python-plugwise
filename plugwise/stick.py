@@ -27,6 +27,7 @@ from plugwise.constants import (
     MESSAGE_RETRY,
     NACK_ON_OFF,
     NACK_SCAN_PARAMETERS_SET,
+    NACK_SLEEP_SET,
     NODE_TYPE_STICK,
     NODE_TYPE_CELSIUS_SED,
     NODE_TYPE_CELSIUS_NR,
@@ -1015,6 +1016,7 @@ class stick(object):
                     ack_response == ACK_ERROR
                     or ack_response == NACK_ON_OFF
                     or ack_response == NACK_SCAN_PARAMETERS_SET
+                    or ack_response == NACK_SLEEP_SET
                 ):
                     mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
                     if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
