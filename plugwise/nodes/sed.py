@@ -46,7 +46,6 @@ class NodeSED(PlugwiseNode):
         """
         if isinstance(message, NodeAwakeResponse):
             self._process_awake_response(message)
-            self.stick.message_processed(message.seq_id)
         elif isinstance(message, NodeAckLargeResponse):
             if message.ack_id == ACK_SLEEP_SET:
                 self._maintenance_interval = self._new_maintenance_interval

@@ -68,7 +68,6 @@ class PlugwiseScan(NodeSED):
                 self.get_mac(),
             )
             self._process_switch_group(message)
-            self.stick.message_processed(message.seq_id)
         elif isinstance(message, NodeAckResponse):
             self._process_ack_message(message)
         else:
