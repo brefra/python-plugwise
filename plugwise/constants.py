@@ -37,7 +37,7 @@ NACK_SLEEP_SET = b"00F7" #TODO: Validate
 ACK_POWER_LOG_INTERVAL_SET = b"00F8"
 
 # Max timeout in seconds
-MESSAGE_TIME_OUT = 5
+MESSAGE_TIME_OUT = 15  # Stick responds with timeout messages after 10 sec.
 MESSAGE_RETRY = 2
 
 # plugwise year information is offset from y2k
