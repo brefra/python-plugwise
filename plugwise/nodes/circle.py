@@ -125,21 +125,19 @@ class PlugwiseCircle(PlugwiseNode):
                 )
                 self.stick.message_processed(message.seq_id)
             else:
-                self.stick.logger.debug(
+                self.stick.logger.info(
                     "Received power update for %s before calibration information is known",
                     self.get_mac(),
                 )
                 self._request_calibration()
         elif isinstance(message, NodeAckLargeResponse):
-            self._response_switch(message)
             self.stick.message_processed(message.seq_id, message.ack_id)
+            self._node_ack_response(message)
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
-            self.stick.message_processed(message.seq_id)
         elif isinstance(message, CirclePowerBufferResponse):
             if self.calibration:
                 self._response_power_buffer(message)
-                self.stick.message_processed(message.seq_id)
             else:
                 self.stick.logger.debug(
                     "Received power buffer log for %s before calibration information is known",
@@ -215,27 +213,27 @@ class PlugwiseCircle(PlugwiseNode):
         """Total power consumption of yesterday in kWh"""
         return self.power_consumption_yesterday
 
-    def _response_switch(self, message):
+    def _node_ack_response(self, message):
         """Process switch response message"""
         if message.ack_id == ACK_ON:
-            self.stick.logger.debug(
-                "Acknowledge message received for %s, relay is switched on",
-                self.get_mac(),
-            )
             if not self._relay_state:
+                self.stick.logger.debug(
+                    "Switch relay on for %s",
+                    self.get_mac(),
+                )
                 self._relay_state = True
                 self.do_callback(SWITCH_RELAY["id"])
         elif message.ack_id == ACK_OFF:
-            self.stick.logger.debug(
-                "Acknowledge message received for %s, relay is switched off",
-                self.get_mac(),
-            )
             if self._relay_state:
+                self.stick.logger.debug(
+                    "Switch relay off for %s",
+                    self.get_mac(),
+                )
                 self._relay_state = False
                 self.do_callback(SWITCH_RELAY["id"])
         else:
-            self.stick.logger.error(
-                "Unknown ack message id %s received for %s",
+            self.stick.logger.debug(
+                "Unmanaged _node_ack_response %s received for %s",
                 str(message.ack_id),
                 self.get_mac(),
             )
