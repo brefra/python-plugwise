@@ -556,15 +556,11 @@ class stick(object):
 
     def _send_message_loop(self):
         """ deamon to send messages waiting in queue """
-        _send_message_loop_check = 0
         while self._run_send_message_thread:
             try:
                 request_set = self._send_message_queue.get(block=True, timeout=1)
             except queue.Empty:
-                if _send_message_loop_check > 10:
-                    _send_message_loop_check = 0
-                else:
-                    _send_message_loop_check += 1
+                time.sleep(SLEEP_TIME)
             else:
                 if self.last_ack_seq_id:
                     # Calc new seq_id based last received ack messsage
