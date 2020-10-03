@@ -80,13 +80,11 @@ class PlugwiseScan(NodeSED):
     def _process_ack_message(self, message):
         """Process acknowledge message"""
         if message.ack_id == ACK_SCAN_PARAMETERS_SET:
-            self.stick.message_processed(message.seq_id)
         elif message.ack_id == NACK_SCAN_PARAMETERS_SET:
             self.stick.logger.warning(
                 "Scan device %s did not accept the requested scan settings",
                 self.get_mac(),
             )
-            self.stick.message_processed(message.seq_id, NACK_SCAN_PARAMETERS_SET)
         else:
             self.stick.logger.info(
                 "Unsupported ack message %s received for %s",

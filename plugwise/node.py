@@ -179,13 +179,10 @@ class PlugwiseNode(object):
                 self.last_update = message.timestamp
             if isinstance(message, NodePingResponse):
                 self._process_ping_response(message)
-                self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeInfoResponse):
                 self._process_info_response(message)
-                self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeFeaturesResponse):
                 self._process_features_response(message)
-                self.stick.message_processed(message.seq_id)
             else:
                 self._on_message(message)
                 self.set_available(True)

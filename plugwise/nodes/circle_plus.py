@@ -48,7 +48,6 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                 str(message.__class__.__name__),
                 self.get_mac(),
             )
-        self.stick.message_processed(message.seq_id)
 
     def scan_for_nodes(self, callback=None):
         """ Scan for registered nodes """

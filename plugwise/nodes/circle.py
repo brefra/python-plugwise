@@ -123,7 +123,6 @@ class PlugwiseCircle(PlugwiseNode):
                     self.get_mac(),
                     str(self.last_update),
                 )
-                self.stick.message_processed(message.seq_id)
             else:
                 self.stick.logger.info(
                     "Received power update for %s before calibration information is known",
@@ -131,7 +130,6 @@ class PlugwiseCircle(PlugwiseNode):
                 )
                 self._request_calibration()
         elif isinstance(message, NodeAckLargeResponse):
-            self.stick.message_processed(message.seq_id, message.ack_id)
             self._node_ack_response(message)
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
