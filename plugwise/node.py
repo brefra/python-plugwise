@@ -59,6 +59,10 @@ class PlugwiseNode(object):
         self._last_info_message = None
         self._features = None
 
+    def is_sed(self) -> bool:
+        """ Return if True if node SED (battery powered)"""
+        return False
+
     def get_categories(self) -> tuple:
         """ Return Home Assistant catagories supported by plugwise node """
         return self.categories

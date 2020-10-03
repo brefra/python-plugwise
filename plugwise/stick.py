@@ -1036,7 +1036,10 @@ class stick(object):
                     # Mark node as unavailable
                     mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
                     if self._plugwise_nodes.get(mac):
-                        if self._plugwise_nodes[mac].get_available():
+                        if (
+                            self._plugwise_nodes[mac].get_available()
+                            and not self._plugwise_nodes[mac].is_sed()
+                        ):
                             self.logger.info(
                                 "Mark %s as unavailabe because %s time out responses reached",
                                 mac,

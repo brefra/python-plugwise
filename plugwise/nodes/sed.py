@@ -40,6 +40,10 @@ class NodeSED(PlugwiseNode):
         self._maintenance_interval = SED_MAINTENANCE_INTERVAL
         self._new_maintenance_interval = None
 
+    def is_sed(self) -> bool:
+        """ Return if True if node SED (battery powered)"""
+        return True
+
     def _on_message(self, message):
         """
         Process received message
