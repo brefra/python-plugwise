@@ -967,94 +967,153 @@ class stick(object):
                 self._messages_for_undiscovered_nodes.append(message)
                 self.discover_node(mac)
 
-    def message_processed(self, seq_id, ack_response=None, mac=None):
+    def message_processed(self, seq_id, ack_response=None, ack_small=False):
         """ Execute callback of received messages """
+        do_callback = False
         if seq_id in self.expected_responses:
-            # excute callback at response of message
             self.logger.debug(
-                "%s request with seq id %s processed",
+                "Process response to %s with seq id %s",
                 self.expected_responses[seq_id][0].__class__.__name__,
                 str(seq_id),
             )
-            if isinstance(self.expected_responses[seq_id][1], StickInitRequest):
-                if self.expected_responses[seq_id][2]:
-                    self.expected_responses[seq_id][2]()
-            else:
-                if ack_response == ACK_TIMEOUT:
-                    if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                        mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
-                        self.logger.debug(
-                            "Network time out received for (%s of %s) of %s to %s, resend request",
-                            str(self.expected_responses[seq_id][3] + 1),
-                            str(MESSAGE_RETRY + 1),
-                            str(self.expected_responses[seq_id][1].__class__.__name__),
-                            mac,
-                        )
-                        if self._plugwise_nodes.get(mac):
-                            if self._plugwise_nodes[mac].get_available():
-                                self.send(
-                                    self.expected_responses[seq_id][1],
-                                    self.expected_responses[seq_id][2],
-                                    self.expected_responses[seq_id][3] + 1,
-                                )
+            if not ack_response:
+                do_callback = True
+            elif ack_response == ACK_SUCCESS:
+                if ack_small:
+                    self.logger.debug(
+                        "Small success acknowledge for %s with seq_id %s",
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
+                        str(seq_id),
+                    )
+                else:
+                    self.logger.info(
+                        "Large success acknowledge for %s with seq_id %s",
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
+                        str(seq_id),
+                    )
+                    do_callback = True
+            elif ack_response == ACK_ON:
+                self.logger.info(
+                    "Relay switched on acknowledge with seq_id %s",
+                    str(seq_id),
+                )
+                do_callback = True
+            elif ack_response == ACK_OFF:
+                self.logger.info(
+                    "Relay switched off acknowledge with seq_id %s",
+                    str(seq_id),
+                )
+                do_callback = True
+            elif ack_response == ACK_ACCEPT_JOINING_REQUEST:
+                self.logger.info(
+                    "Large success acknowledge for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_callback = True
+            elif ack_response == ACK_TIMEOUT:
+                # Timeout to request
+                if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                    if self.expected_responses[seq_id][1].mac == "":
+                        mac = "<empty>"
                     else:
-                        self.logger.debug(
-                            "Max (%s) network time out messages received for %s to %s, drop request",
-                            str(self.expected_responses[seq_id][3] + 1),
-                            str(self.expected_responses[seq_id][1].__class__.__name__),
-                            self.expected_responses[seq_id][1].mac.decode("utf-8"),
-                        )
-                        # Mark node as unavailable
                         mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
-                        if self._plugwise_nodes.get(mac):
-                            if self._plugwise_nodes[mac].get_available():
-                                self.logger.info(
-                                    "Mark %s as unavailabe because %s time out responses reached",
-                                    mac,
-                                    str(MESSAGE_RETRY + 1),
-                                )
-                                self._plugwise_nodes[mac].set_available(False)
-                elif (
-                    ack_response == ACK_ERROR
-                    or ack_response == NACK_ON_OFF
-                    or ack_response == NACK_SCAN_PARAMETERS_SET
-                    or ack_response == NACK_SLEEP_SET
-                    or ack_response == NACK_REAL_TIME_CLOCK_SET
-                ):
-                    mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
-                    if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                        self.logger.debug(
-                            "Error response received for (%s of %s) of %s to %s, resend request",
-                            str(self.expected_responses[seq_id][3] + 1),
-                            str(MESSAGE_RETRY + 1),
-                            str(self.expected_responses[seq_id][1].__class__.__name__),
-                            mac,
-                        )
-                        if self._plugwise_nodes.get(mac):
-                            if self._plugwise_nodes[mac].get_available():
-                                self.send(
-                                    self.expected_responses[seq_id][1],
-                                    self.expected_responses[seq_id][2],
-                                    self.expected_responses[seq_id][3] + 1,
-                                )
-                    else:
-                        self.logger.debug(
-                            "Error response received for (%s of %s) of %s to %s, drop request",
-                            str(self.expected_responses[seq_id][3] + 1),
-                            str(MESSAGE_RETRY + 1),
-                            str(self.expected_responses[seq_id][1].__class__.__name__),
-                            mac,
-                        )
-                elif ack_response == None:
-                    if self.expected_responses[seq_id][2]:
-                        try:
-                            self.expected_responses[seq_id][2]()
-                        except Exception as e:
-                            self.logger.error(
-                                "Error while executing callback after processing message : %s",
-                                e,
+                    self.logger.info(
+                        "Network time out received for (%s of %s) of %s to %s, resend request",
+                        str(self.expected_responses[seq_id][3] + 1),
+                        str(MESSAGE_RETRY + 1),
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
+                        mac,
+                    )
+                    if self._plugwise_nodes.get(mac):
+                        if self._plugwise_nodes[mac].get_available():
+                            self.send(
+                                self.expected_responses[seq_id][1],
+                                self.expected_responses[seq_id][2],
+                                self.expected_responses[seq_id][3] + 1,
                             )
-            del self.expected_responses[seq_id]
+                else:
+                    self.logger.info(
+                        "Max (%s) network time out messages received for %s to %s, drop request",
+                        str(self.expected_responses[seq_id][3] + 1),
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
+                        self.expected_responses[seq_id][1].mac.decode("utf-8"),
+                    )
+                    # Mark node as unavailable
+                    mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
+                    if self._plugwise_nodes.get(mac):
+                        if self._plugwise_nodes[mac].get_available():
+                            self.logger.info(
+                                "Mark %s as unavailabe because %s time out responses reached",
+                                mac,
+                                str(MESSAGE_RETRY + 1),
+                            )
+                            self._plugwise_nodes[mac].set_available(False)
+                del self.expected_responses[seq_id]
+            elif (
+                ack_response == ACK_ERROR
+                or ack_response == NACK_ON_OFF
+                or ack_response == NACK_SCAN_PARAMETERS_SET
+                or ack_response == NACK_SLEEP_SET
+                or ack_response == NACK_REAL_TIME_CLOCK_SET
+            ):
+                mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
+                if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                    self.logger.info(
+                        "Error response received for (%s of %s) of %s to %s, resend request",
+                        str(self.expected_responses[seq_id][3] + 1),
+                        str(MESSAGE_RETRY + 1),
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
+                        mac,
+                    )
+                    if self._plugwise_nodes.get(mac):
+                        if self._plugwise_nodes[mac].get_available():
+                            self.send(
+                                self.expected_responses[seq_id][1],
+                                self.expected_responses[seq_id][2],
+                                self.expected_responses[seq_id][3] + 1,
+                            )
+                else:
+                    self.logger.info(
+                        "Error response received for (%s of %s) of %s to %s, drop request",
+                        str(self.expected_responses[seq_id][3] + 1),
+                        str(MESSAGE_RETRY + 1),
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
+                        mac,
+                    )
+                del self.expected_responses[seq_id]
+            else:
+                self.logger.warning(
+                    "Unknown ack_response %s for %s with seq_id %s",
+                    str(ack_response),
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+
+            if do_callback:
+                if self.expected_responses[seq_id][2]:
+                    try:
+                        self.expected_responses[seq_id][2]()
+                    except Exception as e:
+                        self.logger.error(
+                            "Error while executing callback after processing message : %s",
+                            e,
+                        )
+                # Delete response
+                del self.expected_responses[seq_id]
+
+        else:
+            if not self.last_ack_seq_id:
+                if b"0000" in self.expected_responses:
+                    self.expected_responses[seq_id] = self.expected_responses[b"0000"]
+                    del self.expected_responses[b"0000"]
+                self.last_ack_seq_id = seq_id
+            else:
+                self.logger.info(
+                    "Response %s for unknown seq_id %s",
+                    str(ack_response),
+                    str(seq_id),
+                )
 
     def _watchdog_loop(self):
         """
