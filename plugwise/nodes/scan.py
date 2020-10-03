@@ -46,7 +46,9 @@ class PlugwiseScan(NodeSED):
         self._motion_reset_timer = None
         self._daylight_mode = None
         self._sensitivity = None
-
+        self._new_motion_reset_timer = None
+        self._new_daylight_mode = None
+        self._new_sensitivity = None
 
     def get_node_type(self) -> str:
         """Return node type"""
@@ -80,11 +82,9 @@ class PlugwiseScan(NodeSED):
     def _process_ack_message(self, message):
         """Process acknowledge message"""
         if message.ack_id == ACK_SCAN_PARAMETERS_SET:
-        elif message.ack_id == NACK_SCAN_PARAMETERS_SET:
-            self.stick.logger.warning(
-                "Scan device %s did not accept the requested scan settings",
-                self.get_mac(),
-            )
+            self._motion_reset_timer = self._new_motion_reset_timer
+            self._daylight_mode = self._new_daylight_mode
+            self._sensitivity = self._new_sensitivity
         else:
             self.stick.logger.info(
                 "Unsupported ack message %s received for %s",
@@ -123,17 +123,19 @@ class PlugwiseScan(NodeSED):
         callback=None,
     ):
         """Queue request to set motion reporting settings"""
-        self._motion_reset_timer = motion_reset_timer
-        self._daylight_mode = daylight_mode
+        self._new_motion_reset_timer = motion_reset_timer
+        self._new_daylight_mode = daylight_mode
         if sensitivity_level == SCAN_SENSITIVITY_HIGH:
-            sensitivity_value = 20   # b'14'
+            sensitivity_value = 20  # b'14'
         elif sensitivity_level == SCAN_SENSITIVITY_MEDIUM:
-            sensitivity_value = 30 # b'1E'
+            sensitivity_value = 30  # b'1E'
         elif sensitivity_level == SCAN_SENSITIVITY_OFF:
-            sensitivity_value = 255   # b'FF'
-        self._sensitivity = sensitivity_level
+            sensitivity_value = 255  # b'FF'
+        self._new_sensitivity = sensitivity_level
         self._queue_request(
-            ScanConfigureRequest(self.mac, motion_reset_timer, sensitivity_value, daylight_mode),
+            ScanConfigureRequest(
+                self.mac, motion_reset_timer, sensitivity_value, daylight_mode
+            ),
             callback,
         )
 
@@ -142,4 +144,3 @@ class PlugwiseScan(NodeSED):
         # TODO:
 
         # self._queue_request(NodeSwitchGroupRequest(self.mac), callback)
-
