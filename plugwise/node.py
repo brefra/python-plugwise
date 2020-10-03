@@ -11,6 +11,7 @@ from plugwise.constants import (
     SENSOR_RSSI_OUT,
     SENSOR_PING,
     SWITCH_RELAY,
+    UTF8_DECODE,
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
@@ -36,7 +37,7 @@ class PlugwiseNode(object):
                 "MAC address is in unexpected format: %s",
                 str(mac),
             )
-        self.mac = bytes(mac, encoding="utf-8")
+        self.mac = bytes(mac, encoding=UTF8_DECODE)
         self.stick = stick
         self.categories = ()
         self.sensors = ()
@@ -97,7 +98,7 @@ class PlugwiseNode(object):
 
     def get_mac(self) -> str:
         """Return mac address"""
-        return self.mac.decode("utf-8")
+        return self.mac.decode(UTF8_DECODE)
 
     def get_name(self) -> str:
         """Return unique name"""
@@ -187,7 +188,7 @@ class PlugwiseNode(object):
         else:
             self.stick.logger.debug(
                 "Skip message, mac of node (%s) != mac at message (%s)",
-                message.mac.decode("utf-8"),
+                message.mac.decode(UTF8_DECODE),
                 self.get_mac(),
             )
 

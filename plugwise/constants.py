@@ -1,4 +1,6 @@
 
+UTF8_DECODE = "utf-8"
+
 # Serial connection settings for plugwise USB stick
 BAUD_RATE = 115200
 BYTE_SIZE = 8

@@ -4,7 +4,7 @@ Use of this source code is governed by the MIT license found in the LICENSE file
 Plugwise Circle+ node object
 """
 from datetime import datetime
-from plugwise.constants import MAX_TIME_DRIFT
+from plugwise.constants import MAX_TIME_DRIFT, UTF8_DECODE
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
     CirclePlusRealTimeClockGetRequest,
@@ -68,18 +68,18 @@ class PlugwiseCirclePlus(PlugwiseCircle):
                     "Scan at address "
                     + str(message.node_address.value)
                     + " => node found with mac "
-                    + message.node_mac.value.decode("utf-8")
+                    + message.node_mac.value.decode(UTF8_DECODE)
                 )
             self.stick.logger.debug(
                 "Linked plugwise node with mac %s found",
-                message.node_mac.value.decode("utf-8"),
+                message.node_mac.value.decode(UTF8_DECODE),
             )
             if (
-                message.node_mac.value.decode("utf-8")
+                message.node_mac.value.decode(UTF8_DECODE)
                 not in self._plugwise_nodes.keys()
             ):
                 self._plugwise_nodes[
-                    message.node_mac.value.decode("utf-8")
+                    message.node_mac.value.decode(UTF8_DECODE)
                 ] = message.node_address.value
         else:
             if self.stick.print_progress:

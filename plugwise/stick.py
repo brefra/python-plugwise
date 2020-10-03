@@ -40,6 +40,7 @@ from plugwise.constants import (
     NODE_TYPE_STEALTH,
     SLEEP_TIME,
     WATCHDOG_DEAMON,
+    UTF8_DECODE,
 )
 from plugwise.connections.socket import SocketConnection
 from plugwise.connections.serial import PlugwiseUSBConnection
@@ -323,19 +324,19 @@ class stick(object):
                         None,
                     )
                     self.send(
-                        NodeInfoRequest(bytes(mac, "utf-8")),
+                        NodeInfoRequest(bytes(mac, UTF8_DECODE)),
                         callback,
                     )
                 else:
                     (firstrequest, lastrequest) = self._nodes_not_discovered[mac]
                     if not (firstrequest and lastrequest):
                         self.send(
-                            NodeInfoRequest(bytes(mac, "utf-8")),
+                            NodeInfoRequest(bytes(mac, UTF8_DECODE)),
                             callback,
                         )
                     elif force_discover:
                         self.send(
-                            NodeInfoRequest(bytes(mac, "utf-8")),
+                            NodeInfoRequest(bytes(mac, UTF8_DECODE)),
                             callback,
                         )
                 return True
@@ -435,7 +436,7 @@ class stick(object):
     def node_join(self, mac: str, callback=None) -> bool:
         """Accept node to join Plugwise network by adding it in Circle+ memory"""
         if validate_mac(mac) == True:
-            self.send(NodeAddRequest(bytes(mac, "utf-8"), True), callback)
+            self.send(NodeAddRequest(bytes(mac, UTF8_DECODE), True), callback)
             return True
         else:
             self.logger.warning(
@@ -447,7 +448,7 @@ class stick(object):
         """Remove node from the Plugwise network by deleting it from the Circle+ memory"""
         if validate_mac(mac) == True:
             self.send(
-                NodeRemoveRequest(bytes(self.circle_plus_mac, "utf-8"), mac), callback
+                NodeRemoveRequest(bytes(self.circle_plus_mac, UTF8_DECODE), mac), callback
             )
             return True
         else:
@@ -574,7 +575,7 @@ class stick(object):
                     and not isinstance(request_set[1], NodeAllowJoiningRequest)
                     and not isinstance(request_set[1], NodeAddRequest)
                 ):
-                    mac = request_set[1].mac.decode("utf-8")
+                    mac = request_set[1].mac.decode(UTF8_DECODE)
                     self.logger.info(
                         "send %s to %s using seq_id %s",
                         request_set[1].__class__.__name__,
@@ -588,7 +589,7 @@ class stick(object):
                             "Retry %s for message %s to %s",
                             str(self.expected_responses[seq_id][3]),
                             str(self.expected_responses[seq_id][1].__class__.__name__),
-                            self.expected_responses[seq_id][1].mac.decode("utf-8"),
+                            self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE),
                         )
                 else:
                     mac = ""
@@ -686,7 +687,7 @@ class stick(object):
                                     mac = "<empty>"
                                 else:
                                     mac = self.expected_responses[seq_id][1].mac.decode(
-                                        "utf-8"
+                                        UTF8_DECODE
                                     )
                                 self.logger.info(
                                     "Drop %s request for mac %s because max (%s) retries reached for seq id %s",
@@ -718,7 +719,7 @@ class stick(object):
                 self.last_ack_seq_id = b"0000"
 
         if not isinstance(message, NodeAckSmallResponse):
-            mac = message.mac.decode("utf-8")
+            mac = message.mac.decode(UTF8_DECODE)
             self.logger.info(
                 "Received %s from %s with seq_id %s",
                 message.__class__.__name__,
@@ -852,7 +853,7 @@ class stick(object):
                 self.network_online = False
             # Replace first 2 charactors by 00 for mac of circle+ node
             self.circle_plus_mac = "00" + message.circle_plus_mac.value[2:].decode(
-                "utf-8"
+                UTF8_DECODE
             )
             self.network_id = message.network_id.value
             # The first StickInitResponse gives the actual sequence ID
@@ -906,7 +907,7 @@ class stick(object):
                         "Accepting network join request for node with mac %s",
                         mac,
                     )
-                    self.send(NodeAddRequest(bytes(mac, "utf-8"), True))
+                    self.send(NodeAddRequest(bytes(mac, UTF8_DECODE), True))
                     self.discover_node(mac, self._discover_after_scan)
                 else:
                     self.logger.debug(
@@ -1010,7 +1011,7 @@ class stick(object):
                     if self.expected_responses[seq_id][1].mac == "":
                         mac = "<empty>"
                     else:
-                        mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
+                        mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
                     self.logger.info(
                         "Network time out received for (%s of %s) of %s to %s, resend request",
                         str(self.expected_responses[seq_id][3] + 1),
@@ -1030,10 +1031,10 @@ class stick(object):
                         "Max (%s) network time out messages received for %s to %s, drop request",
                         str(self.expected_responses[seq_id][3] + 1),
                         str(self.expected_responses[seq_id][1].__class__.__name__),
-                        self.expected_responses[seq_id][1].mac.decode("utf-8"),
+                        self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE),
                     )
                     # Mark node as unavailable
-                    mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
+                    mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
                     if self._plugwise_nodes.get(mac):
                         if self._plugwise_nodes[mac].get_available():
                             self.logger.info(
@@ -1050,7 +1051,7 @@ class stick(object):
                 or ack_response == NACK_SLEEP_SET
                 or ack_response == NACK_REAL_TIME_CLOCK_SET
             ):
-                mac = self.expected_responses[seq_id][1].mac.decode("utf-8")
+                mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
                 if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
                     self.logger.info(
                         "Error response received for (%s of %s) of %s to %s, resend request",
@@ -1259,7 +1260,7 @@ class stick(object):
                                     ):
                                         if mac == self.expected_responses[seq_id][
                                             1
-                                        ].mac.decode("utf-8"):
+                                        ].mac.decode(UTF8_DECODE):
                                             open_requests_found = True
                                             break
                                 if not open_requests_found:

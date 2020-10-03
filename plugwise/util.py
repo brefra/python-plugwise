@@ -11,7 +11,11 @@ import re
 import struct
 import sys
 from .exceptions import *
-from .constants import *
+from .constants import (
+    PLUGWISE_EPOCH,
+    LOGADDR_OFFSET,
+    UTF8_DECODE,
+)
 
 
 crc_fun = crcmod.mkCrcFun(0x11021, rev=False, initCrc=0x0000, xorOut=0x0000)
@@ -68,7 +72,7 @@ class BaseType(object):
         self.length = length
 
     def serialize(self):
-        return bytes(self.value, "utf-8")
+        return bytes(self.value, UTF8_DECODE)
 
     def deserialize(self, val):
         self.value = val
@@ -106,7 +110,7 @@ class Int(BaseType):
 
     def serialize(self):
         fmt = "%%0%dX" % self.length
-        return bytes(fmt % self.value, "utf-8")
+        return bytes(fmt % self.value, UTF8_DECODE)
 
     def deserialize(self, val):
         self.value = int(val, 16)
@@ -207,10 +211,10 @@ class IntDec(BaseType):
 
     def serialize(self):
         fmt = "%%0%dd" % self.length
-        return bytes(fmt % self.value, "utf-8")
+        return bytes(fmt % self.value, UTF8_DECODE)
 
     def deserialize(self, val):
-        self.value = val.decode("utf-8")
+        self.value = val.decode(UTF8_DECODE)
 
 
 class RealClockTime(CompositeType):
@@ -263,7 +267,7 @@ class Float(BaseType):
 
 class LogAddr(Int):
     def serialize(self):
-        return bytes("%08X" % ((self.value * 32) + LOGADDR_OFFSET), "utf-8")
+        return bytes("%08X" % ((self.value * 32) + LOGADDR_OFFSET), UTF8_DECODE)
 
     def deserialize(self, val):
         Int.deserialize(self, val)

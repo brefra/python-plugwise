@@ -7,6 +7,7 @@ Base for Plugwise messages
 from plugwise.constants import (
     MESSAGE_FOOTER,
     MESSAGE_HEADER,
+    UTF8_DECODE,
 )
 from plugwise.util import crc_fun
 
@@ -35,4 +36,4 @@ class PlugwiseMessage(object):
         return MESSAGE_HEADER + msg + checksum + MESSAGE_FOOTER
 
     def calculate_checksum(self, s):
-        return bytes("%04X" % crc_fun(s), "utf-8")
+        return bytes("%04X" % crc_fun(s), UTF8_DECODE)
