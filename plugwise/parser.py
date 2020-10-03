@@ -30,7 +30,6 @@ from plugwise.messages.responses import (
     SenseReportResponse,  # 0105
     StickInitResponse,  # 0011
 )
-from plugwise.util import inc_seq_id
 
 
 class PlugwiseParser(object):
