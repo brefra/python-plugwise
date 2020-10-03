@@ -704,10 +704,16 @@ class stick(object):
                 receive_timeout_checker += 1
         self.logger.debug("Receive timeout loop stopped")
 
-    def new_message(self, message):
+    def new_message(self, message: NodeResponse):
         """ Received message from Plugwise Zigbee network """
-        assert isinstance(message, NodeResponse)
-        self.last_ack_seq_id = message.seq_id
+
+        # only save last seq_id and skip special ID's FFFD, FFFE, FFFF
+        if self.last_ack_seq_id:
+            if int(self.last_ack_seq_id, 16) < int(message.seq_id, 16) < 65533:
+                self.last_ack_seq_id = message.seq_id
+            elif message.seq_id == b"0000":
+                self.last_ack_seq_id = b"0000"
+
         if not isinstance(message, NodeAckSmallResponse):
             mac = message.mac.decode("utf-8")
             self.logger.debug(
@@ -722,44 +728,28 @@ class stick(object):
                 message.__class__.__name__,
                 str(message.seq_id),
             )
+
         if isinstance(message, NodeAckSmallResponse):
             if message.ack_id == ACK_SUCCESS:
                 self.logger.debug(
                     "Success acknowledge message received for request with sequence id %s",
                     str(message.seq_id),
                 )
-            elif message.ack_id == ACK_CLOCK_SET:
-                self.logger.debug(
-                    "Success acknowledge message received for CircleClockSetRequest with sequence id %s",
-                    str(message.seq_id),
-                )
-                self.message_processed(message.seq_id, message.ack_id)
-            elif message.ack_id == ACK_REAL_TIME_CLOCK_SET:
-                self.logger.debug(
-                    "Success acknowledge message received for CirclePlusRealTimeClockSetRequest with sequence id %s",
-                    str(message.seq_id),
-                )
-                self.stick.message_processed(message.seq_id, message.ack_id)
-            elif message.ack_id == NACK_REAL_TIME_CLOCK_SET:
-                self.logger.debug(
-                    "No acknowledge to CirclePlusRealTimeClockSetRequest with sequence id %s",
-                    str(message.seq_id),
-                )
-                self.stick.message_processed(message.seq_id, message.ack_id)
+                self.message_processed(message.seq_id, message.ack_id, True)
             elif message.ack_id == ACK_TIMEOUT:
                 # Timeout, no last ack
                 self.logger.debug(
                     "Timeout response received for request with sequence id %s",
                     str(message.seq_id),
                 )
-                self.message_processed(message.seq_id, message.ack_id)
+                self.message_processed(message.seq_id, message.ack_id, True)
             elif message.ack_id == ACK_ERROR:
                 # Error, no last ack
                 self.logger.info(
                     "Error response received for request with sequence id %s",
                     str(message.seq_id),
                 )
-                self.message_processed(message.seq_id, message.ack_id)
+                self.message_processed(message.seq_id, message.ack_id, True)
             else:
                 if self.expected_responses.get(message.seq_id):
                     self.logger.info(
@@ -791,10 +781,16 @@ class stick(object):
                         "acknowledge message received for NodeAllowJoiningRequest with sequence id %s",
                         str(message.seq_id),
                     )
-                    self.message_processed(message.seq_id)
+                    self.message_processed(message.seq_id, message.ack_id)
                 elif message.ack_id == NACK_ON_OFF:
                     self.logger.debug(
                         "No acknowledge message received for CircleSwitchRelayRequest with sequence id %s",
+                        str(message.seq_id),
+                    )
+                    self.message_processed(message.seq_id, message.ack_id)
+                elif message.ack_id == ACK_CLOCK_SET:
+                    self.logger.info(
+                        "Received success response for CircleClockSetRequest with sequence id %s",
                         str(message.seq_id),
                     )
                     self.message_processed(message.seq_id, message.ack_id)
