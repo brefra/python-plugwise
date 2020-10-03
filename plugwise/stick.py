@@ -19,6 +19,7 @@ from plugwise.constants import (
     ACK_SLEEP_SET,
     ACK_SUCCESS,
     ACK_REAL_TIME_CLOCK_SET,
+    ACK_SCAN_PARAMETERS_SET,
     ACK_TIMEOUT,
     CB_JOIN_REQUEST,
     CB_NEW_NODE,
@@ -376,7 +377,7 @@ class stick(object):
                     for mac in self._nodes_to_discover:
                         if mac not in self._plugwise_nodes.keys():
                             self.logger.info(
-                                "Failed to discover node type for registered MAC '%s'. This is expected for battery powered nodes, they will be discovered at first communication",
+                                "Failed to discover node type for registered MAC '%s'. This is expected for battery powered nodes, they will be discovered at their first awake",
                                 str(mac),
                             )
                         else:
@@ -448,7 +449,8 @@ class stick(object):
         """Remove node from the Plugwise network by deleting it from the Circle+ memory"""
         if validate_mac(mac) == True:
             self.send(
-                NodeRemoveRequest(bytes(self.circle_plus_mac, UTF8_DECODE), mac), callback
+                NodeRemoveRequest(bytes(self.circle_plus_mac, UTF8_DECODE), mac),
+                callback,
             )
             return True
         else:
@@ -720,12 +722,13 @@ class stick(object):
 
         if not isinstance(message, NodeAckSmallResponse):
             mac = message.mac.decode(UTF8_DECODE)
-            self.logger.info(
-                "Received %s from %s with seq_id %s",
-                message.__class__.__name__,
-                mac,
-                str(message.seq_id),
-            )
+            if not isinstance(message, NodeAckLargeResponse):
+                self.logger.info(
+                    "Received %s from %s with seq_id %s",
+                    message.__class__.__name__,
+                    mac,
+                    str(message.seq_id),
+                )
 
         if isinstance(message, NodeAckSmallResponse):
             if message.ack_id == ACK_SUCCESS:
@@ -735,14 +738,12 @@ class stick(object):
                 )
                 self.message_processed(message.seq_id, message.ack_id, True)
             elif message.ack_id == ACK_TIMEOUT:
-                # Timeout, no last ack
                 self.logger.info(
                     "Received timeout response for request with sequence id %s",
                     str(message.seq_id),
                 )
                 self.message_processed(message.seq_id, message.ack_id, True)
             elif message.ack_id == ACK_ERROR:
-                # Error, no last ack
                 self.logger.info(
                     "Received error response for request with sequence id %s",
                     str(message.seq_id),
@@ -768,27 +769,56 @@ class stick(object):
                     )
         elif isinstance(message, NodeAckLargeResponse):
             if self._plugwise_nodes.get(mac):
-                if (
-                    message.ack_id == ACK_ON
-                    or message.ack_id == ACK_OFF
-                    or message.ack_id == ACK_SLEEP_SET
-                ):
-                    self._plugwise_nodes[mac].on_message(message)
-                elif message.ack_id == ACK_ACCEPT_JOINING_REQUEST:
+                if message.ack_id == ACK_ON:
                     self.logger.info(
-                        "Received success response for NodeAllowJoiningRequest with sequence id %s",
+                        "Received relay switched on in response for CircleSwitchRelayRequest from %s with sequence id %s",
+                        mac,
                         str(message.seq_id),
                     )
+                    self._plugwise_nodes[mac].on_message(message)
+                    self.message_processed(message.seq_id, message.ack_id)
+                elif message.ack_id == ACK_OFF:
+                    self.logger.info(
+                        "Received relay switched off in response for CircleSwitchRelayRequest from %s with sequence id %s",
+                        mac,
+                        str(message.seq_id),
+                    )
+                    self._plugwise_nodes[mac].on_message(message)
                     self.message_processed(message.seq_id, message.ack_id)
                 elif message.ack_id == NACK_ON_OFF:
                     self.logger.info(
-                        "Received no acknowledge response for CircleSwitchRelayRequest with sequence id %s",
+                        "Received failed response for CircleSwitchRelayRequest from %s with sequence id %s",
+                        mac,
+                        str(message.seq_id),
+                    )
+                    self.message_processed(message.seq_id, message.ack_id)
+                elif message.ack_id == ACK_SLEEP_SET:
+                    self.logger.info(
+                        "Received success sleep configuration response for NodeSleepConfigRequest from %s with sequence id %s",
+                        mac,
+                        str(message.seq_id),
+                    )
+                    self._plugwise_nodes[mac].on_message(message)
+                    self.message_processed(message.seq_id, message.ack_id)
+                elif message.ack_id == NACK_SLEEP_SET:
+                    self.logger.warning(
+                        "Received failed sleep configuration response for NodeSleepConfigRequest from %s with sequence id %s",
+                        mac,
+                        str(message.seq_id),
+                    )
+                    self._plugwise_nodes[mac].on_message(message)
+                    self.message_processed(message.seq_id, message.ack_id)
+                elif message.ack_id == ACK_ACCEPT_JOINING_REQUEST:
+                    self.logger.info(
+                        "Received success response for NodeAllowJoiningRequest from (circle+) %s with sequence id %s",
+                        mac,
                         str(message.seq_id),
                     )
                     self.message_processed(message.seq_id, message.ack_id)
                 elif message.ack_id == ACK_CLOCK_SET:
                     self.logger.info(
-                        "Received success response for CircleClockSetRequest with sequence id %s",
+                        "Received success response for CircleClockSetRequest from %s with sequence id %s",
+                        mac,
                         str(message.seq_id),
                     )
                     self.message_processed(message.seq_id, message.ack_id)
@@ -820,31 +850,49 @@ class stick(object):
                     str(message.seq_id),
                 )
         elif isinstance(message, NodeAckResponse):
-            self.logger.info(
-                "Received NodeAckResponse with ack id %s received from %s",
-                str(message.ack_id),
-                mac,
-            )
             if self._plugwise_nodes.get(mac):
-                if self.expected_responses.get(message.seq_id):
+                if message.ack_id == ACK_SCAN_PARAMETERS_SET:
                     self.logger.info(
-                        "Received unmanaged NodeAckResponse %s message from %s for request %s with sequence id %s",
-                        str(message.ack_id),
+                        "Received success response for ScanConfigureRequest from %s with sequence id %s",
                         mac,
-                        str(
-                            self.expected_responses[message.seq_id][
-                                1
-                            ].__class__.__name__
-                        ),
                         str(message.seq_id),
                     )
+                    self._plugwise_nodes[mac].on_message(message)
+                    self.message_processed(message.seq_id, message.ack_id)
+                elif message.ack_id == ACK_SCAN_PARAMETERS_SET:
+                    self.logger.info(
+                        "Received failed response for ScanConfigureRequest from %s with sequence id %s",
+                        mac,
+                        str(message.seq_id),
+                    )
+                    self.message_processed(message.seq_id, message.ack_id)
                 else:
-                    self.logger.info(
-                        "Received unmanaged NodeAckResponse %s message from %s for unknown request with sequence id %s",
-                        str(message.ack_id),
-                        mac,
-                        str(message.seq_id),
-                    )
+                    if self.expected_responses.get(message.seq_id):
+                        self.logger.info(
+                            "Received unmanaged NodeAckResponse %s message from %s for request %s with sequence id %s",
+                            str(message.ack_id),
+                            mac,
+                            str(
+                                self.expected_responses[message.seq_id][
+                                    1
+                                ].__class__.__name__
+                            ),
+                            str(message.seq_id),
+                        )
+                    else:
+                        self.logger.info(
+                            "Received unmanaged NodeAckResponse %s message from %s for unknown request with sequence id %s",
+                            str(message.ack_id),
+                            mac,
+                            str(message.seq_id),
+                        )
+            else:
+                self.logger.info(
+                    "Received NodeAckResponse %s message from unknown node %s with sequence id %s",
+                    str(message.ack_id),
+                    mac,
+                    str(message.seq_id),
+                )
         elif isinstance(message, StickInitResponse):
             self._mac_stick = message.mac
             if message.network_is_online.value == 1:
@@ -863,6 +911,12 @@ class stick(object):
                 seq_id = message.seq_id
             self.message_processed(seq_id)
         elif isinstance(message, NodeInfoResponse):
+            self.logger.debug(
+                "Received node info (%s) for NodeInfoRequest from %s with sequence id %s",
+                str(message.node_type.value),
+                mac,
+                str(message.seq_id),
+            )
             if not mac in self._plugwise_nodes:
                 if message.node_type.value == NODE_TYPE_CIRCLE_PLUS:
                     self._circle_plus_discovered = True
@@ -879,19 +933,23 @@ class stick(object):
                             )
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
+                self.message_processed(message.seq_id)
         elif isinstance(message, NodeAwakeResponse):
-            # Message from SED node that it is currently awake. If node is not discovered yet do discovery first.
+            # Message from SED node notifying it is currently awake.
+            # If node is not known do discovery first.
             self.logger.info(
-                "Received NodeAwakeResponse message '%s' from node %s",
+                "Received NodeAwakeResponse message (%s) from %s with sequence id %s",
                 str(message.awake_type.value),
                 mac,
+                str(message.seq_id),
             )
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
             else:
                 self.logger.info(
-                    "Received NodeAwakeResponse message from unknown node with mac %s, do discovery now",
+                    "Received NodeAwakeResponse message from unknown node with mac %s with sequence id %s, do discovery now",
                     mac,
+                    str(message.seq_id),
                 )
                 self.discover_node(mac, self._discover_after_scan, True)
         elif isinstance(message, NodeJoinAvailableResponse):
@@ -952,6 +1010,7 @@ class stick(object):
         else:
             if self._plugwise_nodes.get(mac):
                 self._plugwise_nodes[mac].on_message(message)
+                self.message_processed(message.seq_id)
             else:
                 self.logger.info(
                     "Queue %s message because node with mac %s is not discovered yet.",
@@ -964,121 +1023,109 @@ class stick(object):
     def message_processed(self, seq_id, ack_response=None, ack_small=False):
         """ Execute callback of received messages """
         do_callback = False
+        do_resend = False
         if seq_id in self.expected_responses:
             self.logger.debug(
                 "Process response to %s with seq id %s",
                 self.expected_responses[seq_id][0].__class__.__name__,
                 str(seq_id),
             )
+            if self.expected_responses[seq_id][1].mac == "":
+                mac = "<unknown>"
+            else:
+                mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
+
             if not ack_response:
                 do_callback = True
+
             elif ack_response == ACK_SUCCESS:
                 if ack_small:
                     self.logger.debug(
-                        "Small success acknowledge for %s with seq_id %s",
+                        "Process small ACK_SUCCESS acknowledge for %s with seq_id %s",
                         str(self.expected_responses[seq_id][1].__class__.__name__),
                         str(seq_id),
                     )
                 else:
-                    self.logger.info(
-                        "Large success acknowledge for %s with seq_id %s",
+                    self.logger.debug(
+                        "Process large ACK_SUCCESS acknowledge for %s from %s with seq_id %s",
                         str(self.expected_responses[seq_id][1].__class__.__name__),
+                        mac,
                         str(seq_id),
                     )
                     do_callback = True
+            elif ack_response == ACK_TIMEOUT:
+                self.logger.debug(
+                    "Process ACK_TIMEOUT for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_resend = True
+            elif ack_response == ACK_ERROR:
+                self.logger.debug(
+                    "Process ACK_ERROR for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_resend = True
             elif ack_response == ACK_ON:
-                self.logger.info(
-                    "Relay switched on acknowledge with seq_id %s",
+                self.logger.debug(
+                    "Process ACK_ON response for %s from %s with seq_id %s",
+                    self.expected_responses[seq_id][0].__class__.__name__,
+                    mac,
                     str(seq_id),
                 )
                 do_callback = True
             elif ack_response == ACK_OFF:
-                self.logger.info(
-                    "Relay switched off acknowledge with seq_id %s",
+                self.logger.debug(
+                    "Process ACK_OFF response for %s from %s with seq_id %s",
+                    self.expected_responses[seq_id][0].__class__.__name__,
+                    mac,
                     str(seq_id),
                 )
                 do_callback = True
             elif ack_response == ACK_ACCEPT_JOINING_REQUEST:
-                self.logger.info(
-                    "Large success acknowledge for %s with seq_id %s",
+                self.logger.debug(
+                    "Process ACK_ACCEPT_JOINING_REQUEST for %s from %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    mac,
+                    str(seq_id),
+                )
+                do_callback = True
+            elif ack_response == NACK_SLEEP_SET:
+                self.logger.debug(
+                    "Process NACK_SLEEP_SET for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_resend = True
+            elif ack_response == ACK_SCAN_PARAMETERS_SET:
+                self.logger.debug(
+                    "Process ACK_SCAN_PARAMETERS_SET for %s with seq_id %s",
                     str(self.expected_responses[seq_id][1].__class__.__name__),
                     str(seq_id),
                 )
                 do_callback = True
-            elif ack_response == ACK_TIMEOUT:
-                # Timeout to request
-                if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                    if self.expected_responses[seq_id][1].mac == "":
-                        mac = "<empty>"
-                    else:
-                        mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
-                    self.logger.info(
-                        "Network time out received for (%s of %s) of %s to %s, resend request",
-                        str(self.expected_responses[seq_id][3] + 1),
-                        str(MESSAGE_RETRY + 1),
-                        str(self.expected_responses[seq_id][1].__class__.__name__),
-                        mac,
-                    )
-                    if self._plugwise_nodes.get(mac):
-                        if self._plugwise_nodes[mac].get_available():
-                            self.send(
-                                self.expected_responses[seq_id][1],
-                                self.expected_responses[seq_id][2],
-                                self.expected_responses[seq_id][3] + 1,
-                            )
-                else:
-                    self.logger.info(
-                        "Max (%s) network time out messages received for %s to %s, drop request",
-                        str(self.expected_responses[seq_id][3] + 1),
-                        str(self.expected_responses[seq_id][1].__class__.__name__),
-                        self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE),
-                    )
-                    # Mark node as unavailable
-                    mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
-                    if self._plugwise_nodes.get(mac):
-                        if (
-                            self._plugwise_nodes[mac].get_available()
-                            and not self._plugwise_nodes[mac].is_sed()
-                        ):
-                            self.logger.info(
-                                "Mark %s as unavailabe because %s time out responses reached",
-                                mac,
-                                str(MESSAGE_RETRY + 1),
-                            )
-                            self._plugwise_nodes[mac].set_available(False)
-                del self.expected_responses[seq_id]
-            elif (
-                ack_response == ACK_ERROR
-                or ack_response == NACK_ON_OFF
-                or ack_response == NACK_SCAN_PARAMETERS_SET
-                or ack_response == NACK_SLEEP_SET
-                or ack_response == NACK_REAL_TIME_CLOCK_SET
-            ):
-                mac = self.expected_responses[seq_id][1].mac.decode(UTF8_DECODE)
-                if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                    self.logger.info(
-                        "Error response received for (%s of %s) of %s to %s, resend request",
-                        str(self.expected_responses[seq_id][3] + 1),
-                        str(MESSAGE_RETRY + 1),
-                        str(self.expected_responses[seq_id][1].__class__.__name__),
-                        mac,
-                    )
-                    if self._plugwise_nodes.get(mac):
-                        if self._plugwise_nodes[mac].get_available():
-                            self.send(
-                                self.expected_responses[seq_id][1],
-                                self.expected_responses[seq_id][2],
-                                self.expected_responses[seq_id][3] + 1,
-                            )
-                else:
-                    self.logger.info(
-                        "Error response received for (%s of %s) of %s to %s, drop request",
-                        str(self.expected_responses[seq_id][3] + 1),
-                        str(MESSAGE_RETRY + 1),
-                        str(self.expected_responses[seq_id][1].__class__.__name__),
-                        mac,
-                    )
-                del self.expected_responses[seq_id]
+            elif ack_response == NACK_SCAN_PARAMETERS_SET:
+                self.logger.debug(
+                    "Process NACK_SCAN_PARAMETERS_SET for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_resend = True
+            elif ack_response == NACK_ON_OFF:
+                self.logger.debug(
+                    "Process NACK_ON_OFF for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_resend = True
+            elif ack_response == NACK_REAL_TIME_CLOCK_SET:
+                self.logger.debug(
+                    "Process NACK_REAL_TIME_CLOCK_SET for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_resend = True
             else:
                 self.logger.warning(
                     "Unknown ack_response %s for %s with seq_id %s",
@@ -1086,6 +1133,85 @@ class stick(object):
                     str(self.expected_responses[seq_id][1].__class__.__name__),
                     str(seq_id),
                 )
+
+            if do_resend:
+                if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
+                    if isinstance(
+                        self.expected_responses[seq_id][1], NodeInfoRequest
+                    ) or isinstance(
+                        self.expected_responses[seq_id][1], NodePingRequest
+                    ):
+                        self.logger.info(
+                            "Resend request %s for %s, retry %s of %s",
+                            str(self.expected_responses[seq_id][1].__class__.__name__),
+                            mac,
+                            str(self.expected_responses[seq_id][3] + 1),
+                            str(MESSAGE_RETRY + 1),
+                        )
+                        self.send(
+                            self.expected_responses[seq_id][1],
+                            self.expected_responses[seq_id][2],
+                            self.expected_responses[seq_id][3] + 1,
+                        )
+                    else:
+                        if (
+                            self._plugwise_nodes.get(mac)
+                            and self._plugwise_nodes[mac].get_available()
+                        ):
+                            self.logger.info(
+                                "Resend request %s for %s, retry %s of %s",
+                                str(
+                                    self.expected_responses[seq_id][
+                                        1
+                                    ].__class__.__name__
+                                ),
+                                mac,
+                                str(self.expected_responses[seq_id][3] + 1),
+                                str(MESSAGE_RETRY + 1),
+                            )
+                            self.send(
+                                self.expected_responses[seq_id][1],
+                                self.expected_responses[seq_id][2],
+                                self.expected_responses[seq_id][3] + 1,
+                            )
+                        else:
+                            self.logger.debug(
+                                "Do not resend request %s for %s, node is off-line",
+                                str(
+                                    self.expected_responses[seq_id][
+                                        1
+                                    ].__class__.__name__
+                                ),
+                                mac,
+                            )
+                else:
+                    if isinstance(self.expected_responses[seq_id][1], NodeInfoRequest):
+                        self.logger.info(
+                            "Drop request for %s for %s because max retries %s reached",
+                            str(self.expected_responses[seq_id][1].__class__.__name__),
+                            mac,
+                            str(MESSAGE_RETRY + 1),
+                        )
+                    else:
+                        self.logger.warning(
+                            "Drop request for %s for %s because max retries %s reached",
+                            str(self.expected_responses[seq_id][1].__class__.__name__),
+                            mac,
+                            str(MESSAGE_RETRY + 1),
+                        )
+                    # Mark node as unavailable
+                    if self._plugwise_nodes.get(mac):
+                        if (
+                            self._plugwise_nodes[mac].get_available()
+                            and not self._plugwise_nodes[mac].is_sed()
+                        ):
+                            self.logger.info(
+                                "Mark %s as unavailabe because no response after %s retries",
+                                mac,
+                                str(MESSAGE_RETRY + 1),
+                            )
+                            self._plugwise_nodes[mac].set_available(False)
+                del self.expected_responses[seq_id]
 
             if do_callback:
                 if self.expected_responses[seq_id][2]:
@@ -1096,7 +1222,6 @@ class stick(object):
                             "Error while executing callback after processing message : %s",
                             e,
                         )
-                # Delete response
                 del self.expected_responses[seq_id]
 
         else:
