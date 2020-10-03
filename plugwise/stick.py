@@ -639,61 +639,62 @@ class stick(object):
         self.logger.debug("Send message loop stopped")
 
     def _receive_timeout_loop(self):
-        """ deamon to time out receive messages """
+        """ deamon to time out requests without any (n)ack response message """
         while self._run_receive_timeout_thread:
             for seq_id in list(self.expected_responses.keys()):
-                if isinstance(self.expected_responses[seq_id][1], StickInitRequest):
-                    del self.expected_responses[seq_id]
-                elif isinstance(
-                    self.expected_responses[seq_id][1], NodeAllowJoiningRequest
-                ):
-                    del self.expected_responses[seq_id]
-                elif isinstance(self.expected_responses[seq_id][1], NodeAddRequest):
-                    del self.expected_responses[seq_id]
-                elif isinstance(
-                    self.expected_responses[seq_id][1], CircleClockSetRequest
-                ):
-                    del self.expected_responses[seq_id]
-                elif isinstance(
-                    self.expected_responses[seq_id][1],
-                    CirclePlusRealTimeClockSetRequest,
-                ):
-                    del self.expected_responses[seq_id]
-                else:
-                    if self.expected_responses[seq_id][4] != None:
-                        if self.expected_responses[seq_id][4] < (
-                            datetime.now() - timedelta(seconds=MESSAGE_TIME_OUT)
-                        ):
+                if self.expected_responses[seq_id][4] != None:
+                    if self.expected_responses[seq_id][4] < (
+                        datetime.now() - timedelta(seconds=MESSAGE_TIME_OUT)
+                    ):
+                        self.logger.debug(
+                            "Timeout expired for message with sequence ID %s",
+                            str(seq_id),
+                        )
+                        if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
                             self.logger.debug(
-                                "Timeout expired for message with sequence ID %s",
-                                str(seq_id),
+                                "Resend request %s",
+                                str(
+                                    self.expected_responses[seq_id][
+                                        1
+                                    ].__class__.__name__
+                                ),
                             )
-                            if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                                self.logger.debug(
-                                    "Resend request %s",
-                                    str(
-                                        self.expected_responses[seq_id][
-                                            1
-                                        ].__class__.__name__
-                                    ),
-                                )
-                                self.send(
-                                    self.expected_responses[seq_id][1],
-                                    self.expected_responses[seq_id][2],
-                                    self.expected_responses[seq_id][3] + 1,
-                                )
-                            else:
+                            self.send(
+                                self.expected_responses[seq_id][1],
+                                self.expected_responses[seq_id][2],
+                                self.expected_responses[seq_id][3] + 1,
+                            )
+                        else:
+                            if isinstance(
+                                self.expected_responses[seq_id][1], NodeAddRequest
+                            ) or isinstance(
+                                self.expected_responses[seq_id][1], StickInitRequest
+                            ):
                                 self.logger.info(
-                                    "Drop %s request for mac %s because max (%s) retries reached",
+                                    "Drop %s request because max (%s) retries reached for seq id %s",
                                     self.expected_responses[seq_id][
                                         1
                                     ].__class__.__name__,
-                                    self.expected_responses[seq_id][1].mac.decode(
-                                        "utf-8"
-                                    ),
                                     str(MESSAGE_RETRY),
+                                    str(seq_id),
                                 )
-                            del self.expected_responses[seq_id]
+                            else:
+                                if self.expected_responses[seq_id][1].mac == "":
+                                    mac = "<empty>"
+                                else:
+                                    mac = self.expected_responses[seq_id][1].mac.decode(
+                                        "utf-8"
+                                    )
+                                self.logger.info(
+                                    "Drop %s request for mac %s because max (%s) retries reached for seq id %s",
+                                    self.expected_responses[seq_id][
+                                        1
+                                    ].__class__.__name__,
+                                    mac,
+                                    str(MESSAGE_RETRY),
+                                    str(seq_id),
+                                )
+                        del self.expected_responses[seq_id]
             receive_timeout_checker = 0
             while (
                 receive_timeout_checker < MESSAGE_TIME_OUT
