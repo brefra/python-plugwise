@@ -60,7 +60,7 @@ class PlugwiseNode(object):
         self._features = None
 
     def is_sed(self) -> bool:
-        """ Return if True if node SED (battery powered)"""
+        """ Return True if node SED (battery powered)"""
         return False
 
     def get_categories(self) -> tuple:
@@ -255,7 +255,8 @@ class PlugwiseNode(object):
             self._last_log_address = message.last_logaddr.value
             self._last_log_collected = False
         self.stick.logger.debug("Node type        = %s", self.get_node_type())
-        self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
+        if not self.is_sed:
+            self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
         self.stick.logger.debug("Hardware version = %s", str(self._hardware_version))
         self.stick.logger.debug("Firmware version = %s", str(self._firmware_version))
 
