@@ -1447,20 +1447,32 @@ class stick(object):
                     if firstrequest and lastrequest:
                         if (firstrequest + timedelta(hours=1)) > datetime.now():
                             # first hour, so do every update a request
-                            self.discover_node(mac, self._discover_after_scan)
+                            self.logger.debug(
+                                "Try rediscovery of node %s",
+                                mac,
+                            )
+                            self.discover_node(mac, self._discover_after_scan, True)
                             self._nodes_not_discovered[mac] = (
                                 firstrequest,
                                 datetime.now(),
                             )
                         else:
                             if (lastrequest + timedelta(hours=1)) < datetime.now():
-                                self.discover_node(mac, self._discover_after_scan)
+                                self.logger.debug(
+                                    "Try rediscovery of node %s",
+                                    mac,
+                                )
+                                self.discover_node(mac, self._discover_after_scan, True)
                                 self._nodes_not_discovered[mac] = (
                                     firstrequest,
                                     datetime.now(),
                                 )
                     else:
-                        self.discover_node(mac, self._discover_after_scan)
+                        self.logger.debug(
+                            "Try rediscovery of node %s",
+                            mac,
+                        )
+                        self.discover_node(mac, self._discover_after_scan, True)
                         self._nodes_not_discovered[mac] = (
                             datetime.now(),
                             datetime.now(),
