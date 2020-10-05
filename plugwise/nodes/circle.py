@@ -158,10 +158,9 @@ class PlugwiseCircle(PlugwiseNode):
         """ Return last known relay state """
         return self._relay_state
 
-    def set_relay_state(self, state, callback=None):
+    def set_relay_state(self, state: bool, callback=None):
         """ Switch relay """
-        if isinstance(state, bool):
-            self._request_switch(state, callback)
+        self._request_switch(state, callback)
 
     def get_power_usage(self):
         """

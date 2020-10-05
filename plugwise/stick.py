@@ -1327,7 +1327,7 @@ class stick(object):
                         self._plugwise_nodes[mac].ping()
 
                         # Check availability state of SED's
-                        if isinstance(self._plugwise_nodes[mac], NodeSED):
+                        if self._plugwise_nodes[mac].is_sed():
                             if self._plugwise_nodes[mac].get_available():
                                 if self._plugwise_nodes[mac].last_update < (
                                     datetime.now()
