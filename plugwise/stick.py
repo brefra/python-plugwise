@@ -1037,7 +1037,6 @@ class stick(object):
 
             if not ack_response:
                 do_callback = True
-
             elif ack_response == ACK_SUCCESS:
                 if ack_small:
                     self.logger.debug(
@@ -1199,32 +1198,34 @@ class stick(object):
                                 mac,
                             )
                 else:
-                    if isinstance(self.expected_responses[seq_id][1], NodeInfoRequest):
-                        self.logger.info(
-                            "Drop request for %s for %s because max retries %s reached",
-                            str(self.expected_responses[seq_id][1].__class__.__name__),
-                            mac,
-                            str(MESSAGE_RETRY + 1),
-                        )
+                    self.logger.info(
+                        "Drop request for %s for %s because max retries %s reached",
+                        str(self.expected_responses[seq_id][1].__class__.__name__),
+                        mac,
+                        str(MESSAGE_RETRY + 1),
+                    )
+                    if isinstance(
+                        self.expected_responses[seq_id][1], NodeInfoRequest
+                    ) or isinstance(
+                        self.expected_responses[seq_id][1], NodePingRequest
+                    ):
+                        # Mark node as unavailable
+                        if self._plugwise_nodes.get(mac):
+                            if (
+                                self._plugwise_nodes[mac].get_available()
+                                and not self._plugwise_nodes[mac].is_sed()
+                            ):
+                                self.logger.info(
+                                    "Mark %s as unavailabe because no response after %s retries",
+                                    mac,
+                                    str(MESSAGE_RETRY + 1),
+                                )
+                                self._plugwise_nodes[mac].set_available(False)
                     else:
-                        self.logger.warning(
-                            "Drop request for %s for %s because max retries %s reached",
-                            str(self.expected_responses[seq_id][1].__class__.__name__),
-                            mac,
-                            str(MESSAGE_RETRY + 1),
-                        )
-                    # Mark node as unavailable
-                    if self._plugwise_nodes.get(mac):
-                        if (
-                            self._plugwise_nodes[mac].get_available()
-                            and not self._plugwise_nodes[mac].is_sed()
-                        ):
-                            self.logger.info(
-                                "Mark %s as unavailabe because no response after %s retries",
-                                mac,
-                                str(MESSAGE_RETRY + 1),
-                            )
-                            self._plugwise_nodes[mac].set_available(False)
+                        # Failed request, do a ping to validate if node is available
+                        if self._plugwise_nodes.get(mac):
+                            if not self._plugwise_nodes[mac].is_sed():
+                                self._plugwise_nodes[mac].ping()
                 del self.expected_responses[seq_id]
 
             if do_callback:
@@ -1413,8 +1414,8 @@ class stick(object):
                                 if self._plugwise_nodes[mac]._last_info_message != None:
                                     if self._plugwise_nodes[mac]._last_info_message < (
                                         datetime.now().replace(
-                                            minute=1,
-                                            second=MAX_TIME_DRIFT,
+                                            minute=0,
+                                            second=0,
                                             microsecond=0,
                                         )
                                     ):
