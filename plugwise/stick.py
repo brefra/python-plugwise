@@ -1098,6 +1098,13 @@ class stick(object):
                     str(seq_id),
                 )
                 do_callback = True
+            elif ack_response == ACK_CLOCK_SET:
+                self.logger.debug(
+                    "Process ACK_CLOCK_SET for %s with seq_id %s",
+                    str(self.expected_responses[seq_id][1].__class__.__name__),
+                    str(seq_id),
+                )
+                do_callback = True
             elif ack_response == NACK_SLEEP_SET:
                 self.logger.debug(
                     "Process NACK_SLEEP_SET for %s with seq_id %s",
