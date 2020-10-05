@@ -1333,13 +1333,6 @@ class stick(object):
             while self._run_update_thread:
                 for mac in self._plugwise_nodes:
                     if self._plugwise_nodes[mac]:
-                        # Do ping request
-                        self.logger.debug(
-                            "Send ping to node %s",
-                            mac,
-                        )
-                        self._plugwise_nodes[mac].ping()
-
                         # Check availability state of SED's
                         if self._plugwise_nodes[mac].is_sed():
                             if self._plugwise_nodes[mac].get_available():
@@ -1376,6 +1369,13 @@ class stick(object):
                                         ),
                                     )
                                     self._plugwise_nodes[mac].set_available(False)
+                        else:
+                            # Do ping request
+                            self.logger.debug(
+                                "Send ping to node %s",
+                                mac,
+                            )
+                            self._plugwise_nodes[mac].ping()
 
                     # Only power use updates for supported nodes
                     if (
