@@ -1371,9 +1371,11 @@ class stick(object):
                                     self._plugwise_nodes[mac].set_available(False)
 
                     # Only power use updates for supported nodes
-                    if isinstance(
-                        self._plugwise_nodes[mac], PlugwiseCircle
-                    ) or isinstance(self._plugwise_nodes[mac], PlugwiseCirclePlus):
+                    if (
+                        isinstance(self._plugwise_nodes[mac], PlugwiseCircle)
+                        or isinstance(self._plugwise_nodes[mac], PlugwiseCirclePlus)
+                        or isinstance(self._plugwise_nodes[mac], PlugwiseStealth)
+                    ):
                         # Don't check at first time
                         self.logger.debug(
                             "Request current power usage for node %s", mac
