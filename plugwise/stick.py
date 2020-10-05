@@ -859,7 +859,7 @@ class stick(object):
                     )
                     self._plugwise_nodes[mac].on_message(message)
                     self.message_processed(message.seq_id, message.ack_id)
-                elif message.ack_id == ACK_SCAN_PARAMETERS_SET:
+                elif message.ack_id == NACK_SCAN_PARAMETERS_SET:
                     self.logger.info(
                         "Received failed response for ScanConfigureRequest from %s with sequence id %s",
                         mac,
