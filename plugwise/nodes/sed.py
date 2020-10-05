@@ -12,6 +12,12 @@ TODO:
 from plugwise.constants import (
     ACK_SLEEP_SET,
     NACK_SLEEP_SET,
+    SED_AWAKE_BUTTON,
+    SED_AWAKE_FIRST,
+    SED_AWAKE_MAINTENANCE,
+    SED_AWAKE_STARTUP,
+    SED_AWAKE_STATE,
+    SED_AWAKE_UNKNOWN,
     SED_CLOCK_INTERVAL,
     SED_CLOCK_SYNC,
     SED_MAINTENANCE_INTERVAL,
@@ -68,18 +74,11 @@ class NodeSED(PlugwiseNode):
             str(message.awake_type.value),
             self.get_mac(),
         )
-        # awake_type
-        # 0 : SED available for maintenance
-        # 1 : SED joins network for first time
-        # 2 : SED joins again while it has already joined, e.g. after reinserting a battery
-        # 3 : SED is awake to notify state change
-        # 4 : <unknown>
-        # 5 : SED is awake due to button press
         if (
-            message.awake_type.value == 0
-            or message.awake_type.value == 1
-            or message.awake_type.value == 2
-            or message.awake_type.value == 5
+            message.awake_type.value == SED_AWAKE_MAINTENANCE
+            or message.awake_type.value == SED_AWAKE_FIRST
+            or message.awake_type.value == SED_AWAKE_STARTUP
+            or message.awake_type.value == SED_AWAKE_BUTTON
         ):
             for request in self._SED_requests:
                 (request_message, callback) = self._SED_requests[request]
@@ -91,7 +90,7 @@ class NodeSED(PlugwiseNode):
                 self.stick.send(request_message, callback)
             self._SED_requests = {}
         else:
-            if message.awake_type.value == 3:
+            if message.awake_type.value == SED_AWAKE_STATE:
                 self.stick.logger.debug(
                     "Node %s awake for state change", self.get_mac()
                 )

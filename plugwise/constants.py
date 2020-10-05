@@ -38,6 +38,14 @@ ACK_SLEEP_SET = b"00F6"
 NACK_SLEEP_SET = b"00F7" #TODO: Validate
 ACK_POWER_LOG_INTERVAL_SET = b"00F8"
 
+# SED Awake status ID
+SED_AWAKE_MAINTENANCE = 0   # SED awake for maintenance
+SED_AWAKE_FIRST = 1         # SED awake for the first time
+SED_AWAKE_STARTUP = 2       # SED awake after restart, e.g. after reinserting a battery
+SED_AWAKE_STATE = 3         # SED awake to report state (Motion / Temperature / Humidity
+SED_AWAKE_UNKNOWN = 4       # TODO: Unknown
+SED_AWAKE_BUTTON = 5        # SED awake due to button press
+
 # Max timeout in seconds
 MESSAGE_TIME_OUT = 15  # Stick responds with timeout messages after 10 sec.
 MESSAGE_RETRY = 2
