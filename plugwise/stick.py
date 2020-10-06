@@ -120,6 +120,8 @@ class stick(object):
         self._nodes_registered = 0
         self._nodes_to_discover = {}
         self._nodes_not_discovered = {}
+        self._nodes_off_line = 0
+        self._discovery_finished = False
         self._messages_for_undiscovered_nodes = []
         self._accept_join_requests = ACCEPT_JOIN_REQUESTS
         self._stick_initialized = False
@@ -358,17 +360,33 @@ class stick(object):
             self._nodes_registered = len(nodes_to_discover)
             self._discovery_finished = False
 
-            def node_discovered():
+            def node_discovered(nodes_off_line=False):
+                if nodes_off_line:
+                    self._nodes_off_line += 1
                 self._nodes_discovered += 1
                 self.logger.debug(
-                    "Discovered Plugwise node %s of %s",
+                    "Discovered Plugwise node %s (%s off-line) of %s",
                     str(len(self._plugwise_nodes)),
+                    str(self._nodes_off_line),
                     str(len(self._nodes_to_discover)),
                 )
-                if (len(self._plugwise_nodes) - 1) >= len(self._nodes_to_discover):
+                if (len(self._plugwise_nodes) - 1 + self._nodes_off_line) >= len(
+                    self._nodes_to_discover
+                ):
+                    if self._nodes_off_line == 0:
+                        self._nodes_to_discover = {}
+                        self._nodes_not_discovered = {}
+                    else:
+                        for mac in self._nodes_to_discover:
+                            if mac not in self._plugwise_nodes.keys():
+                                self.logger.info(
+                                    "Failed to discover node type for registered MAC '%s'. This is expected for battery powered nodes, they will be discovered at their first awake",
+                                    str(mac),
+                                )
+                            else:
+                                if mac in self._nodes_not_discovered:
+                                    del self._nodes_not_discovered[mac]
                     self._discovery_finished = True
-                    self._nodes_to_discover = {}
-                    self._nodes_not_discovered = {}
                     if callback:
                         callback()
 
@@ -1149,7 +1167,20 @@ class stick(object):
 
             if do_resend:
                 if self.expected_responses[seq_id][3] <= MESSAGE_RETRY:
-                    if isinstance(
+                    if (
+                        isinstance(self.expected_responses[seq_id][1], NodeInfoRequest)
+                        and not self._discovery_finished
+                        and mac in self._nodes_not_discovered
+                        and self.expected_responses[seq_id][2].__name__ == "node_discovered"
+                    ):
+                        # Time out for node which is not discovered yet
+                        # to speedup the initial discover phase skip retries and mark node as not discovered.
+                        self.logger.debug(
+                            "Skip retries for %s to speedup discover process",
+                            mac,
+                        )
+                        self.expected_responses[seq_id][2](True)
+                    elif isinstance(
                         self.expected_responses[seq_id][1], NodeInfoRequest
                     ) or isinstance(
                         self.expected_responses[seq_id][1], NodePingRequest
