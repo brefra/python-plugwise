@@ -12,6 +12,8 @@ from plugwise.constants import (
     SENSE_TEMPERATURE_OFFSET,
     SENSOR_AVAILABLE,
     SENSOR_HUMIDITY,
+    SENSOR_RSSI_IN,
+    SENSOR_RSSI_OUT,
     SENSOR_TEMPERATURE,
 )
 from plugwise.nodes.sed import NodeSED
@@ -29,6 +31,8 @@ class PlugwiseSense(NodeSED):
             SENSOR_AVAILABLE["id"],
             SENSOR_TEMPERATURE["id"],
             SENSOR_HUMIDITY["id"],
+            SENSOR_RSSI_IN["id"],
+            SENSOR_RSSI_OUT["id"],
         )
         self._temperature = None
         self._humidity = None
@@ -51,7 +55,12 @@ class PlugwiseSense(NodeSED):
         """
         if isinstance(message, SenseReportResponse):
             self._process_sense_report(message)
-            self.stick.message_processed(message.seq_id)
+        else:
+            self.stick.logger.info(
+                "Unsupported message %s received from %s",
+                message.__class__.__name__,
+                self.get_mac(),
+            )
 
     def _process_sense_report(self, message):
         """ process sense report message to extract current temperature and humidity values """

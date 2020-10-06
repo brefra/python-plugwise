@@ -498,8 +498,8 @@ class stick(object):
             self._plugwise_nodes[mac] = None
         elif node_type == NODE_TYPE_SENSE:
             if self.print_progress:
-                print("Unsupported sense node found using mac " + mac)
-            self._plugwise_nodes[mac] = None
+                print("Sense node found using mac " + mac)
+            self._plugwise_nodes[mac] = PlugwiseSense(mac, address, self)
         elif node_type == NODE_TYPE_SCAN:
             if self.print_progress:
                 print("Scan node found using mac " + mac)
