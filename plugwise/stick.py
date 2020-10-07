@@ -1171,7 +1171,8 @@ class stick(object):
                         isinstance(self.expected_responses[seq_id][1], NodeInfoRequest)
                         and not self._discovery_finished
                         and mac in self._nodes_not_discovered
-                        and self.expected_responses[seq_id][2].__name__ == "node_discovered"
+                        and self.expected_responses[seq_id][2].__name__
+                        == "node_discovered"
                     ):
                         # Time out for node which is not discovered yet
                         # to speedup the initial discover phase skip retries and mark node as not discovered.
