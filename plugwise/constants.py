@@ -1,4 +1,3 @@
-
 UTF8_DECODE = "utf-8"
 
 # Serial connection settings for plugwise USB stick
@@ -8,8 +7,8 @@ PARITY = "N"
 STOPBITS = 1
 
 # Plugwise message identifiers
-MESSAGE_FOOTER = b'\x0d\x0a'
-MESSAGE_HEADER = b'\x05\x05\x03\x03'
+MESSAGE_FOOTER = b"\x0d\x0a"
+MESSAGE_HEADER = b"\x05\x05\x03\x03"
 MESSAGE_LARGE = "LARGE"
 MESSAGE_SMALL = "SMALL"
 
@@ -35,16 +34,16 @@ ACK_TIMEOUT = b"00E1"
 NACK_ON_OFF = b"00E2"
 NACK_REAL_TIME_CLOCK_SET = b"00E7"
 ACK_SLEEP_SET = b"00F6"
-NACK_SLEEP_SET = b"00F7" #TODO: Validate
+NACK_SLEEP_SET = b"00F7"  # TODO: Validate
 ACK_POWER_LOG_INTERVAL_SET = b"00F8"
 
 # SED Awake status ID
-SED_AWAKE_MAINTENANCE = 0   # SED awake for maintenance
-SED_AWAKE_FIRST = 1         # SED awake for the first time
-SED_AWAKE_STARTUP = 2       # SED awake after restart, e.g. after reinserting a battery
-SED_AWAKE_STATE = 3         # SED awake to report state (Motion / Temperature / Humidity
-SED_AWAKE_UNKNOWN = 4       # TODO: Unknown
-SED_AWAKE_BUTTON = 5        # SED awake due to button press
+SED_AWAKE_MAINTENANCE = 0  # SED awake for maintenance
+SED_AWAKE_FIRST = 1  # SED awake for the first time
+SED_AWAKE_STARTUP = 2  # SED awake after restart, e.g. after reinserting a battery
+SED_AWAKE_STATE = 3  # SED awake to report state (Motion / Temperature / Humidity
+SED_AWAKE_UNKNOWN = 4  # TODO: Unknown
+SED_AWAKE_BUTTON = 5  # SED awake due to button press
 
 # Max timeout in seconds
 MESSAGE_TIME_OUT = 15  # Stick responds with timeout messages after 10 sec.
@@ -70,23 +69,23 @@ ACCEPT_JOIN_REQUESTS = False
 
 # Node types
 NODE_TYPE_STICK = 0
-NODE_TYPE_CIRCLE_PLUS = 1   #AME_NC
-NODE_TYPE_CIRCLE = 2        #AME_NR
-NODE_TYPE_SWITCH = 3        #AME_SEDSwitch
-NODE_TYPE_SENSE = 5         #AME_SEDSense
-NODE_TYPE_SCAN = 6          #AME_SEDScan
-NODE_TYPE_CELSIUS_SED = 7   #AME_CelsiusSED
-NODE_TYPE_CELSIUS_NR = 8    #AME_CelsiusNR
-NODE_TYPE_STEALTH = 9       #AME_STEALTH_ZE
+NODE_TYPE_CIRCLE_PLUS = 1  # AME_NC
+NODE_TYPE_CIRCLE = 2  # AME_NR
+NODE_TYPE_SWITCH = 3  # AME_SEDSwitch
+NODE_TYPE_SENSE = 5  # AME_SEDSense
+NODE_TYPE_SCAN = 6  # AME_SEDScan
+NODE_TYPE_CELSIUS_SED = 7  # AME_CelsiusSED
+NODE_TYPE_CELSIUS_NR = 8  # AME_CelsiusNR
+NODE_TYPE_STEALTH = 9  # AME_STEALTH_ZE
 # 10 AME_MSPBOOTLOAD
 # 11 AME_STAR
 
 # Defaults for SED's (Sleeping End Devices)
-SED_STAY_ACTIVE = 10            # Time in seconds the SED keep itself awake to receive and respond to other messages
-SED_SLEEP_FOR = 60              # Time in minutes the SED will sleep
-SED_MAINTENANCE_INTERVAL = 1440 # 24 hours, Interval in minutes the SED will get awake and notify it's available for maintenance purposes
-SED_CLOCK_SYNC = True           # Enable or disable synchronizing clock
-SED_CLOCK_INTERVAL = 25200      # 7 days, duration in minutes the node synchronize its clock
+SED_STAY_ACTIVE = 10  # Time in seconds the SED keep itself awake to receive and respond to other messages
+SED_SLEEP_FOR = 60  # Time in minutes the SED will sleep
+SED_MAINTENANCE_INTERVAL = 1440  # 24 hours, Interval in minutes the SED will get awake and notify it's available for maintenance purposes
+SED_CLOCK_SYNC = True  # Enable or disable synchronizing clock
+SED_CLOCK_INTERVAL = 25200  # 7 days, duration in minutes the node synchronize its clock
 
 
 # Scan motion Sensitivity levels
@@ -95,9 +94,9 @@ SCAN_SENSITIVITY_MEDIUM = "medium"
 SCAN_SENSITIVITY_OFF = "medium"
 
 # Defaults for Scan Devices
-SCAN_MOTION_RESET_TIMER = 5                 # Time in minutes the motion sensor should not sense motion to report "no motion" state
+SCAN_MOTION_RESET_TIMER = 5  # Time in minutes the motion sensor should not sense motion to report "no motion" state
 SCAN_SENSITIVITY = SCAN_SENSITIVITY_MEDIUM  # Default sensitivity of the motion sensors
-SCAN_DAYLIGHT_MODE = False                  # Light override 
+SCAN_DAYLIGHT_MODE = False  # Light override
 
 # Sense calculations
 SENSE_HUMIDITY_MULTIPLIER = 125
@@ -127,13 +126,13 @@ SENSOR_HUMIDITY = {
     "id": "humidity",
     "name": "Humidity",
     "state": "get_humidity",
-    "unit": "%"
+    "unit": "%",
 }
 SENSOR_MOTION = {
     "id": "motion",
     "name": "Motion",
     "state": "get_motion",
-    "unit": "state"
+    "unit": "state",
 }
 SENSOR_PING = {
     "id": "ping",
@@ -169,25 +168,25 @@ SENSOR_POWER_CONSUMPTION_TODAY = {
     "id": "power_con_today",
     "name": "Power consumption today",
     "state": "get_power_consumption_today",
-    "unit": ENERGY_KILO_WATT_HOUR, 
+    "unit": ENERGY_KILO_WATT_HOUR,
 }
 SENSOR_POWER_CONSUMPTION_YESTERDAY = {
     "id": "power_con_yesterday",
     "name": "Power consumption yesterday",
     "state": "get_power_consumption_yesterday",
-    "unit": ENERGY_KILO_WATT_HOUR, 
+    "unit": ENERGY_KILO_WATT_HOUR,
 }
 SENSOR_POWER_PRODUCTION_CURRENT_HOUR = {
     "id": "power_prod_cur_hour",
     "name": "Power production current hour",
     "state": "get_power_production_current_hour",
-    "unit": ENERGY_KILO_WATT_HOUR, 
+    "unit": ENERGY_KILO_WATT_HOUR,
 }
 SENSOR_POWER_PRODUCTION_PREVIOUS_HOUR = {
     "id": "power_prod_prev_hour",
     "name": "Power production previous hour",
     "state": "get_power_production_previous_hour",
-    "unit": ENERGY_KILO_WATT_HOUR, 
+    "unit": ENERGY_KILO_WATT_HOUR,
 }
 SENSOR_SWITCH = {
     "id": "switch",

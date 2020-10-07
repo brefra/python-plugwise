@@ -13,8 +13,7 @@ from plugwise.messages.responses import NodeSwitchGroupResponse
 
 
 class PlugwiseSwitch(NodeSED):
-    """provides interface to the Plugwise Switch nodes
-    """
+    """provides interface to the Plugwise Switch nodes"""
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
