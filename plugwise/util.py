@@ -11,7 +11,11 @@ import re
 import struct
 import sys
 from .exceptions import *
-from .constants import *
+from .constants import (
+    PLUGWISE_EPOCH,
+    LOGADDR_OFFSET,
+    UTF8_DECODE,
+)
 
 
 crc_fun = crcmod.mkCrcFun(0x11021, rev=False, initCrc=0x0000, xorOut=0x0000)
@@ -35,6 +39,9 @@ def inc_seq_id(seq_id, value=1):
     """
     temp_int = int(seq_id, 16) + value
     # Max seq_id = b'FFFC'
+    # b'FFFD' reserved for 'NodeJoinAckResponse' message
+    # b'FFFE' reserved for 'NodeSwitchGroupResponse' message
+    # b'FFFF' reserved for 'NodeAwakeResponse' message
     if temp_int >= 65532:
         temp_int = 0
     temp_str = str(hex(temp_int)).lstrip("0x").upper()
@@ -43,15 +50,31 @@ def inc_seq_id(seq_id, value=1):
     return temp_str.encode()
 
 
+def uint_to_int(val, octals):
+    """compute the 2's compliment of int value val for negative values"""
+    bits = octals << 2
+    if (val & (1 << (bits - 1))) != 0:
+        val = val - (1 << bits)
+    return val
+
+
+def int_to_uint(val, octals):
+    """compute the 2's compliment of int value val for negative values"""
+    bits = octals << 2
+    if val < 0:
+        val = val + (1 << bits)
+    return val
+
+
 class BaseType(object):
     def __init__(self, value, length):
         self.value = value
         self.length = length
 
     def serialize(self):
-        return bytes(self.value, "utf-8")
+        return bytes(self.value, UTF8_DECODE)
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         self.value = val
 
     def __len__(self):
@@ -65,10 +88,10 @@ class CompositeType(BaseType):
     def serialize(self):
         return b"".join(a.serialize() for a in self.contents)
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         for p in self.contents:
             myval = val[: len(p)]
-            p.unserialize(myval)
+            p.deserialize(myval)
             val = val[len(myval) :]
         return val
 
@@ -87,27 +110,48 @@ class Int(BaseType):
 
     def serialize(self):
         fmt = "%%0%dX" % self.length
-        return bytes(fmt % self.value, "utf-8")
+        return bytes(fmt % self.value, UTF8_DECODE)
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         self.value = int(val, 16)
-        mask = 1 << (self.length*4 - 1)
+        mask = 1 << (self.length * 4 - 1)
         self.value = -(self.value & mask) + (self.value & ~mask)
+
+
+class SInt(BaseType):
+    def __init__(self, value, length=2):
+        self.value = value
+        self.length = length
+
+    def negative(self, val, octals):
+        """compute the 2's compliment of int value val for negative values"""
+        bits = octals << 2
+        if (val & (1 << (bits - 1))) != 0:
+            val = val - (1 << bits)
+        return val
+
+    def serialize(self):
+        fmt = "%%0%dX" % self.length
+        return fmt % int_to_uint(self.value, self.length)
+
+    def deserialize(self, val):
+        self.value = self.negative(int(val, 16), self.length)
+
 
 class UnixTimestamp(Int):
     def __init__(self, value, length=8):
         Int.__init__(self, value, length=length)
 
-    def unserialize(self, val):
-        Int.unserialize(self, val)
+    def deserialize(self, val):
+        Int.deserialize(self, val)
         self.value = datetime.datetime.fromtimestamp(self.value)
 
 
 class Year2k(Int):
     """year value that is offset from the year 2000"""
 
-    def unserialize(self, val):
-        Int.unserialize(self, val)
+    def deserialize(self, val):
+        Int.deserialize(self, val)
         self.value += PLUGWISE_EPOCH
 
 
@@ -125,8 +169,8 @@ class DateTime(CompositeType):
         self.minutes = Int(minutes, 4)
         self.contents += [self.year, self.month, self.minutes]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         minutes = self.minutes.value
         hours = minutes // 60
         days = hours // 24
@@ -137,9 +181,9 @@ class DateTime(CompositeType):
                 self.year.value, self.month.value, days + 1, hours, minutes
             )
         except ValueError:
-            #debug(
+            # debug(
             #    "encountered value error while attempting to construct datetime object"
-            #)
+            # )
             self.value = None
 
 
@@ -153,8 +197,8 @@ class Time(CompositeType):
         self.second = Int(second, 2)
         self.contents += [self.hour, self.minute, self.second]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         self.value = datetime.time(
             self.hour.value, self.minute.value, self.second.value
         )
@@ -167,24 +211,24 @@ class IntDec(BaseType):
 
     def serialize(self):
         fmt = "%%0%dd" % self.length
-        return bytes(fmt % self.value, "utf-8")
+        return bytes(fmt % self.value, UTF8_DECODE)
 
-    def unserialize(self, val):
-        self.value = val.decode("utf-8")
+    def deserialize(self, val):
+        self.value = val.decode(UTF8_DECODE)
 
 
 class RealClockTime(CompositeType):
     """time value as used in the realtime clock info response"""
 
-    def __init__(self, hour=0, minute=0, second=0 ):
+    def __init__(self, hour=0, minute=0, second=0):
         CompositeType.__init__(self)
         self.hour = IntDec(hour, 2)
         self.minute = IntDec(minute, 2)
         self.second = IntDec(second, 2)
         self.contents += [self.second, self.minute, self.hour]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         self.value = datetime.time(
             int(self.hour.value),
             int(self.minute.value),
@@ -202,8 +246,8 @@ class RealClockDate(CompositeType):
         self.year = IntDec(year - PLUGWISE_EPOCH, 2)
         self.contents += [self.day, self.month, self.year]
 
-    def unserialize(self, val):
-        CompositeType.unserialize(self, val)
+    def deserialize(self, val):
+        CompositeType.deserialize(self, val)
         self.value = datetime.date(
             int(self.year.value) + PLUGWISE_EPOCH,
             int(self.month.value),
@@ -216,16 +260,15 @@ class Float(BaseType):
         self.value = value
         self.length = length
 
-    def unserialize(self, val):
+    def deserialize(self, val):
         hexval = binascii.unhexlify(val)
         self.value = struct.unpack("!f", hexval)[0]
 
 
 class LogAddr(Int):
-
     def serialize(self):
-        return bytes("%08X" % ((self.value * 32) + LOGADDR_OFFSET), "utf-8")
+        return bytes("%08X" % ((self.value * 32) + LOGADDR_OFFSET), UTF8_DECODE)
 
-    def unserialize(self, val):
-        Int.unserialize(self, val)
+    def deserialize(self, val):
+        Int.deserialize(self, val)
         self.value = (self.value - LOGADDR_OFFSET) // 32

@@ -5,7 +5,7 @@ Base for serial or socket connections
 """
 from plugwise.constants import SLEEP_TIME
 from plugwise.message import PlugwiseMessage
-from queue import Queue
+import queue
 import threading
 import time
 
@@ -51,6 +51,8 @@ class StickConnection(object):
             if data:
                 self.stick.feed_parser(data)
             time.sleep(0.01)
+        self.stick.logger.debug("Reader deamon stopped")
+
 
     def _read_data(self):
         """Placeholder to receive message from the connection"""
@@ -62,7 +64,7 @@ class StickConnection(object):
 
     def _writer_start(self, name: str):
         """Start the writer thread to send data"""
-        self._write_queue = Queue()
+        self._write_queue = queue.Queue()
         self._writer_thread = threading.Thread(None, self._writer_deamon, name, (), {})
         self._writer_thread.daemon = True
         self.run_writer_thread = True
@@ -71,16 +73,22 @@ class StickConnection(object):
     def _writer_deamon(self):
         """Thread to write data from queue to existing connection."""
         while self.run_writer_thread:
-            (message, callback) = self._write_queue.get(block=True)
-            self.stick.logger.debug(
-                "Sending %s to plugwise stick (%s)",
-                message.__class__.__name__,
-                message.serialize(),
-            )
-            self._write_data(message.serialize())
-            time.sleep(SLEEP_TIME)
-            if callback:
-                callback()
+            try:
+                (message, callback) = self._write_queue.get(block=True, timeout=1)
+            except queue.Empty:
+                time.sleep(SLEEP_TIME)
+            else:
+                self.stick.logger.debug(
+                    "Sending %s to plugwise stick (%s)",
+                    message.__class__.__name__,
+                    message.serialize(),
+                )
+                self._write_data(message.serialize())
+                time.sleep(SLEEP_TIME)
+                if callback:
+                    callback()
+        self.stick.logger.debug("Writer deamon stopped")
+
 
     def _write_data(self, data):
         """Placeholder to write message to the connection"""
@@ -115,11 +123,11 @@ class StickConnection(object):
         if self._is_connected:
             self._is_connected = False
             self.run_writer_thread = False
+            self.run_reader_thread = False
             max_wait = 5 * SLEEP_TIME
             while self._writer_thread.isAlive():
                 time.sleep(SLEEP_TIME)
                 max_wait -= SLEEP_TIME
-            self.run_writer_thread = False
             self._close_connection()
 
     def _close_connection(self):

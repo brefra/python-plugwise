@@ -6,6 +6,9 @@ Plugwise Circle node object
 import logging
 from datetime import date, datetime, timedelta
 from plugwise.constants import (
+    ACK_OFF,
+    ACK_ON,
+    MAX_TIME_DRIFT,
     SENSOR_AVAILABLE,
     SENSOR_PING,
     SENSOR_POWER_USE,
@@ -28,23 +31,25 @@ from plugwise.node import PlugwiseNode
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.requests import (
     CircleCalibrationRequest,
+    CircleClockGetRequest,
+    CircleClockSetRequest,
     CirclePowerBufferRequest,
     CirclePowerUsageRequest,
-    CircleSwitchRequest,
+    CircleSwitchRelayRequest,
 )
 from plugwise.messages.responses import (
     CircleCalibrationResponse,
+    CircleClockResponse,
     CirclePowerBufferResponse,
     CirclePowerUsageResponse,
-    CircleScanResponse,
-    CircleSwitchResponse,
+    CirclePlusScanResponse,
+    NodeAckLargeResponse,
 )
 from plugwise.util import Int
 
 
 class PlugwiseCircle(PlugwiseNode):
-    """provides interface to the Plugwise Circle nodes
-    """
+    """provides interface to the Plugwise Circle nodes and base class for Circle+ nodes"""
 
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
@@ -77,27 +82,33 @@ class PlugwiseCircle(PlugwiseNode):
         self.power_consumption_prev_hour = None
         self.power_consumption_today = None
         self.power_consumption_yesterday = None
+        self._clock_offset = None
+        self.get_clock(self.sync_clock)
         self._request_calibration()
 
+    def get_node_type(self) -> str:
+        """Return node type"""
+        return "Circle"
+
     def _request_calibration(self, callback=None):
-        """Request calibration info
-        """
+        """Request calibration info"""
         self.stick.send(
-            CircleCalibrationRequest(self.mac), callback,
+            CircleCalibrationRequest(self.mac),
+            callback,
         )
 
     def _request_switch(self, state, callback=None):
-        """Request to switch relay state and request state info
-        """
+        """Request to switch relay state and request state info"""
         self.stick.send(
-            CircleSwitchRequest(self.mac, state), callback,
+            CircleSwitchRelayRequest(self.mac, state),
+            callback,
         )
 
     def update_power_usage(self, callback=None):
-        """Request power usage
-        """
+        """Request power usage"""
         self.stick.send(
-            CirclePowerUsageRequest(self.mac), callback,
+            CirclePowerUsageRequest(self.mac),
+            callback,
         )
 
     def _on_message(self, message):
@@ -112,34 +123,28 @@ class PlugwiseCircle(PlugwiseNode):
                     self.get_mac(),
                     str(self.last_update),
                 )
-                self.stick.message_processed(message.seq_id)
             else:
-                self.stick.logger.debug(
+                self.stick.logger.info(
                     "Received power update for %s before calibration information is known",
                     self.get_mac(),
                 )
                 self._request_calibration()
-        elif isinstance(message, CircleSwitchResponse):
-            self._response_switch(message)
-            self.stick.logger.debug(
-                "Switch update for %s, last update %s",
-                self.get_mac(),
-                str(self.last_update),
-            )
-            self.stick.message_processed(message.seq_id)
+        elif isinstance(message, NodeAckLargeResponse):
+            self._node_ack_response(message)
         elif isinstance(message, CircleCalibrationResponse):
             self._response_calibration(message)
-            self.stick.message_processed(message.seq_id)
         elif isinstance(message, CirclePowerBufferResponse):
             if self.calibration:
                 self._response_power_buffer(message)
-                self.stick.message_processed(message.seq_id)
             else:
                 self.stick.logger.debug(
                     "Received power buffer log for %s before calibration information is known",
                     self.get_mac(),
                 )
                 self._request_calibration()
+        elif isinstance(message, CircleClockResponse):
+            self._response_clock(message)
+            self.stick.message_processed(message.seq_id)
         else:
             self._circle_plus_message(message)
 
@@ -153,15 +158,14 @@ class PlugwiseCircle(PlugwiseNode):
         """ Return last known relay state """
         return self._relay_state
 
-    def set_relay_state(self, state, callback=None):
+    def set_relay_state(self, state: bool, callback=None):
         """ Switch relay """
-        if isinstance(state, bool):
-            self._request_switch(state, callback)
+        self._request_switch(state, callback)
 
     def get_power_usage(self):
         """
         Returns power usage during the last second in Watts
-        Based on last received power usage information 
+        Based on last received power usage information
         """
         if self.pulses_1s is not None:
             return self.pulses_to_kWs(self.pulses_1s) * 1000
@@ -170,7 +174,7 @@ class PlugwiseCircle(PlugwiseNode):
     def get_power_usage_8_sec(self):
         """
         Returns power usage during the last 8 second in Watts
-        Based on last received power usage information 
+        Based on last received power usage information
         """
         if self.pulses_8s is not None:
             return self.pulses_to_kWs(self.pulses_8s, 8) * 1000
@@ -179,7 +183,7 @@ class PlugwiseCircle(PlugwiseNode):
     def get_power_consumption_current_hour(self):
         """
         Returns the power usage during this running hour in kWh
-        Based on last received power usage information 
+        Based on last received power usage information
         """
         if self.pulses_consumed_1h is not None:
             return self.pulses_to_kWs(self.pulses_consumed_1h, 3600)
@@ -188,38 +192,48 @@ class PlugwiseCircle(PlugwiseNode):
     def get_power_production_current_hour(self):
         """
         Returns the power production during this running hour in kWh
-        Based on last received power usage information 
+        Based on last received power usage information
         """
         if self.pulses_produced_1h is not None:
             return self.pulses_to_kWs(self.pulses_produced_1h, 3600)
         return None
 
     def get_power_consumption_prev_hour(self):
-        """ Returns power consumption during the previous hour in kWh
-        """
+        """Returns power consumption during the previous hour in kWh"""
         return self.power_consumption_prev_hour
 
     def get_power_consumption_today(self):
-        """ Total power consumption during today in kWh
-        """
+        """Total power consumption during today in kWh"""
         return self.power_consumption_today
 
     def get_power_consumption_yesterday(self):
-        """ Total power consumption of yesterday in kWh
-        """
+        """Total power consumption of yesterday in kWh"""
         return self.power_consumption_yesterday
 
-    def _response_switch(self, message):
-        """ Process switch response message
-        """
-        if message.relay_state == b"D8":
+    def _node_ack_response(self, message):
+        """Process switch response message"""
+        if message.ack_id == ACK_ON:
             if not self._relay_state:
+                self.stick.logger.debug(
+                    "Switch relay on for %s",
+                    self.get_mac(),
+                )
                 self._relay_state = True
                 self.do_callback(SWITCH_RELAY["id"])
-        else:
+        elif message.ack_id == ACK_OFF:
             if self._relay_state:
+                self.stick.logger.debug(
+                    "Switch relay off for %s",
+                    self.get_mac(),
+                )
                 self._relay_state = False
                 self.do_callback(SWITCH_RELAY["id"])
+        else:
+            self.stick.logger.debug(
+                "Unmanaged _node_ack_response %s received for %s",
+                str(message.ack_id),
+                self.get_mac(),
+            )
 
     def _response_power_usage(self, message):
         # Sometimes the circle returns -1 for some of the pulse counters
@@ -286,8 +300,7 @@ class PlugwiseCircle(PlugwiseNode):
         self.do_callback(SENSOR_POWER_PRODUCTION_CURRENT_HOUR["id"])
 
     def _response_calibration(self, message):
-        """ Store calibration properties
-        """
+        """Store calibration properties"""
         for x in ("gain_a", "gain_b", "off_noise", "off_tot"):
             val = getattr(message, x).value
             setattr(self, "_" + x, val)
@@ -314,16 +327,18 @@ class PlugwiseCircle(PlugwiseNode):
         return calc_value
 
     def _request_power_buffer(self, log_address=None, callback=None):
-        """Request power log of specified address
-        """
+        """Request power log of specified address"""
         if log_address == None:
             log_address = self._last_log_address
         if log_address != None:
             if bool(self.power_history):
                 # Only request last 2 power buffer logs
-                self.stick.send(CirclePowerBufferRequest(self.mac, log_address - 1),)
                 self.stick.send(
-                    CirclePowerBufferRequest(self.mac, log_address), callback,
+                    CirclePowerBufferRequest(self.mac, log_address - 1),
+                )
+                self.stick.send(
+                    CirclePowerBufferRequest(self.mac, log_address),
+                    callback,
                 )
             else:
                 # Collect power history info of today and yesterday
@@ -333,7 +348,8 @@ class PlugwiseCircle(PlugwiseNode):
                         CirclePowerBufferRequest(self.mac, req_log_address),
                     )
                 self.stick.send(
-                    CirclePowerBufferRequest(self.mac, log_address), callback,
+                    CirclePowerBufferRequest(self.mac, log_address),
+                    callback,
                 )
 
     def _response_power_buffer(self, message):
@@ -385,3 +401,52 @@ class PlugwiseCircle(PlugwiseNode):
         if self.power_consumption_yesterday != yesterday_power:
             self.power_consumption_yesterday = yesterday_power
             self.do_callback(SENSOR_POWER_CONSUMPTION_YESTERDAY["id"])
+
+    def _response_clock(self, message):
+        dt = datetime(
+            datetime.now().year,
+            datetime.now().month,
+            datetime.now().day,
+            message.time.value.hour,
+            message.time.value.minute,
+            message.time.value.second,
+        )
+        clock_offset = message.timestamp.replace(microsecond=0) - (
+            dt + self.stick.timezone_delta
+        )
+        if clock_offset.days == -1:
+            self._clock_offset = clock_offset.seconds - 86400
+        else:
+            self._clock_offset = clock_offset.seconds
+        self.stick.logger.debug(
+            "Clock of node %s has drifted %s sec",
+            self.get_mac(),
+            str(self._clock_offset),
+        )
+
+    def get_clock(self, callback=None):
+        """ get current datetime of internal clock of Circle """
+        self.stick.send(
+            CircleClockGetRequest(self.mac),
+            callback,
+        )
+
+    def set_clock(self, callback=None):
+        """ set internal clock of CirclePlus """
+        self.stick.send(
+            CircleClockSetRequest(self.mac, datetime.utcnow()),
+            callback,
+        )
+
+    def sync_clock(self, max_drift=0):
+        """Resync clock of node if time has drifted more than MAX_TIME_DRIFT"""
+        if self._clock_offset != None:
+            if max_drift == 0:
+                max_drift = MAX_TIME_DRIFT
+            if (self._clock_offset > max_drift) or (self._clock_offset < -(max_drift)):
+                self.stick.logger.info(
+                    "Reset clock of node %s because time has drifted %s sec",
+                    self.get_mac(),
+                    str(self._clock_offset),
+                )
+                self.set_clock()

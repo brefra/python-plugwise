@@ -14,8 +14,8 @@ The latest version of the library is published as a python package on [pypi](htt
 | ----------- | ----------- | ----------- | ----------- |
 | Circle+ | Yes | Yes | Working |
 | Circle | Yes | Yes | Working |
-| Scan | No | No | Not supported yet |
-| Sense | No | No | Not supported yet |
+| Scan | N/A | N/A | Working |
+| Sense | N/A | N/A | Experimental (not tested) |
 | Switch | No | No | Not supported yet |
 | Stealth | Yes | Yes | Experimental (not tested) |
 | Sting | No | No | Not supported yet |
@@ -24,15 +24,23 @@ When the connection to the stick is initialized it will automatically do a disco
 
 I would like to extend this library to support other Plugwise device types, unfortunately I do not own these devices so I'm unable to test. So feel free to submit pull requests or log issues through [github](https://github.com/brefra/python-plugwise) for functionality you like to have included.
 
-Note: This library does not support linking or removing nodes from the Plugwise network (yet). You still need the Plugwise Source software for that.
+This library supports linking or removing nodes from the Plugwise network. The easiest way of linking new nodes is after connection calling:
+
+```python
+<stick_object>.allow_join_requests(True, True)
+```
+
+This will automatically add any new node not yet registered to any network (i.e. after it is set back to factory defaults)
 
 ## Install
 
 To install and use this library standalone use the following command:
-```
+
+```shell
 pip install python-plugwise
 ```
-If you want to control the Plugwise devices from Home Assisant, do not install this library but install [this custom integration](https://github.com/brefra/home-assistant-plugwise-stick) instead.
+
+If you want to control the Plugwise devices from Home Assistant, do not install this library but install [this custom integration](https://github.com/brefra/home-assistant-plugwise-stick) instead.
 
 ## Example usage
 

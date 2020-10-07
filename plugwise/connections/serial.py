@@ -40,7 +40,9 @@ class PlugwiseUSBConnection(StickConnection):
             )
         except serial.serialutil.SerialException as err:
             self.stick.logger.debug(
-                "Failed to connect to serial port %s, %s", self.port, err,
+                "Failed to connect to serial port %s, %s",
+                self.port,
+                err,
             )
             raise PortError(err)
         self._is_connected = self._serial.isOpen()
@@ -52,7 +54,8 @@ class PlugwiseUSBConnection(StickConnection):
             )
         else:
             self.stick.logger.error(
-                "Failed to open serial port %s", self.port,
+                "Failed to open serial port %s",
+                self.port,
             )
 
     def _close_connection(self):
@@ -61,7 +64,9 @@ class PlugwiseUSBConnection(StickConnection):
             self._serial.close()
         except serial.serialutil.SerialException as err:
             self.stick.logger.debug(
-                "Failed to close serial port %s, %s", self.port, err,
+                "Failed to close serial port %s, %s",
+                self.port,
+                err,
             )
             raise PortError(err)
 

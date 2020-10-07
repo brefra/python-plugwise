@@ -6,29 +6,21 @@ General node object to control associated plugwise nodes like: Circle+, Circle, 
 from datetime import datetime
 from plugwise.constants import (
     HA_SWITCH,
-    MAX_TIME_DRIFT,
-    NODE_TYPE_CIRCLE,
-    NODE_TYPE_CIRCLE_PLUS,
-    NODE_TYPE_SCAN,
-    NODE_TYPE_SENSE,
-    NODE_TYPE_STEALTH,
-    NODE_TYPE_SWITCH,
-    NODE_TYPE_STICK,
     SENSOR_AVAILABLE,
     SENSOR_RSSI_IN,
     SENSOR_RSSI_OUT,
     SENSOR_PING,
     SWITCH_RELAY,
+    UTF8_DECODE,
 )
 from plugwise.message import PlugwiseMessage
 from plugwise.messages.responses import (
-    NodeClockResponse,
+    NodeFeaturesResponse,
     NodeInfoResponse,
     NodePingResponse,
 )
 from plugwise.messages.requests import (
-    NodeClockGetRequest,
-    NodeClockSetRequest,
+    NodeFeaturesRequest,
     NodeInfoRequest,
     NodePingRequest,
 )
@@ -36,16 +28,16 @@ from plugwise.util import validate_mac
 
 
 class PlugwiseNode(object):
-    """provides interface to the Plugwise node devices
-    """
+    """ Base class for a Plugwise node """
 
     def __init__(self, mac, address, stick):
         mac = mac.upper()
         if validate_mac(mac) == False:
             self.stick.logger.debug(
-                "MAC address is in unexpected format: %s", str(mac),
+                "MAC address is in unexpected format: %s",
+                str(mac),
             )
-        self.mac = bytes(mac, encoding="ascii")
+        self.mac = bytes(mac, encoding=UTF8_DECODE)
         self.stick = stick
         self.categories = ()
         self.sensors = ()
@@ -65,8 +57,11 @@ class PlugwiseNode(object):
         self._last_log_address = None
         self._last_log_collected = False
         self._last_info_message = None
-        self._clock_offset = None
-        self.get_clock(self.sync_clock)
+        self._features = None
+
+    def is_sed(self) -> bool:
+        """ Return True if node SED (battery powered)"""
+        return False
 
     def get_categories(self) -> tuple:
         """ Return Home Assistant catagories supported by plugwise node """
@@ -90,7 +85,8 @@ class PlugwiseNode(object):
             if self._available == False:
                 self._available = True
                 self.stick.logger.debug(
-                    "Mark node %s available", self.get_mac(),
+                    "Mark node %s available",
+                    self.get_mac(),
                 )
                 self.do_callback(SENSOR_AVAILABLE["id"])
                 if request_info:
@@ -99,35 +95,18 @@ class PlugwiseNode(object):
             if self._available == True:
                 self._available = False
                 self.stick.logger.debug(
-                    "Mark node %s unavailable", self.get_mac(),
+                    "Mark node %s unavailable",
+                    self.get_mac(),
                 )
                 self.do_callback(SENSOR_AVAILABLE["id"])
 
     def get_mac(self) -> str:
         """Return mac address"""
-        return self.mac.decode("ascii")
+        return self.mac.decode(UTF8_DECODE)
 
     def get_name(self) -> str:
         """Return unique name"""
         return self.get_node_type() + " (" + str(self._address) + ")"
-
-    def get_node_type(self) -> str:
-        """Return Circle type"""
-        if self._node_type == NODE_TYPE_CIRCLE:
-            return "Circle"
-        elif self._node_type == NODE_TYPE_CIRCLE_PLUS:
-            return "Circle+"
-        elif self._node_type == NODE_TYPE_SCAN:
-            return "Scan"
-        elif self._node_type == NODE_TYPE_SENSE:
-            return "Sense"
-        elif self._node_type == NODE_TYPE_STEALTH:
-            return "Stealth"
-        elif self._node_type == NODE_TYPE_SWITCH:
-            return "Switch"
-        elif self._node_type == NODE_TYPE_STICK:
-            return "Stick"
-        return "Unknown"
 
     def get_hardware_version(self) -> str:
         """Return hardware version"""
@@ -166,13 +145,22 @@ class PlugwiseNode(object):
     def _request_info(self, callback=None):
         """ Request info from node"""
         self.stick.send(
-            NodeInfoRequest(self.mac), callback,
+            NodeInfoRequest(self.mac),
+            callback,
+        )
+
+    def _request_features(self, callback=None):
+        """ Request supported features for this node"""
+        self.stick.send(
+            NodeFeaturesRequest(self.mac),
+            callback,
         )
 
     def ping(self, callback=None):
         """ Ping node"""
         self.stick.send(
-            NodePingRequest(self.mac), callback,
+            NodePingRequest(self.mac),
+            callback,
         )
 
     def on_message(self, message):
@@ -191,34 +179,34 @@ class PlugwiseNode(object):
                 self.last_update = message.timestamp
             if isinstance(message, NodePingResponse):
                 self._process_ping_response(message)
-                self.stick.message_processed(message.seq_id)
             elif isinstance(message, NodeInfoResponse):
                 self._process_info_response(message)
-                self.stick.message_processed(message.seq_id)
-            elif isinstance(message, NodeClockResponse):
-                self._response_clock(message)
-                self.stick.message_processed(message.seq_id)
+            elif isinstance(message, NodeFeaturesResponse):
+                self._process_features_response(message)
             else:
-                self.set_available(True)
                 self._on_message(message)
+                self.set_available(True)
         else:
             self.stick.logger.debug(
                 "Skip message, mac of node (%s) != mac at message (%s)",
-                message.mac.decode("ascii"),
+                message.mac.decode(UTF8_DECODE),
                 self.get_mac(),
             )
 
     def _on_message(self, message):
         pass
 
-    def subscribe_callback(self, callback, sensor):
+    def subscribe_callback(self, callback, sensor) -> bool:
         """ Subscribe callback to execute when state change happens """
-        if sensor not in self._callbacks:
-            self._callbacks[sensor] = []
-        self._callbacks[sensor].append(callback)
+        if sensor in self.sensors:
+            if sensor not in self._callbacks:
+                self._callbacks[sensor] = []
+            self._callbacks[sensor].append(callback)
+            return True
+        return False
 
     def unsubscribe_callback(self, callback, sensor):
-        """ Register callback to execute when state change happens """
+        """ Unsubscribe callback to execute when state change happens """
         if sensor in self._callbacks:
             self._callbacks[sensor].remove(callback)
 
@@ -230,7 +218,8 @@ class PlugwiseNode(object):
                     callback(None)
                 except Exception as e:
                     self.stick.logger.error(
-                        "Error while executing all callback : %s", e,
+                        "Error while executing all callback : %s",
+                        e,
                     )
 
     def _process_ping_response(self, message):
@@ -248,7 +237,7 @@ class PlugwiseNode(object):
 
     def _process_info_response(self, message):
         """ Process info response message"""
-        self.stick.logger.debug("Response info message for plug %s", self.get_mac())
+        self.stick.logger.debug("Response info message for node %s", self.get_mac())
         self.set_available(True)
         if message.relay_state.serialize() == b"01":
             if not self._relay_state:
@@ -266,57 +255,14 @@ class PlugwiseNode(object):
             self._last_log_address = message.last_logaddr.value
             self._last_log_collected = False
         self.stick.logger.debug("Node type        = %s", self.get_node_type())
-        self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
+        if not self.is_sed:
+            self.stick.logger.debug("Relay state      = %s", str(self._relay_state))
         self.stick.logger.debug("Hardware version = %s", str(self._hardware_version))
         self.stick.logger.debug("Firmware version = %s", str(self._firmware_version))
 
-    def _request_power_buffer(self, log_address=None, callback=None):
-        pass
-
-    def get_clock(self, callback=None):
-        """ get current datetime of internal clock of CirclePlus """
-        self.stick.send(
-            NodeClockGetRequest(self.mac), callback,
+    def _process_features_response(self, message):
+        """ Process features message """
+        self.stick.logger.info(
+            "Node %s supports features %s", self.get_mac(), str(message.features.value)
         )
-
-    def _response_clock(self, message):
-        dt = datetime(
-            datetime.now().year,
-            datetime.now().month,
-            datetime.now().day,
-            message.time.value.hour,
-            message.time.value.minute,
-            message.time.value.second,
-        )
-        clock_offset = message.timestamp.replace(microsecond=0) - (
-            dt + self.stick.timezone_delta
-        )
-        if clock_offset.days == -1:
-            self._clock_offset = clock_offset.seconds - 86400
-        else:
-            self._clock_offset = clock_offset.seconds
-        self.stick.logger.debug(
-            "Clock of node %s has drifted %s sec",
-            self.get_mac(),
-            str(self._clock_offset),
-        )
-
-    def set_clock(self, callback=None):
-        """ set internal clock of CirclePlus """
-        self.stick.send(
-            NodeClockSetRequest(self.mac, datetime.utcnow()), callback,
-        )
-
-    def sync_clock(self, max_drift=0):
-        """ Resync clock of node if time has drifted more than MAX_TIME_DRIFT
-        """
-        if self._clock_offset != None:
-            if max_drift == 0:
-                max_drift = MAX_TIME_DRIFT
-            if (self._clock_offset > max_drift) or (self._clock_offset < -(max_drift)):
-                self.stick.logger.info(
-                    "Reset clock of node %s because time has drifted %s sec",
-                    self.get_mac(),
-                    str(self._clock_offset),
-                )
-                self.set_clock()
+        self._features = message.features.value
