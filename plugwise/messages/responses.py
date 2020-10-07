@@ -509,7 +509,7 @@ class NodeAckResponse(NodeResponse):
     Acknowledge message in regular format
     Sent by nodes supporting plugwise 2.4 protocol version
 
-    Response to: 
+    Response to:
     """
 
     ID = b"0100"
