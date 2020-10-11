@@ -50,10 +50,6 @@ class PlugwiseScan(NodeSED):
         self._new_daylight_mode = None
         self._new_sensitivity = None
 
-    def get_node_type(self) -> str:
-        """Return node type"""
-        return "Scan"
-
     def get_motion(self) -> bool:
         """ Return motion state"""
         return self._motion_state

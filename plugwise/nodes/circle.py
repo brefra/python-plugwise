@@ -86,10 +86,6 @@ class PlugwiseCircle(PlugwiseNode):
         self.get_clock(self.sync_clock)
         self._request_calibration()
 
-    def get_node_type(self) -> str:
-        """Return node type"""
-        return "Circle"
-
     def _request_calibration(self, callback=None):
         """Request calibration info"""
         self.stick.send(
@@ -144,7 +140,6 @@ class PlugwiseCircle(PlugwiseNode):
                 self._request_calibration()
         elif isinstance(message, CircleClockResponse):
             self._response_clock(message)
-            self.stick.message_processed(message.seq_id)
         else:
             self._circle_plus_message(message)
 

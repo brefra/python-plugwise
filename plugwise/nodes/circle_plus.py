@@ -30,10 +30,6 @@ class PlugwiseCirclePlus(PlugwiseCircle):
         self._realtime_clock_offset = None
         self.get_real_time_clock(self.sync_realtime_clock)
 
-    def get_node_type(self) -> str:
-        """Return node type"""
-        return "Circle+"
-
     def _circle_plus_message(self, message):
         """
         Process received message
