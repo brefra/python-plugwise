@@ -37,10 +37,6 @@ class PlugwiseSense(NodeSED):
         self._temperature = None
         self._humidity = None
 
-    def get_node_type(self) -> str:
-        """Return node type"""
-        return "Sense"
-
     def get_temperature(self) -> int:
         """ Return the current temperature """
         return self._temperature

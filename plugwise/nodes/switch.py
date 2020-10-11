@@ -20,10 +20,6 @@ class PlugwiseSwitch(NodeSED):
         self.categories = (HA_SENSOR, HA_BINARY_SENSOR)
         self._switch_state = False
 
-    def get_node_type(self) -> str:
-        """Return node type"""
-        return "Switch"
-
     def get_switch_state(self):
         """ Return state of switch"""
         return self._switch_state

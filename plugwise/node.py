@@ -6,6 +6,7 @@ General node object to control associated plugwise nodes like: Circle+, Circle, 
 from datetime import datetime
 from plugwise.constants import (
     HA_SWITCH,
+    HW_MODELS,
     SENSOR_AVAILABLE,
     SENSOR_RSSI_IN,
     SENSOR_RSSI_OUT,
@@ -58,6 +59,19 @@ class PlugwiseNode(object):
         self._last_log_collected = False
         self._last_info_message = None
         self._features = None
+
+    def get_node_type(self) -> str:
+        """Return hardware model"""
+        if self._hardware_version:
+            hw_model = HW_MODELS.get(self._hardware_version[4:10], None)
+            if hw_model:
+                return hw_model
+            else:
+                # Try again with reversed order
+                hw_model = HW_MODELS.get(self._hardware_version[-2:] + self._hardware_version[-4:-2] + self._hardware_version[-6:-4], None)
+                if hw_model:
+                    return hw_model
+        return "Unknown"
 
     def is_sed(self) -> bool:
         """ Return True if node SED (battery powered)"""
@@ -247,7 +261,7 @@ class PlugwiseNode(object):
             if self._relay_state:
                 self._relay_state = False
                 self.do_callback(SWITCH_RELAY["id"])
-        self._hardware_version = int(message.hw_ver.value)
+        self._hardware_version = message.hw_ver.value.decode(UTF8_DECODE)
         self._firmware_version = message.fw_ver.value
         self._node_type = message.node_type.value
         self._last_info_message = message.timestamp

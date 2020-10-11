@@ -13,6 +13,3 @@ class PlugwiseStealth(PlugwiseCircle):
     def __init__(self, mac, address, stick):
         super().__init__(mac, address, stick)
 
-    def get_node_type(self) -> str:
-        """Return node type"""
-        return "Stealth"
