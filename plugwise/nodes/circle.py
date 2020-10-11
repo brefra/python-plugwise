@@ -140,7 +140,6 @@ class PlugwiseCircle(PlugwiseNode):
                 self._request_calibration()
         elif isinstance(message, CircleClockResponse):
             self._response_clock(message)
-            self.stick.message_processed(message.seq_id)
         else:
             self._circle_plus_message(message)
 
