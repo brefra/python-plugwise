@@ -441,6 +441,12 @@ class stick(object):
                 "Plugwise stick not properly initialized, Circle+ MAC is missing."
             )
 
+    def get_mac_stick(self) -> str:
+        """Return mac address of USB-Stick"""
+        if self._mac_stick:
+            return self._mac_stick.decode(UTF8_DECODE)
+        return None
+
     def allow_join_requests(self, enable: bool, accept: bool):
         """
         Enable or disable Plugwise network
